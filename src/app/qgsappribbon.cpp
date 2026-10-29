@@ -943,6 +943,9 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( layers, u"mActionOpenTable"_s );
     addMenu( layers, mApp->layerMenu() );
 
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+
     QgsAppRibbonGroup *layout = addGroup( page, tr( "Layout" ) );
     addNamedAction( layout, u"mActionNewPrintLayout"_s, true );
     addNamedAction( layout, u"mActionShowLayoutManager"_s );
