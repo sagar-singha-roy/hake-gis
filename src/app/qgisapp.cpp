@@ -3044,7 +3044,7 @@ void QgisApp::applyDefaultSettingsToCanvas( QgsMapCanvas *canvas )
 void QgisApp::readSettings()
 {
   QgsSettings settings;
-  QString themeName = settings.value( u"UI/UITheme"_s, "Hake Light" ).toString();
+  QString themeName = settings.value( u"UI/UITheme"_s, u"default"_s ).toString();
   const QgsHakeTheme::AppearanceMode appearanceMode = QgsHakeTheme::appearanceMode();
   if ( appearanceMode == QgsHakeTheme::AppearanceMode::System )
     themeName = QgsHakeTheme::resolveTheme( appearanceMode, themeName );

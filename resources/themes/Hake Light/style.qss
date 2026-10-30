@@ -1680,13 +1680,13 @@ QTabWidget#HakeAppRibbon > QTabBar::tab:!selected {
 }
 
 QTabWidget#HakeAppRibbon > QTabBar::tab:hover:!selected {
-    background-color: @chromeToolbar;
-    color: @chrome;
+    background-color: @hover;
+    color: @text;
 }
 
 QTabWidget#HakeAppRibbon > QTabBar::tab:selected {
-    background-color: @chrome;
-    color: @chromeText;
+    background-color: transparent;
+    color: @text;
 }
 
 /* Tab-strip scroll arrows sit on the white strip, not the command area. */

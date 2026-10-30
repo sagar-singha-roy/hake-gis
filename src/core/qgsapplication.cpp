@@ -936,8 +936,6 @@ namespace
   QString hakeMonochromeColor( const QString &theme )
   {
     // Hake icon palette stroke colors (see src/app/qgshakeicons.cpp).
-    if ( theme == QLatin1String( "Hake Light" ) )
-      return QStringLiteral( "#164A73" );
     if ( theme == QLatin1String( "Hake Night" ) )
       return QStringLiteral( "#CFE0F0" );
     return QString();
@@ -1236,7 +1234,9 @@ QString QgsApplication::resolvePkgPath()
     static const QStringList paths { QStringList() << QString() << u"/.."_s << u"/bin"_s << u"/../../.."_s };
     for ( const QString &path : paths )
     {
-      f.setFileName( prefix + path + "/qgisbuildpath.txt" );
+      f.setFileName( prefix + path + "/hake-gisbuildpath.txt" );
+      if ( !f.exists() )
+        f.setFileName( prefix + path + "/qgisbuildpath.txt" );
       if ( f.exists() )
         break;
     }
@@ -1268,7 +1268,12 @@ QString QgsApplication::resolvePkgPath()
 #else
 
 #if defined( Q_OS_MACOS )
+#if defined( QGIS_MAC_BUNDLE )
+    QDir dir( appPath + "/../.."_L1 );
+    prefixPath = dir.absolutePath();
+#else
     prefixPath = appPath;
+#endif
 #elif defined( Q_OS_WIN )
     prefixPath = appPath;
     if ( prefixPath.endsWith( "/bin" ) )

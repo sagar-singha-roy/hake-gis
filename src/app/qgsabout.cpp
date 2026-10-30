@@ -171,22 +171,43 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
     return;
   }
   file.write( data );
+
+  const QString logoPath = info.absolutePath() + u"/logo.png"_s;
+  if ( !QFile::exists( logoPath ) )
+  {
+    const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+    logo.save( logoPath, "PNG" );
+  }
 }
 
 void QgsAbout::showWhatsNewHtml( const QString &html )
 {
   txtWhatsNew->clear();
   txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setHtml( html );
+
+  const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"http://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"https://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"qrc:/images/icons/hake-gis-full.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u":/images/icons/hake-gis-full.png"_s ), logo );
+
+  QString processedHtml = html;
+  static const QRegularExpression logoRe( u"src=[\"'](?:https?://[^/\"'>]+)?/?(?:[^/\"'>]+/)*logo\\.png[\"']"_s, QRegularExpression::CaseInsensitiveOption );
+  processedHtml.replace( logoRe, u"src=\"qrc:/images/icons/hake-gis-full.png\""_s );
+
+  txtWhatsNew->setHtml( processedHtml );
 }
 
 void QgsAbout::showWhatsNewFile( const QString &path )
 {
   if ( !QFile::exists( path ) )
     return;
-  txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setSource( QUrl::fromLocalFile( path ) );
+  QFile file( path );
+  if ( !file.open( QIODevice::ReadOnly ) )
+    return;
+  showWhatsNewHtml( QString::fromUtf8( file.readAll() ) );
 }
 
 void QgsAbout::setWhatsNew()

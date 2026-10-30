@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_REPOSITORY_URL = "https://github.com/Subhankar-hub/hake-gis"
+DEFAULT_REPOSITORY_URL = "https://github.com/sagar-singha-roy/hake-gis"
 SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 BINARY_MAGICS = (
     b"MZ",  # PE

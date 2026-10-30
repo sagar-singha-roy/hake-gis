@@ -124,7 +124,7 @@ QgsHakeTheme::AppearanceMode QgsHakeTheme::appearanceMode()
   if ( !stored.isEmpty() )
     return appearanceModeFromString( stored );
 
-  switch ( variantForTheme( settings.value( QLatin1String( THEME_SETTING ), lightTheme() ).toString() ) )
+  switch ( variantForTheme( settings.value( QLatin1String( THEME_SETTING ), "default"_L1 ).toString() ) )
   {
     case Variant::Light:
       return AppearanceMode::Light;
@@ -187,14 +187,14 @@ QString QgsHakeTheme::resolveTheme( AppearanceMode mode, const QString &fallback
   switch ( mode )
   {
     case AppearanceMode::Light:
-      return lightTheme();
+      return u"default"_s;
     case AppearanceMode::Dark:
       return nightTheme();
     case AppearanceMode::System:
       switch ( systemVariant() )
       {
         case Variant::Light:
-          return lightTheme();
+          return u"default"_s;
         case Variant::Night:
           return nightTheme();
         case Variant::None:

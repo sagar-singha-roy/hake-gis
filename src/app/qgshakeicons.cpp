@@ -849,7 +849,7 @@ namespace
 
 bool QgsHakeIcons::isHakeTheme( const QString &themeName )
 {
-  return QgsHakeTheme::variantForTheme( themeName ) != QgsHakeTheme::Variant::None;
+  return QgsHakeTheme::variantForTheme( themeName ) == QgsHakeTheme::Variant::Night;
 }
 
 QIcon QgsHakeIcons::icon( const QString &resource )
@@ -897,7 +897,7 @@ namespace
   template<typename Item> void applyToSidebarItem( Item *item, const QString &resource, QgsHakeTheme::Variant variant )
   {
     const QVariant stockIcon = item->data( PROPERTIES_STOCK_ICON_ROLE );
-    if ( variant != QgsHakeTheme::Variant::None )
+    if ( variant == QgsHakeTheme::Variant::Night )
     {
       const QIcon hakeIcon = QgsHakeIcons::icon( resource, variant );
       if ( hakeIcon.isNull() )
@@ -922,7 +922,7 @@ namespace
     const QVariant hakeKey = target->property( HAKE_ICON_KEY_PROPERTY );
     const bool showingHakeIcon = hakeKey.isValid() && hakeKey.toLongLong() == current.cacheKey();
 
-    if ( variant != QgsHakeTheme::Variant::None )
+    if ( variant == QgsHakeTheme::Variant::Night )
     {
       const QIcon hakeIcon = QgsHakeIcons::icon( resource, variant );
       if ( hakeIcon.isNull() )
@@ -1063,6 +1063,8 @@ void QgsHakeIcons::applyToActions( QObject *root, const QString &themeName )
     return;
 
   const QgsHakeTheme::Variant hakeTheme = QgsHakeTheme::variantForTheme( themeName );
+  if ( hakeTheme != QgsHakeTheme::Variant::Night )
+    return;
 
   // Plugin and Processing actions can share an objectName (e.g. stale copies after a plugin reload), so look them all up.
   QMultiHash<QString, QAction *> namedActions;
@@ -1080,8 +1082,7 @@ void QgsHakeIcons::applyToActions( QObject *root, const QString &themeName )
     {
       case HakeIconKind::Action:
       {
-        if ( QAction *action = root->findChild<QAction *>( key ) )
-          applyToAction( action, entry.resource, hakeTheme );
+        // Preserve desktop theme icons as usual (hand pan map, colorful art, small Hake Technology badge)
         break;
       }
 
@@ -1224,7 +1225,7 @@ void QgsHakeIcons::applyToDataSourceManager( QWidget *dialog, const QString &the
     if ( it == resources.constEnd() )
       continue;
 
-    if ( variant != QgsHakeTheme::Variant::None )
+    if ( variant == QgsHakeTheme::Variant::Night )
     {
       const QIcon hakeIcon = icon( QLatin1String( *it ), variant );
       if ( hakeIcon.isNull() )
@@ -1395,7 +1396,7 @@ void QgsHakeIcons::applyToBrowserModel( QgsBrowserModel *model, const QString &t
       continue;
 
     const QVariant hakeKey = item->property( HAKE_ICON_KEY_PROPERTY );
-    if ( variant != QgsHakeTheme::Variant::None )
+    if ( variant == QgsHakeTheme::Variant::Night )
     {
       const QIcon hakeIcon = icon( QLatin1String( resource ), variant );
       if ( hakeIcon.isNull() || ( hakeKey.isValid() && hakeKey.toLongLong() == hakeIcon.cacheKey() ) )

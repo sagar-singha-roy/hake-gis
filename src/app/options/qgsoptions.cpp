@@ -759,7 +759,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl, const QList<QgsOpti
   QString name = mSettings->value( u"/qgis/style"_s ).toString();
   whileBlocking( cmbStyle )->setCurrentIndex( cmbStyle->findText( name, Qt::MatchFixedString ) );
 
-  QString theme = mSettings->value( u"UI/UITheme"_s, u"Hake Light"_s ).toString();
+  QString theme = mSettings->value( u"UI/UITheme"_s, u"default"_s ).toString();
   if ( !QgsApplication::uiThemes().contains( theme ) )
   {
     theme = u"default"_s;

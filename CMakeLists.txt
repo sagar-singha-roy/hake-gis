@@ -87,7 +87,7 @@ set(HAKE_WHATSNEW_URL "http://plugins.haketech.com/news/latest.html" CACHE STRIN
 # Code revision shown in About = Git commit this build comes from. CI passes
 # -DHAKE_GIT_REVISION=<full sha>; it is consumed once and not kept in the cache
 # (see cmake/CreateQgsVersion.cmake). The About link is <repository>/commit/<sha>.
-set(HAKE_GIT_REPOSITORY_URL "https://github.com/Subhankar-hub/hake-gis" CACHE STRING "Repository base URL for code revision links")
+set(HAKE_GIT_REPOSITORY_URL "https://github.com/sagar-singha-roy/hake-gis" CACHE STRING "Repository base URL for code revision links")
 set(HAKE_INSTALLER_NAME "Hake Geodesk Installer" CACHE STRING "User-facing installer package name")
 set(HAKE_INSTALLER_FILE_NAME "Hake-Geodesk-Installer" CACHE STRING "Filesystem-safe installer artifact basename")
 project(hake-gis VERSION ${COMPLETE_VERSION})
@@ -1156,6 +1156,7 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_LIB_SUBDIR})
 # write a marker with source directory path into the output's bin directory
 # if run from the build directory QGIS will detect it and alter the paths
 file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/hake-gisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
+file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/qgisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
 
 # Write the qgis.env file to the bin folder to allow running qgis.exe correctly from build folder
 # and find the SDK installed folders. Only runs when VCPKG_APPLOCAL_DEPS=OFF because ON means it is packaged together

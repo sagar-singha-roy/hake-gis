@@ -962,6 +962,9 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
   // Analysis
   {
     QgsAppRibbonPage *page = addPage( tr( "Analysis" ) );
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+
     QgsAppRibbonGroup *measure = addGroup( page, tr( "Measure" ) );
     addNamedAction( measure, u"mActionMeasure"_s, true );
     addNamedAction( measure, u"mActionMeasureArea"_s );
@@ -1016,6 +1019,9 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
   // Vector
   {
     QgsAppRibbonPage *page = addPage( tr( "Vector" ) );
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+
     QgsAppRibbonGroup *digitize = addGroup( page, tr( "Digitizing" ) );
     addNamedAction( digitize, u"mActionToggleEditing"_s, true );
     addNamedAction( digitize, u"mActionSaveLayerEdits"_s );
@@ -1047,6 +1053,9 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
   // Raster
   {
     QgsAppRibbonPage *page = addPage( tr( "Raster" ) );
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+
     QgsAppRibbonGroup *stretch = addGroup( page, tr( "Stretch" ) );
     addNamedAction( stretch, u"mActionLocalHistogramStretch"_s, true );
     addNamedAction( stretch, u"mActionFullHistogramStretch"_s );

@@ -1,30 +1,30 @@
-@background: #F2F6FB
-@itembackground: #EAF1F9
-@itemalternativebackground: #E2EDF9
-@itemdarkbackground: #B8CDE4
-@panelheader: #D6E4F4
-@statusbar: #D9E8F8
-@darkgradient: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #EAF1F9, stop: 0.1 #E4EDF7, stop: 0.5 #DCE8F5, stop: 0.9 #D6E4F4, stop: 1 #D6E4F4)
-@darkalternativegradient: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #E2EDF9, stop: 1 #D6E4F4);
-@gradient: QLinearGradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E2EDF9, stop:1 #D6E4F4)
+@background: #FFFFFF
+@itembackground: #F5F7FA
+@itemalternativebackground: #FFFFFF
+@itemdarkbackground: #E5E9F0
+@panelheader: #FFFFFF
+@statusbar: #FFFFFF
+@darkgradient: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #FFFFFF, stop: 0.1 #FFFFFF, stop: 0.5 #FFFFFF, stop: 0.9 #FFFFFF, stop: 1 #FFFFFF)
+@darkalternativegradient: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #FFFFFF, stop: 1 #FFFFFF);
+@gradient: QLinearGradient(x1:0, y1:0, x2:1, y2:1, stop:0 #FFFFFF, stop:1 #FFFFFF)
 @textlight: #1B2F4B
 @text: #1B2F4B
 @toggleoff: #B8CDE4
 @toggleon: #4A7EC7
 @selection: #A8C8EC
-@hover: #D8E7F8
+@hover: #EBF3FB
 @focusdark: rgba(27,47,75,80)
 @focus: #4A7EC7
 /* Longer @chrome* names must come before @chrome — setUITheme does plain substring replace. */
-@chromeToolbar: #EAF2F7
-@chromeTextMuted: #D7E6F2
-@chromeHover: #22658F
-@chromeActive: #0E3858
-@chromeBorder: #0F3B5C
-@chromeText: #FFFFFF
+@chromeToolbar: #FFFFFF
+@chromeTextMuted: #8090A0
+@chromeHover: #EBF3FB
+@chromeActive: #D8E4F0
+@chromeBorder: #D8DFE5
+@chromeText: #1B2F4B
 @chrome: #164A73
-@ribbonBorder: #C7D8E5
-@ribbonPressed: #D6E4F4
+@ribbonBorder: #D8DFE5
+@ribbonPressed: #E8EEF5
 @ribbonSurface: #FFFFFF
 @ribbonCaption: #607D94
 @ribbonDisabled: #9DB0C0
