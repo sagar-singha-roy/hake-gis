@@ -127,8 +127,8 @@ jobs:
                 -D HAKE_GIT_REVISION=${{ github.sha }} \
                 -D NUGET_USERNAME=${{ github.actor }} \
                 -D NUGET_SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/Subhankar-hub/index.json" \
-                -D NUGET_READ_USERNAME=Subhankar-hub \
+                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/qgis/index.json" \
+                -D NUGET_READ_USERNAME=qgis \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }} || true
 
                 fdupes -q -r -1 build/vcpkg_installed/${{ matrix.triplet }}/lib | grep -E '\.(so|dylib)' | while read line; do master=""; for file in ${line[*]}; do if  [[ "x${master}" == "x" ]]; then master=$file; else rm "${file}"; ln -s $(basename "${master}") "${file}"; fi; done; done

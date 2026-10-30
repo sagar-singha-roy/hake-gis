@@ -212,8 +212,8 @@ jobs:
                 -D VCPKG_INSTALL_OPTIONS="--x-buildtrees-root=C:/src" \
                 -D NUGET_USERNAME=${{ github.actor }} \
                 -D NUGET_SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/Subhankar-hub/index.json" \
-                -D NUGET_READ_USERNAME=Subhankar-hub \
+                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/qgis/index.json" \
+                -D NUGET_READ_USERNAME=qgis \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: 🌋 Build
