@@ -23,6 +23,7 @@
 #include "qgsappgpsdigitizing.h"
 #include "qgsapplayertreeviewmenuprovider.h"
 #include "qgsappmaptools.h"
+#include "qgsappribbon.h"
 #include "qgsattributedialog.h"
 #include "qgsattributetabledialog.h"
 #include "qgsfeatureaction.h"
@@ -1368,6 +1369,8 @@ QgsStatusBar *QgisAppInterface::statusBarIface()
 void QgisAppInterface::locatorSearch( const QString &searchText )
 {
   qgis->mLocatorWidget->invalidateResults();
+  if ( qgis->mAppRibbon )
+    qgis->mAppRibbon->revealSearch();
   qgis->mLocatorWidget->search( searchText );
 }
 

@@ -1,0 +1,38 @@
+---
+name: Hake theme validation
+on:
+  push:
+    branches:
+      - master
+      - release-**
+      - ribbon-ui
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate UI themes
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate theme resources
+        run: python3 scripts/hake_theme_validate.py
+
+      - name: Validate Options sidebar icon coverage
+        run: python3 scripts/hake_options_icon_coverage.py
+
+      - name: Validate Hake icon coverage
+        run: python3 scripts/hake_icon_coverage.py

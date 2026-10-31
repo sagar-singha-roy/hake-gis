@@ -136,7 +136,8 @@ jobs:
                 -D WITH_SERVER=ON \
                 -D CREATE_ZIP=ON \
                 -D CREATE_DEB=ON \
-                -D HAKE_INSTALLER_FILE_NAME=Hake-Geodesk-Installer-${{ matrix.suffix }}
+                -D HAKE_INSTALLER_FILE_NAME=Hake-Geodesk-Installer-${{ matrix.suffix }} \
+                -D HAKE_GIT_REVISION=${{ github.sha }}
 
       - name: 🌋 Build
         run: |
@@ -145,6 +146,32 @@ jobs:
       - name: 📦 Package
         run: |
           cmake --build build --target bundle --config Release
+
+      - name: Verify packaged Hake Night theme
+        run: |
+          shopt -s nullglob
+          debs=(build/*.deb)
+          if [ ${#debs[@]} -eq 0 ]; then echo "No .deb in build/"; exit 1; fi
+          for deb in "${debs[@]}"; do
+            dpkg-deb -c "$deb" | grep -F "resources/themes/Hake Night/style.qss"
+            root="$(mktemp -d)"
+            dpkg-deb -x "$deb" "$root"
+            python3 scripts/hake_theme_validate.py --installed "$root"
+          done
+
+      - name: Verify installed code revision
+        run: |
+          deb="build/Hake-Geodesk-Installer-${{ matrix.suffix }}.deb"
+          sudo apt-get install -y "./${deb}"
+          sudo ldconfig
+          pkg="$(dpkg-deb -f "$deb" Package)"
+          process_exe="$(dpkg -L "$pkg" | grep -E '/bin/hake-geodesk-process$' | head -1)"
+          root="$(mktemp -d)"
+          dpkg-deb -x "$deb" "$root"
+          python3 scripts/ci/hake_verify_revision.py \
+            --expected "${{ github.sha }}" \
+            --package-root "$root" \
+            --process-exe "$process_exe"
 
       - name: 📤 Upload Linux build
         uses: actions/upload-artifact@v7

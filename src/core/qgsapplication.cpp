@@ -126,10 +126,12 @@
 #include <QStyle>
 #include <QTextStream>
 #include <QThreadPool>
+#include <QToolTip>
 
 #include "moc_qgsapplication.cpp"
 
 #include <algorithm>
+#include <optional>
 
 using namespace Qt::StringLiterals;
 
@@ -267,6 +269,8 @@ Q_GLOBAL_STATIC( QString, sLibraryPath )
 Q_GLOBAL_STATIC( QString, sLibexecPath )
 Q_GLOBAL_STATIC( QString, sQmlImportPath )
 Q_GLOBAL_STATIC( QString, sThemeName )
+// Palette in effect before any theme palette.txt was applied; every theme palette is built on top of it.
+Q_GLOBAL_STATIC( std::optional<QPalette>, sThemeBasePalette )
 Q_GLOBAL_STATIC( QString, sProfilePath )
 
 Q_GLOBAL_STATIC( QStringList, sDefaultSvgPaths )
@@ -926,13 +930,54 @@ QString QgsApplication::iconPath( const QString &iconFile )
 namespace
 {
   /**
-   * Force SVG paint colors to Hake Light navy (#1B2F4B) for theme.png-style monochrome toolbars.
+   * Monochrome glyph color for the Hake themes, or an empty string for themes
+   * that keep the stock multi-color icons.
+   */
+  QString hakeMonochromeColor( const QString &theme )
+  {
+    // Hake icon palette stroke colors (see src/app/qgshakeicons.cpp).
+    if ( theme == QLatin1String( "Hake Night" ) )
+      return QStringLiteral( "#CFE0F0" );
+    return QString();
+  }
+
+  /**
+   * TRUE for icons that identify a data provider, processing provider or external
+   * service; they keep their stock colors under the Hake themes so they stay recognizable.
+   */
+  bool isProviderIdentityIcon( const QString &name )
+  {
+    static const QStringList identityIcons {
+      u"mIconPostgis.svg"_s,
+      u"mIconSpatialite.svg"_s,
+      u"mIconOracle.svg"_s,
+      u"mIconMssql.svg"_s,
+      u"mIconHana.svg"_s,
+      u"mIconWms.svg"_s,
+      u"mIconWfs.svg"_s,
+      u"mIconWcs.svg"_s,
+      u"mIconSensorThings.svg"_s,
+      u"mIconImageServer.svg"_s,
+      u"mIconAms.svg"_s,
+      u"mIconAfs.svg"_s,
+      u"mIconGpx.svg"_s,
+      u"mIconDelimitedText.svg"_s,
+      u"mIconMemory.svg"_s,
+      u"mIconCesium3dTiles.svg"_s,
+      u"mIconStac.svg"_s,
+      u"mGeoPackage.svg"_s,
+    };
+    const QString fileName = name.section( '/', -1 );
+    return identityIcons.contains( fileName ) || fileName.startsWith( QLatin1String( "provider" ) ) || fileName.startsWith( QLatin1String( "grass_" ) );
+  }
+
+  /**
+   * Force SVG paint colors to a single Hake glyph color for theme.png-style monochrome toolbars.
    * Leaves none/transparent/currentColor alone; near-white fills become none (hollow glyphs).
    */
-  QByteArray hakeLightMonochromeSvg( const QByteArray &svgBytes )
+  QByteArray hakeMonochromeSvg( const QByteArray &svgBytes, const QString &navy )
   {
     QString svg = QString::fromUtf8( svgBytes );
-    const QString navy = QStringLiteral( "#1B2F4B" );
 
     const auto replaceColor = [&navy]( const QString &color ) -> QString {
       const QString trimmed = color.trimmed();
@@ -1026,7 +1071,8 @@ QIcon QgsApplication::getThemeIcon( const QString &name, const QColor &fillColor
 
   QIcon icon;
   const bool colorBased = fillColor.isValid() || strokeColor.isValid();
-  const bool monochrome = !colorBased && theme == QLatin1String( "Hake Light" );
+  const QString monochromeColor = colorBased || isProviderIdentityIcon( name ) ? QString() : hakeMonochromeColor( theme );
+  const bool monochrome = !monochromeColor.isEmpty();
 
   auto iconFromColoredSvg = [fillColor, strokeColor, cacheKey]( const QString &path ) -> QIcon {
     // sizes are unused here!
@@ -1034,11 +1080,11 @@ QIcon QgsApplication::getThemeIcon( const QString &name, const QColor &fillColor
     return iconFromCachedSvgBytes( cacheKey, svgContent );
   };
 
-  auto iconFromMonochromeSvg = [cacheKey]( const QString &path ) -> QIcon {
+  auto iconFromMonochromeSvg = [cacheKey, monochromeColor]( const QString &path ) -> QIcon {
     QFile in( path );
     if ( !in.open( QIODevice::ReadOnly ) )
       return QIcon();
-    return iconFromCachedSvgBytes( cacheKey, hakeLightMonochromeSvg( in.readAll() ) );
+    return iconFromCachedSvgBytes( cacheKey, hakeMonochromeSvg( in.readAll(), monochromeColor ) );
   };
 
   const auto resolveIcon = [&]( const QString &path ) {
@@ -1188,7 +1234,9 @@ QString QgsApplication::resolvePkgPath()
     static const QStringList paths { QStringList() << QString() << u"/.."_s << u"/bin"_s << u"/../../.."_s };
     for ( const QString &path : paths )
     {
-      f.setFileName( prefix + path + "/qgisbuildpath.txt" );
+      f.setFileName( prefix + path + "/hake-gisbuildpath.txt" );
+      if ( !f.exists() )
+        f.setFileName( prefix + path + "/qgisbuildpath.txt" );
       if ( f.exists() )
         break;
     }
@@ -1220,7 +1268,12 @@ QString QgsApplication::resolvePkgPath()
 #else
 
 #if defined( Q_OS_MACOS )
+#if defined( QGIS_MAC_BUNDLE )
+    QDir dir( appPath + "/../.."_L1 );
+    prefixPath = dir.absolutePath();
+#else
     prefixPath = appPath;
+#endif
 #elif defined( Q_OS_WIN )
     prefixPath = appPath;
     if ( prefixPath.endsWith( "/bin" ) )
@@ -1251,51 +1304,78 @@ QString QgsApplication::themeName()
 
 void QgsApplication::setUITheme( const QString &themeName )
 {
-  if ( QgsApplication *app = instance() )
-  {
-    app->mIconCache.clear();
-  }
-
   // Loop all style sheets, find matching name, load it.
   const QString path = applicationThemeRegistry()->themeFolder( themeName );
   if ( themeName == "default"_L1 || path.isEmpty() )
   {
+    if ( QgsApplication *app = instance() )
+    {
+      app->mIconCache.clear();
+    }
     setThemeName( u"default"_s );
     qApp->setStyleSheet( QString() );
     instance()->themeChanged();
     return;
   }
 
+  // Everything is read and built before anything is applied, so a missing or unreadable
+  // file leaves the current theme fully in place instead of a half-applied mix.
   QFile file( path + "/style.qss" );
   QFile variablesfile( path + "/variables.qss" );
   QFileInfo variableInfo( variablesfile );
 
   if ( !file.open( QIODevice::ReadOnly ) || ( variableInfo.exists() && !variablesfile.open( QIODevice::ReadOnly ) ) )
   {
-    qApp->setStyleSheet( QString() );
-    instance()->themeChanged();
+    QgsMessageLog::logMessage( tr( "Could not read the style files of UI theme \"%1\" in %2; keeping the current theme." ).arg( themeName, path ), tr( "Theme" ), Qgis::MessageLevel::Warning );
     return;
   }
 
+  if ( !sThemeBasePalette()->has_value() )
+    *sThemeBasePalette() = qApp->palette();
+
+  bool hasPalette = false;
+  QPalette pal = sThemeBasePalette()->value();
   QFile palettefile( path + "/palette.txt" );
   QFileInfo paletteInfo( palettefile );
-  if ( paletteInfo.exists() && palettefile.open( QIODevice::ReadOnly ) )
+  if ( paletteInfo.exists() )
   {
-    QPalette pal = qApp->palette();
+    if ( !palettefile.open( QIODevice::ReadOnly ) )
+    {
+      QgsMessageLog::logMessage( tr( "Could not read palette.txt of UI theme \"%1\"; keeping the current theme." ).arg( themeName ), tr( "Theme" ), Qgis::MessageLevel::Warning );
+      return;
+    }
+
+    // Lines are "role:color", or "disabled:role:color" for the disabled color group.
+    // Disabled entries are applied after the others so they are not overwritten.
+    QList<QPair<int, QColor>> disabledColors;
     QTextStream in( &palettefile );
     while ( !in.atEnd() )
     {
-      QString line = in.readLine();
+      const QString line = in.readLine();
       QStringList parts = line.split( ':' );
-      if ( parts.count() == 2 )
+      bool disabled = false;
+      if ( parts.count() == 3 && parts.at( 0 ).trimmed() == "disabled"_L1 )
       {
-        int role = parts.at( 0 ).trimmed().toInt();
-        QColor color = QgsSymbolLayerUtils::decodeColor( parts.at( 1 ).trimmed() );
-        pal.setColor( static_cast< QPalette::ColorRole >( role ), color );
+        disabled = true;
+        parts.removeFirst();
       }
+      if ( parts.count() != 2 )
+        continue;
+
+      bool ok = false;
+      const int role = parts.at( 0 ).trimmed().toInt( &ok );
+      if ( !ok || role < 0 || role >= static_cast<int>( QPalette::NColorRoles ) )
+        continue;
+      const QColor color = QgsSymbolLayerUtils::decodeColor( parts.at( 1 ).trimmed() );
+      if ( disabled )
+        disabledColors.append( qMakePair( role, color ) );
+      else
+        pal.setColor( static_cast<QPalette::ColorRole>( role ), color );
     }
+    for ( const QPair<int, QColor> &disabledColor : std::as_const( disabledColors ) )
+      pal.setColor( QPalette::Disabled, static_cast<QPalette::ColorRole>( disabledColor.first ), disabledColor.second );
     palettefile.close();
-    qApp->setPalette( pal );
+    hasPalette = true;
   }
 
   QString styledata = file.readAll();
@@ -1344,6 +1424,16 @@ void QgsApplication::setUITheme( const QString &themeName )
     }
   }
 
+  if ( QgsApplication *app = instance() )
+  {
+    app->mIconCache.clear();
+  }
+  if ( hasPalette )
+  {
+    qApp->setPalette( pal );
+    // Tooltips keep their own palette, seeded from the OS color scheme at startup.
+    QToolTip::setPalette( pal );
+  }
   qApp->setStyleSheet( styledata );
 
   setThemeName( themeName );

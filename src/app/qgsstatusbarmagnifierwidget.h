@@ -50,6 +50,8 @@ class APP_EXPORT QgsStatusBarMagnifierWidget : public QWidget
       */
     void setFont( const QFont &font );
 
+    //! Re-picks the lock button icon for the current UI theme.
+    void refreshIcons();
 
   public slots:
     //! will be triggered from map canvas changes (from mouse wheel, zoom)

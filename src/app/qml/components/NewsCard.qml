@@ -91,8 +91,9 @@ Rectangle {
     }
 
     flat: true
-    icon.source: "../images/close.svg"
-    icon.color: "#1a365d"
+    icon.source: welcomeTheme.hakeIcons ? "image://hakeicon/welcome:close/" + welcomeTheme.iconRevision : "../images/close.svg"
+    // Transparent keeps the two-tone Hake icon uncolorized.
+    icon.color: welcomeTheme.hakeIcons ? "transparent" : "#1a365d"
     icon.width: 20
     icon.height: 20
     onClicked: root.closeClicked()

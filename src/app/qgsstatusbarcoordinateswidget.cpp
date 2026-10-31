@@ -18,6 +18,7 @@
 #include "qgsapplication.h"
 #include "qgscoordinatereferencesystemutils.h"
 #include "qgscoordinateutils.h"
+#include "qgshakeicons.h"
 #include "qgsmapcanvas.h"
 #include "qgsproject.h"
 #include "qgsvectorlayer.h"
@@ -66,7 +67,7 @@ QgsStatusBarCoordinatesWidget::QgsStatusBarCoordinatesWidget( QWidget *parent )
 
   //toggle to switch between mouse pos and extents display in status bar widget
   mToggleExtentsViewButton = new QToolButton( this );
-  mToggleExtentsViewButton->setIcon( QgsApplication::getThemeIcon( u"tracking.svg"_s ) );
+  mToggleExtentsViewButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:coordinate-tracking"_s, u"tracking.svg"_s ) );
   mToggleExtentsViewButton->setToolTip( tr( "Toggle extents and mouse position display" ) );
   mToggleExtentsViewButton->setCheckable( true );
   mToggleExtentsViewButton->setAutoRaise( true );
@@ -349,19 +350,26 @@ void QgsStatusBarCoordinatesWidget::extentsViewToggled( bool flag )
   if ( flag )
   {
     //extents view mode!
-    mToggleExtentsViewButton->setIcon( QgsApplication::getThemeIcon( u"extents.svg"_s ) );
     mLineEdit->setReadOnly( true );
     mLabel->setText( tr( "Extents" ) );
   }
   else
   {
     //mouse cursor pos view mode!
-    mToggleExtentsViewButton->setIcon( QgsApplication::getThemeIcon( u"tracking.svg"_s ) );
     mLineEdit->setReadOnly( false );
     mLabel->setText( tr( "Coordinate" ) );
   }
+  refreshIcons();
 
   applyCoordinateDisplaySettings();
+}
+
+void QgsStatusBarCoordinatesWidget::refreshIcons()
+{
+  if ( mToggleExtentsViewButton->isChecked() )
+    mToggleExtentsViewButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:coordinate-extents"_s, u"extents.svg"_s ) );
+  else
+    mToggleExtentsViewButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:coordinate-tracking"_s, u"tracking.svg"_s ) );
 }
 
 void QgsStatusBarCoordinatesWidget::refreshMapCanvas()

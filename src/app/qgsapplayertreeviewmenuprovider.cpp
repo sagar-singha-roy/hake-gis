@@ -23,6 +23,7 @@
 #include "qgscolorwidgets.h"
 #include "qgsdialog.h"
 #include "qgsgui.h"
+#include "qgshakeicons.h"
 #include "qgslayernotesmanager.h"
 #include "qgslayernotesutils.h"
 #include "qgslayertree.h"
@@ -65,6 +66,21 @@
 
 using namespace Qt::StringLiterals;
 
+namespace
+{
+  //! Gives a shared layer tree default \a action the Hake icon mapped to \a key under the Hake themes.
+  QAction *withHakeIcon( QAction *action, const QString &key )
+  {
+    if ( action && QgsHakeIcons::isHakeTheme( QgsApplication::themeName() ) )
+    {
+      const QIcon icon = QgsHakeIcons::iconFor( key, QString() );
+      if ( !icon.isNull() )
+        action->setIcon( icon );
+    }
+    return action;
+  }
+} // namespace
+
 QgsAppLayerTreeViewMenuProvider::QgsAppLayerTreeViewMenuProvider( QgsLayerTreeView *view, QgsMapCanvas *canvas )
   : mView( view )
   , mCanvas( canvas )
@@ -80,13 +96,13 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
   if ( !idx.isValid() )
   {
     // global menu
-    menu->addAction( actions->actionAddGroup( menu ) );
-    menu->addAction( QgsApplication::getThemeIcon( u"/mActionExpandTree.svg"_s ), tr( "&Expand All" ), mView, &QgsLayerTreeView::expandAll );
-    menu->addAction( QgsApplication::getThemeIcon( u"/mActionCollapseTree.svg"_s ), tr( "&Collapse All" ), mView, &QgsLayerTreeView::collapseAll );
+    menu->addAction( withHakeIcon( actions->actionAddGroup( menu ), u"layertree:add-group"_s ) );
+    menu->addAction( QgsHakeIcons::iconFor( u"layertree:expand-all"_s, u"/mActionExpandTree.svg"_s ), tr( "&Expand All" ), mView, &QgsLayerTreeView::expandAll );
+    menu->addAction( QgsHakeIcons::iconFor( u"layertree:collapse-all"_s, u"/mActionCollapseTree.svg"_s ), tr( "&Collapse All" ), mView, &QgsLayerTreeView::collapseAll );
     menu->addSeparator()->setObjectName( "GlobalSeparator"_L1 );
     if ( QgisApp::instance()->clipboard()->hasFormat( QGSCLIPBOARD_MAPLAYER_MIME ) )
     {
-      QAction *actionPasteLayerOrGroup = new QAction( QgsApplication::getThemeIcon( u"/mActionEditPaste.svg"_s ), tr( "Paste Layer/Group" ), menu );
+      QAction *actionPasteLayerOrGroup = new QAction( QgsHakeIcons::iconFor( u"mActionPasteLayer"_s, u"/mActionEditPaste.svg"_s ), tr( "Paste Layer/Group" ), menu );
       connect( actionPasteLayerOrGroup, &QAction::triggered, QgisApp::instance(), &QgisApp::pasteLayer );
       menu->addAction( actionPasteLayerOrGroup );
     }
@@ -98,7 +114,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
     // layer or group selected
     if ( QgsLayerTree::isGroup( node ) )
     {
-      menu->addAction( actions->actionZoomToGroup( mCanvas, menu ) );
+      menu->addAction( withHakeIcon( actions->actionZoomToGroup( mCanvas, menu ), u"mActionZoomToLayers"_s ) );
 
       menu->addAction( tr( "Co&py Group" ), QgisApp::instance(), &QgisApp::copyLayer );
       if ( QgisApp::instance()->clipboard()->hasFormat( QGSCLIPBOARD_MAPLAYER_MIME ) )
@@ -114,12 +130,12 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
       }
 
       menu->addSeparator()->setObjectName( "RenameGroupOrLayerSeparator"_L1 );
-      menu->addAction( actions->actionAddGroup( menu ) );
-      QAction *removeAction = menu->addAction( QgsApplication::getThemeIcon( u"/mActionRemoveLayer.svg"_s ), tr( "&Remove Group…" ), QgisApp::instance(), &QgisApp::removeLayer );
+      menu->addAction( withHakeIcon( actions->actionAddGroup( menu ), u"layertree:add-group"_s ) );
+      QAction *removeAction = menu->addAction( QgsHakeIcons::iconFor( u"mActionRemoveLayer"_s, u"/mActionRemoveLayer.svg"_s ), tr( "&Remove Group…" ), QgisApp::instance(), &QgisApp::removeLayer );
       removeAction->setEnabled( removeActionEnabled() );
       menu->addSeparator()->setObjectName( "RemoveSeparator"_L1 );
 
-      menu->addAction( QgsApplication::getThemeIcon( u"/mActionSetCRS.png"_s ), tr( "Set Group &CRS…" ), QgisApp::instance(), &QgisApp::legendGroupSetCrs );
+      menu->addAction( QgsHakeIcons::iconFor( u"mActionSetLayerCRS"_s, u"/mActionSetCRS.png"_s ), tr( "Set Group &CRS…" ), QgisApp::instance(), &QgisApp::legendGroupSetCrs );
       menu->addAction( tr( "Set Group &WMS Properties…" ), QgisApp::instance(), &QgisApp::legendGroupSetWmsData );
 
       menu->addSeparator()->setObjectName( "WmsSeparator"_L1 );
@@ -173,7 +189,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
 
       if ( layer && layer->isSpatial() )
       {
-        QAction *zoomToLayers = actions->actionZoomToLayers( mCanvas, menu );
+        QAction *zoomToLayers = withHakeIcon( actions->actionZoomToLayers( mCanvas, menu ), u"mActionZoomToLayers"_s );
         zoomToLayers->setEnabled( layer->isValid() );
         menu->addAction( zoomToLayers );
         if ( vlayer )
@@ -191,11 +207,11 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
               }
             }
           }
-          QAction *actionZoomSelected = actions->actionZoomToSelection( mCanvas, menu );
+          QAction *actionZoomSelected = withHakeIcon( actions->actionZoomToSelection( mCanvas, menu ), u"mActionZoomToSelected"_s );
           actionZoomSelected->setEnabled( vlayer->isValid() && hasSelectedFeature );
           menu->addAction( actionZoomSelected );
         }
-        menu->addAction( actions->actionShowInOverview( menu ) );
+        menu->addAction( withHakeIcon( actions->actionShowInOverview( menu ), u"mActionAddToOverview"_s ) );
       }
 
       if ( vlayer )
@@ -208,7 +224,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
       if ( vlayer || vectorTileLayer || meshLayer || rlayer )
       {
         const QString iconName = vectorTileLayer || ( vlayer && vlayer->labeling() && vlayer->labeling()->type() == "rule-based"_L1 ) ? u"labelingRuleBased.svg"_s : u"labelingSingle.svg"_s;
-        QAction *actionShowLabels = new QAction( QgsApplication::getThemeIcon( iconName ), tr( "Show &Labels" ), menu );
+        QAction *actionShowLabels = new QAction( QgsHakeIcons::iconFor( u"layertree:show-labels"_s, iconName ), tr( "Show &Labels" ), menu );
         actionShowLabels->setCheckable( true );
         actionShowLabels->setChecked( vectorTileLayer ? vectorTileLayer->labelsEnabled() : meshLayer ? meshLayer->labelsEnabled() : rlayer ? rlayer->labelsEnabled() : vlayer->labelsEnabled() );
         connect( actionShowLabels, &QAction::toggled, this, &QgsAppLayerTreeViewMenuProvider::toggleLabels );
@@ -227,7 +243,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
       if ( rlayer && mView->selectedLayerNodes().count() == 1 )
       {
         QAction *zoomToNative
-          = menu->addAction( QgsApplication::getThemeIcon( u"/mActionZoomActual.svg"_s ), tr( "Zoom to Nat&ive Resolution (100%)" ), QgisApp::instance(), &QgisApp::legendLayerZoomNative );
+          = menu->addAction( QgsHakeIcons::iconFor( u"mActionZoomActualSize"_s, u"/mActionZoomActual.svg"_s ), tr( "Zoom to Nat&ive Resolution (100%)" ), QgisApp::instance(), &QgisApp::legendLayerZoomNative );
         zoomToNative->setEnabled( rlayer->isValid() );
 
         if ( rlayer->rasterType() != Qgis::RasterLayerType::Palette )
@@ -239,7 +255,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
         if ( rlayer->attributeTableCount() > 0 )
         {
           // Open RAT action
-          menu->addAction( QgsApplication::getThemeIcon( u"/mActionOpenTable.svg"_s ), tr( "Open Raster Attribute Table" ), QgisApp::instance(), &QgisApp::openRasterAttributeTable );
+          menu->addAction( QgsHakeIcons::iconFor( u"mActionOpenTable"_s, u"/mActionOpenTable.svg"_s ), tr( "Open Raster Attribute Table" ), QgisApp::instance(), &QgisApp::openRasterAttributeTable );
         }
         else if ( rlayer->canCreateRasterAttributeTable() )
         {
@@ -256,7 +272,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
         if ( conn )
         {
           if ( vlayer->isSqlQuery() )
-            menu->addAction( QgsApplication::getThemeIcon( u"/dbmanager.svg"_s ), tr( "Update SQL Layer…" ), menu, [layer, this] {
+            menu->addAction( QgsHakeIcons::iconFor( u"layertree:execute-sql"_s, u"/dbmanager.svg"_s ), tr( "Update SQL Layer…" ), menu, [layer, this] {
               std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn2 { QgsMapLayerUtils::databaseConnection( layer ) };
               if ( conn2 )
               {
@@ -322,7 +338,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
           // SQL dialog
           if ( conn->capabilities().testFlag( QgsAbstractDatabaseProviderConnection::Capability::ExecuteSql ) )
           {
-            QAction *executeSqlAction = new QAction( QgsApplication::getThemeIcon( u"/dbmanager.svg"_s ), tr( "Execute SQL…" ), menu );
+            QAction *executeSqlAction = new QAction( QgsHakeIcons::iconFor( u"layertree:execute-sql"_s, u"/dbmanager.svg"_s ), tr( "Execute SQL…" ), menu );
             menu->addAction( executeSqlAction );
 
             const QString providerType = layer->providerType();
@@ -400,16 +416,16 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
       addCustomLayerActions( menu, layer );
       if ( layer && vlayer && vlayer->providerType() == "virtual"_L1 && mView->selectedLayerNodes().count() == 1 )
       {
-        menu->addAction( QgsApplication::getThemeIcon( u"/mActionAddVirtualLayer.svg"_s ), tr( "Edit Virtual Layer…" ), QgisApp::instance(), &QgisApp::addVirtualLayer );
+        menu->addAction( QgsHakeIcons::iconFor( u"mActionAddVirtualLayer"_s, u"/mActionAddVirtualLayer.svg"_s ), tr( "Edit Virtual Layer…" ), QgisApp::instance(), &QgisApp::addVirtualLayer );
       }
 
       menu->addSeparator()->setObjectName( "LayerSeparator"_L1 );
 
       // duplicate layer
-      QAction *duplicateLayersAction = menu->addAction( QgsApplication::getThemeIcon( u"/mActionDuplicateLayer.svg"_s ), tr( "&Duplicate Layer" ), QgisApp::instance(), [] {
+      QAction *duplicateLayersAction = menu->addAction( QgsHakeIcons::iconFor( u"mActionDuplicateLayer"_s, u"/mActionDuplicateLayer.svg"_s ), tr( "&Duplicate Layer" ), QgisApp::instance(), [] {
         QgisApp::instance()->duplicateLayers();
       } );
-      QAction *removeAction = menu->addAction( QgsApplication::getThemeIcon( u"/mActionRemoveLayer.svg"_s ), tr( "&Remove Layer…" ), QgisApp::instance(), &QgisApp::removeLayer );
+      QAction *removeAction = menu->addAction( QgsHakeIcons::iconFor( u"mActionRemoveLayer"_s, u"/mActionRemoveLayer.svg"_s ), tr( "&Remove Layer…" ), QgisApp::instance(), &QgisApp::removeLayer );
       removeAction->setEnabled( removeActionEnabled() );
 
       menu->addSeparator()->setObjectName( "LayerActionSeparator"_L1 );
@@ -448,7 +464,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
           QgsSettings settings;
           const QgsAttributeTableFilterModel::FilterMode initialMode = settings.enumValue( u"qgis/attributeTableBehavior"_s, QgsAttributeTableFilterModel::ShowAll );
           const auto lambdaOpenAttributeTable = [initialMode] { QgisApp::instance()->attributeTable( initialMode ); };
-          QAction *attributeTableAction = menu->addAction( QgsApplication::getThemeIcon( u"/mActionOpenTable.svg"_s ), tr( "Open &Attribute Table" ), QgisApp::instance(), lambdaOpenAttributeTable );
+          QAction *attributeTableAction = menu->addAction( QgsHakeIcons::iconFor( u"mActionOpenTable"_s, u"/mActionOpenTable.svg"_s ), tr( "Open &Attribute Table" ), QgisApp::instance(), lambdaOpenAttributeTable );
           attributeTableAction->setEnabled( vlayer->isValid() );
         }
 
@@ -628,7 +644,7 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
             {
               if ( vlayer->isTemporary() && mView->selectedLayerNodes().count() == 1 )
               {
-                QAction *actionMakePermanent = new QAction( QgsApplication::getThemeIcon( u"mActionFileSave.svg"_s ), tr( "Make Permanent…" ), menu );
+                QAction *actionMakePermanent = new QAction( QgsHakeIcons::iconFor( u"layertree:make-permanent"_s, u"mActionFileSave.svg"_s ), tr( "Make Permanent…" ), menu );
                 connect( actionMakePermanent, &QAction::triggered, QgisApp::instance(), [vlayer] { QgisApp::instance()->makeMemoryLayerPermanent( vlayer ); } );
                 menu->addAction( actionMakePermanent );
               }
@@ -943,9 +959,9 @@ QMenu *QgsAppLayerTreeViewMenuProvider::createContextMenu()
   {
     if ( node->flags() & Qt::ItemIsUserCheckable )
     {
-      menu->addAction( QgsApplication::getThemeIcon( u"/mActionToggleAllLayers.svg"_s ), tr( "&Toggle Items" ), node, &QgsLayerTreeModelLegendNode::toggleAllItems );
-      menu->addAction( QgsApplication::getThemeIcon( u"/mActionShowAllLayers.svg"_s ), tr( "&Show All Items" ), node, &QgsLayerTreeModelLegendNode::checkAllItems );
-      menu->addAction( QgsApplication::getThemeIcon( u"/mActionHideAllLayers.svg"_s ), tr( "&Hide All Items" ), node, &QgsLayerTreeModelLegendNode::uncheckAllItems );
+      menu->addAction( QgsHakeIcons::iconFor( u"mActionToggleSelectedLayers"_s, u"/mActionToggleAllLayers.svg"_s ), tr( "&Toggle Items" ), node, &QgsLayerTreeModelLegendNode::toggleAllItems );
+      menu->addAction( QgsHakeIcons::iconFor( u"mActionShowAllLayers"_s, u"/mActionShowAllLayers.svg"_s ), tr( "&Show All Items" ), node, &QgsLayerTreeModelLegendNode::checkAllItems );
+      menu->addAction( QgsHakeIcons::iconFor( u"mActionHideAllLayers"_s, u"/mActionHideAllLayers.svg"_s ), tr( "&Hide All Items" ), node, &QgsLayerTreeModelLegendNode::uncheckAllItems );
       menu->addSeparator()->setObjectName( "UserCheckableSeparator"_L1 );
     }
 

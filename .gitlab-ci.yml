@@ -1,38 +1,151 @@
-image: docker:24.0.5
-
-variables:
-  DOCKER_TLS_CERTDIR: ""
-  DISTRO: ubuntu
-  DISTRO_VERSION: "25.10"
-  QT_VERSION: "6"
-
-services:
-  - docker:24.0.5-dind
+# Linux only: GitLab.com hosted jobs are capped at 3 hours, which the Windows
+# (vcpkg) and macOS builds exceed; those stay on GitHub Actions.
+# Keep packages and CMake flags in sync with .github/workflows/linux-qt6.yml.
 
 stages:
   - build
-  - test
 
-before_script:
-  - docker info
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
 
 build_linux:
   stage: build
-  script:
-    - echo "Building Hake Geospatial (QGIS base) for Linux..."
-    - docker build -t qgis3-build-deps-binary-image -f .docker/qgis3-${DISTRO}-qt${QT_VERSION}-build-deps.dockerfile --build-arg DISTRO_VERSION=${DISTRO_VERSION} .
-    - docker run --rm -v $(pwd):/root/QGIS --env WITH_QUICK=ON --env WITH_3D=ON --env WITH_SFCGAL=ON qgis3-build-deps-binary-image /root/QGIS/.docker/docker-qgis-build.sh
-    - tar --exclude='*.o' -cvzf build.tgz build
-  artifacts:
+  tags:
+    - saas-linux-medium-amd64
+  image: ubuntu:${UBUNTU_VERSION}
+  timeout: 3h
+  interruptible: true
+  parallel:
+    matrix:
+      # Ubuntu 22.04 is omitted: stock jammy lacks Qt6 QCA, PyQt6, QScintilla,
+      # and qt6-5compat-dev required by this Qt6 codebase.
+      - UBUNTU_VERSION: "24.04"
+        SUFFIX: ubuntu2404
+      - UBUNTU_VERSION: "26.04"
+        SUFFIX: ubuntu2604
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+    GIT_DEPTH: "2"
+    CCACHE_DIR: ${CI_PROJECT_DIR}/.ccache
+    CCACHE_MAXSIZE: 1G
+  cache:
+    key: ccache-linux-qt6-${SUFFIX}-${CI_COMMIT_REF_SLUG}
+    fallback_keys:
+      - ccache-linux-qt6-${SUFFIX}-${CI_DEFAULT_BRANCH}
     paths:
-      - build.tgz
-    expire_in: 1 day
-
-test_linux:
-  stage: test
+      - .ccache/
+  before_script:
+    - apt-get update
+    - >
+      apt-get install -y --no-install-recommends
+      build-essential
+      ca-certificates
+      dpkg-dev
+      file
+      g++
+      git
+      python3
+      bison
+      ccache
+      cmake
+      flex
+      ninja-build
+      gdal-bin
+      libdraco-dev
+      libexiv2-dev
+      libexpat1-dev
+      libfcgi-dev
+      libgdal-dev
+      libgeographiclib-dev
+      libgeos-dev
+      libgsl-dev
+      libpq-dev
+      libproj-dev
+      libprotobuf-dev
+      libqca-qt6-dev
+      libqt6opengl6-dev
+      libqscintilla2-qt6-dev
+      libqt6svg6-dev
+      libspatialindex-dev
+      libspatialite-dev
+      libsqlite3-dev
+      libsqlite3-mod-spatialite
+      libzip-dev
+      libzstd-dev
+      protobuf-compiler
+      qt6-base-dev
+      qt6-tools-dev
+      qt6-tools-dev-tools
+      qt6-3d-dev
+      qt6-positioning-dev
+      qt6-serialport-dev
+      qtkeychain-qt6-dev
+      python3-all-dev
+      python3-pyqt6
+      python3-pyqt6.qsci
+      python3-pyqt6.qtpositioning
+      python3-pyqt6.qtserialport
+      python3-pyqt6.qtsvg
+      python3-pyqt6.sip
+      python3-pyqtbuild
+      sip-tools
+      pyqt6-dev
+      pyqt6-dev-tools
+      pyqt6.qsci-dev
+      qt6-multimedia-dev
+      qt6-5compat-dev
+      qt6-base-private-dev
+      libsfcgal-dev
   script:
-    - echo "Running Linux Tests for Hake Geospatial..."
-    - tar xvzf build.tgz
-    - rm build.tgz
-    - docker build -t qgis3-build-deps-binary-image -f .docker/qgis3-${DISTRO}-qt${QT_VERSION}-build-deps.dockerfile --build-arg DISTRO_VERSION=${DISTRO_VERSION} .
-    - docker run --rm -v $(pwd):/root/QGIS --env GITHUB_SHA=$CI_COMMIT_SHA qgis3-build-deps-binary-image /root/QGIS/.docker/docker-qgis-test.sh ALL_BUT_PROVIDERS
+    - >
+      cmake -S . -B build -G Ninja
+      -D CMAKE_BUILD_TYPE=Release
+      -D CMAKE_C_COMPILER=gcc
+      -D CMAKE_CXX_COMPILER=g++
+      -D USE_CCACHE=ON
+      -D WITH_DESKTOP=ON
+      -D WITH_3D=ON
+      -D WITH_BINDINGS=ON
+      -D WITH_PDAL=OFF
+      -D WITH_POSTGRESQL=ON
+      -D WITH_SPATIALITE=ON
+      -D WITH_HAKE_GIS_PROCESS=ON
+      -D WITH_GEOGRAPHICLIB=ON
+      -D WITH_SFCGAL=OFF
+      -D WITH_QTWEBENGINE=OFF
+      -D ENABLE_TESTS=OFF
+      -D ENABLE_UNITY_BUILDS=OFF
+      -D WITH_INTERNAL_SPATIALINDEX=ON
+      -D WITH_SERVER=ON
+      -D CREATE_ZIP=ON
+      -D CREATE_DEB=ON
+      -D HAKE_INSTALLER_FILE_NAME=Hake-Geodesk-Installer-${SUFFIX}
+      -D HAKE_GIT_REVISION=${CI_COMMIT_SHA}
+    - cmake --build build --config Release
+    - cmake --build build --target bundle --config Release
+    - |
+      bash -euo pipefail -c '
+      shopt -s nullglob
+      debs=(build/*.deb)
+      if [ ${#debs[@]} -eq 0 ]; then echo "No .deb in build/"; exit 1; fi
+      for deb in "${debs[@]}"; do
+        dpkg-deb -c "$deb" | grep -F "resources/themes/Hake Night/style.qss"
+        root="$(mktemp -d)"
+        dpkg-deb -x "$deb" "$root"
+        python3 scripts/hake_theme_validate.py --installed "$root"
+      done
+      '
+    - ccache -s
+  after_script:
+    - mkdir -p logs
+    - cp build/CMakeFiles/CMakeOutput.log build/CMakeFiles/CMakeError.log build/CMakeFiles/CMakeConfigureLog.yaml logs/ 2>/dev/null || true
+  artifacts:
+    name: hake-geodesk-installer-linux-${SUFFIX}
+    when: always
+    expire_in: 1 week
+    paths:
+      - build/*.deb
+      - build/*.tar.gz
+      - build/*.zip
+      - logs/

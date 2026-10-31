@@ -14,7 +14,7 @@ Rectangle {
   readonly property real normalFontSize: Application.font.pointSize * layoutSizeFactor
   readonly property real smallFontSize: Application.font.pointSize * 0.925 * layoutSizeFactor
 
-  property color backgroundColor: "#ffffff"
+  property color backgroundColor: welcomeTheme.projectCardColor
   property string title: ""
   property string subtitle: ""
   property string crs: ""
@@ -29,7 +29,7 @@ Rectangle {
   Rectangle {
     id: imageContainer
     anchors.fill: parent
-    color: root.imageSource != "" ? "#ffffff" : root.backgroundColor
+    color: root.backgroundColor
     radius: root.radius
 
     Image {
@@ -47,7 +47,7 @@ Rectangle {
       radius: root.radius
       gradient: Gradient {
         orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: "#ffffff" }
+        GradientStop { position: 0.0; color: root.backgroundColor }
         GradientStop { position: 1.0; color: "transparent" }
       }
     }
@@ -57,7 +57,7 @@ Rectangle {
       anchors.topMargin: 15
       anchors.right: parent.right
       anchors.rightMargin: 15
-      source: "qrc:/images/themes/default/pin.svg"
+      source: welcomeTheme.hakeIcons ? "image://hakeicon/welcome:pin/" + welcomeTheme.iconRevision : "qrc:/images/themes/default/pin.svg"
       width: 24
       height: 24
       layer.enabled: true
@@ -82,7 +82,7 @@ Rectangle {
       text: root.title
       font.pointSize: normalFontSize
       font.bold: true
-      color: "#2d3748"
+      color: welcomeTheme.projectTitleColor
       wrapMode: Text.Wrap
       elide: Text.ElideRight
       opacity: root.isEnabled ? 1.0 : 0.5
@@ -94,7 +94,7 @@ Rectangle {
       visible: root.crs != ""
       text: root.crs
       font.pointSize: smallFontSize
-      color: "#4a5568"
+      color: welcomeTheme.projectTextColor
       wrapMode: Text.NoWrap
       elide: Text.ElideRight
       opacity: root.isEnabled ? 1.0 : 0.5
@@ -106,7 +106,7 @@ Rectangle {
       Layout.fillHeight: true
       text: root.subtitle
       font.pointSize: smallFontSize
-      color: "#4a5568"
+      color: welcomeTheme.projectTextColor
       wrapMode: Text.Wrap
       elide: Text.ElideRight
       opacity: root.isEnabled ? 1.0 : 0.5

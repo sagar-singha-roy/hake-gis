@@ -8,6 +8,7 @@ on:
   pull_request:
   release:
     types: ['published']
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -208,16 +209,17 @@ jobs:
                 -D WITH_SFCGAL=ON \
                 -D ENABLE_TESTS=OFF \
                 -D USE_CCACHE=ON \
-                -D ENABLE_UNITY_BUILDS=OFF \
+                -D ENABLE_UNITY_BUILDS=ON \
                 -D CREATE_NSIS=ON \
                 -D FLEX_EXECUTABLE="${SOURCE_DIR}/win_flex.exe" \
                 -D BISON_EXECUTABLE="${SOURCE_DIR}/win_bison.exe" \
                 -D WITH_QTWEBENGINE=OFF \
+                -D HAKE_GIT_REVISION=${{ github.sha }} \
                 -D VCPKG_INSTALL_OPTIONS="--x-buildtrees-root=C:/src" \
                 -D NUGET_USERNAME=${{ github.actor }} \
                 -D NUGET_SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/qgis/index.json" \
-                -D NUGET_READ_USERNAME=qgis \
+                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/Subhankar-hub/index.json" \
+                -D NUGET_READ_USERNAME=Subhankar-hub \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: 🌋 Build
@@ -232,6 +234,13 @@ jobs:
         shell: bash
         run: |
           cmake --build "${{ github.workspace }}/build" --target bundle --config Release
+
+      # The disk cleanup step removes the runner's Python toolcache; restore one only
+      # after the build so it is not on PATH while vcpkg/CMake run.
+      - name: Setup Python for packaging checks
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
 
       - name: Verify packaged GdalUtils decoder
         shell: pwsh
@@ -269,6 +278,37 @@ jobs:
           }
           Write-Host "Packaged GdalUtils.py decoder check passed"
 
+      - name: Verify packaged Hake Night theme
+        shell: pwsh
+        run: |
+          $build = "${{ github.workspace }}/build"
+          $zips = Get-ChildItem -Path $build -Filter *.zip | Sort-Object FullName
+          if (-not $zips) { throw "No CPack zip in $build" }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $root = Join-Path $env:RUNNER_TEMP "hake-theme-installed"
+          if (Test-Path $root) { Remove-Item -Recurse -Force $root }
+          $extracted = 0
+          foreach ($zpath in $zips) {
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($zpath.FullName)
+            try {
+              foreach ($entry in $archive.Entries) {
+                $name = $entry.FullName -replace '\\','/'
+                if ($name -notlike "*resources/themes/Hake Night/*" -or $name.EndsWith('/')) { continue }
+                $target = Join-Path $root $name
+                New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+                $extracted++
+              }
+            } finally {
+              $archive.Dispose()
+            }
+          }
+          if ($extracted -eq 0) { throw "Hake Night theme was not packaged" }
+          Write-Host "Extracted $extracted Hake Night theme files"
+          python scripts/hake_theme_validate.py --installed $root
+          if ($LASTEXITCODE -ne 0) { throw "Installed Hake Night theme validation failed" }
+
       # Issue #10: prove the packaged Windows runtime can locate proj.db and run
       # GDAL Polygonize without machine-global PROJ_DATA / OSGeo4W.
       - name: Assert packaged PROJ/GDAL/Python layout
@@ -287,6 +327,15 @@ jobs:
             -RepoRoot "${{ github.workspace }}" `
             -ReportDir "${{ github.workspace }}\build\runtime-smoke" `
             -Mode Runtime
+
+      - name: Verify installed code revision
+        shell: pwsh
+        run: |
+          python scripts/ci/hake_verify_revision.py `
+            --expected "${{ github.sha }}" `
+            --package-root "C:\Hake GeoDesk" `
+            --process-exe "C:\Hake GeoDesk\bin\hake-geodesk-process.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Code revision verification failed" }
 
       - name: 📤 Upload runtime smoke diagnostics
         if: failure()

@@ -184,6 +184,7 @@ class QgsTopocentricWidget;
 #include "qgsbrowserdockwidget.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgscustomization.h"
+#include "qgshaketheme.h"
 #include "qgslayertreeregistrybridge.h"
 #include "qgslayoutdesignerinterface.h"
 #include "qgsmaplayeractionregistry.h"
@@ -381,6 +382,13 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     //! Sets theme (icons)
     void setTheme( const QString &themeName = "default" );
+
+    /**
+     * Applies an explicit user theme choice: switches live when the change is between
+     * Hake Light and Hake Night, otherwise announces that a restart is required.
+     * The selection is persisted either way. Returns TRUE if the theme was applied live.
+     */
+    bool selectTheme( const QString &themeName, QgsHakeTheme::AppearanceMode mode );
 
     void setIconSizes( int size );
 
@@ -765,6 +773,12 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 #endif
     QMenu *helpMenu() { return mHelpMenu; }
 
+    /**
+     * Hides the classic menu bar row; the ribbon is the only navigation row.
+     * Menus stay intact and their shortcuts keep working through the main window.
+     */
+    void hideClassicMenuBar();
+
     //! Toolbars
 
     /**
@@ -804,6 +818,15 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QgsMapOverviewCanvas *mapOverviewCanvas() { return mOverviewCanvas; }
 
     QgsLocatorWidget *locatorWidget() { return mLocatorWidget; }
+
+    //! Returns the visible locator entry point: the Ribbon search host, or the status-bar locator without a Ribbon.
+    QWidget *locatorEntryWidget();
+
+    //! Shows or hides the locator entry point (Interface Customization "LocatorWidget").
+    void setLocatorEntryVisible( bool visible );
+
+    //! Returns TRUE unless the locator entry point was hidden with setLocatorEntryVisible().
+    bool isLocatorEntryVisible() const;
 
     //! show layer properties
     void showLayerProperties( QgsMapLayer *mapLayer, const QString &page = QString() );
@@ -1589,6 +1612,15 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void transactionGroupCommitError( const QString &error );
 
     void onSnappingConfigChanged();
+
+    //! Switches between Hake Light and Hake Night (non-Hake themes switch to Hake Night)
+    void toggleHakeTheme();
+
+    //! Updates the icon and tooltip of the theme toggle for the active theme
+    void updateThemeToggleAction();
+
+    //! Follows the OS color scheme in the System appearance mode
+    void systemColorSchemeChanged();
 
     /**
      * Triggers validation of the specified \a crs.
@@ -2702,6 +2734,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     //! Widget embedded in mTopocentricMenu to display the topocentric origin
     QgsTopocentricWidget *mTopocentricWidget = nullptr;
     QToolButton *mMessageButton = nullptr;
+    //! TRUE while mMessageButton shows the unread messages icon
+    bool mLogMessageUnread = false;
     //! Menu that contains the list of actions of the selected vector layer
     QMenu *mFeatureActionMenu = nullptr;
     //! Popup menu
@@ -2905,6 +2939,12 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void tapAndHoldTriggered( QTapAndHoldGesture *gesture );
 
     QgsLocatorWidget *mLocatorWidget = nullptr;
+    QAction *mActionToolSearch = nullptr;
+    QAction *mActionToggleTheme = nullptr;
+    //! TRUE while setTheme() runs, so theme-change listeners cannot re-enter it
+    bool mThemeChangeInProgress = false;
+    //! TRUE once the startup theme has been applied
+    bool mThemeApplied = false;
     std::unique_ptr<QgsNominatimGeocoder> mNominatimGeocoder;
 
     QgsStatusBar *mStatusBar = nullptr;

@@ -63,7 +63,7 @@ QString QgsCommandLineUtils::allVersions()
   }
   else
   {
-    versionString += u"QGIS code revision %1\n"_s.arg( Qgis::devVersion() );
+    versionString += u"Hake Geospatial code revision %1\n"_s.arg( Qgis::devVersion() );
   }
 
   // Qt version

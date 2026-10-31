@@ -280,7 +280,7 @@
    </widget>
    <widget class="QMenu" name="mPluginMenu">
     <property name="title">
-     <string>&amp;Plugins</string>
+     <string>&amp;Extensions</string>
     </property>
     <addaction name="mActionManagePlugins"/>
     <addaction name="separator"/>
@@ -1861,7 +1861,7 @@ Shift+O to turn segments into straight or curve lines.</string>
      <normaloff>:/images/themes/default/mActionShowPluginManager.svg</normaloff>:/images/themes/default/mActionShowPluginManager.svg</iconset>
    </property>
    <property name="text">
-    <string>Manage and Install Plugins…</string>
+    <string>Manage and Install Extensions…</string>
    </property>
   </action>
   <action name="mActionToggleFullScreen">

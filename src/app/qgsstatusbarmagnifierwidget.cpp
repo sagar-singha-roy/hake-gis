@@ -19,6 +19,7 @@
 #include "qgsapplication.h"
 #include "qgsdoublespinbox.h"
 #include "qgsguiutils.h"
+#include "qgshakeicons.h"
 #include "qgssettings.h"
 #include "qgssettingsregistrygui.h"
 
@@ -64,7 +65,7 @@ QgsStatusBarMagnifierWidget::QgsStatusBarMagnifierWidget( QWidget *parent )
   connect( mSpinBox, static_cast<void ( QgsDoubleSpinBox::* )( double )>( &QgsDoubleSpinBox::valueChanged ), this, &QgsStatusBarMagnifierWidget::setMagnification );
 
   mLockButton = new QToolButton();
-  mLockButton->setIcon( QIcon( QgsApplication::getThemeIcon( "/lockedGray.svg" ) ) );
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
   mLockButton->setToolTip( tr( "Lock the scale to use magnifier to zoom in or out." ) );
   mLockButton->setCheckable( true );
   mLockButton->setChecked( false );
@@ -93,6 +94,11 @@ void QgsStatusBarMagnifierWidget::setFont( const QFont &myFont )
 {
   mLabel->setFont( myFont );
   mSpinBox->setFont( myFont );
+}
+
+void QgsStatusBarMagnifierWidget::refreshIcons()
+{
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
 }
 
 void QgsStatusBarMagnifierWidget::updateMagnification( double factor )
