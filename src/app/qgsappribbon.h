@@ -83,6 +83,22 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     //! Rebuilds the groups so button styles and collapsed-group icons follow action icons changed by a theme switch.
     void refreshIcons();
 
+    struct RibbonCommandInfo
+    {
+        QPointer<QAction> action;
+        int pageIndex = -1;
+        QString pageTitle;
+        QString groupTitle;
+        QString ribbonLabel;
+        QString fullHierarchy;
+    };
+
+    //! Returns all commands present on the Ribbon across all tabs (Home, Data, Analysis, Map, Vector, Raster, Extensions, Mesh, Help)
+    QList<RibbonCommandInfo> ribbonCommands() const;
+
+    //! Switches the Ribbon to the tab containing \a action, activates the map canvas if needed, and triggers the action.
+    void activateRibbonCommand( QAction *action );
+
     /**
      * Shows \a action as a compact icon button beside the brand at the top-right of the tab strip.
      * Does not take ownership of the action.
@@ -112,6 +128,11 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
+    int userHeightOffset() const { return mUserHeightOffset; }
+    void setUserHeightOffset( int offset );
+    void saveUserHeightOffset() const;
+    void loadUserHeightOffset();
+
   protected:
     bool event( QEvent *event ) override;
     void changeEvent( QEvent *event ) override;
@@ -132,7 +153,7 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     //! \a label is shown on the button only; the dock's toggle action text is left untouched.
     void addDockToggle( QgsAppRibbonGroup *group, const QString &dockObjectName, const QString &label, bool primary = false );
     //! Adds an existing menu as a drop-down button; hidden while the menu is empty.
-    void addMenu( QgsAppRibbonGroup *group, QMenu *menu );
+    void addMenu( QgsAppRibbonGroup *group, QMenu *menu, const QString &overrideLabel = QString() );
     //! Adds a menu created later (e.g. by a plugin), resolved by object name in refreshOptionalActions().
     void addDeferredMenu( QgsAppRibbonGroup *group, const QString &menuObjectName );
     void mirrorToolbar( QgsAppRibbonGroup *group, QToolBar *toolbar );
@@ -170,7 +191,37 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     bool mMenuBarSyncPending = false;
     QgsAppRibbonMetrics mMetrics;
     int mCommandHeight = 0;
+    int mUserHeightOffset = 0;
     bool mUpdatingMetrics = false;
+};
+
+/**
+ * Interactive bottom resize grip for the upper Ribbon navbar.
+ * Allows the user to click and drag vertically to expand or collapse the navbar height,
+ * exactly like resizing a dock widget sidebar, with double-click reset to default.
+ */
+class APP_EXPORT QgsAppRibbonResizeGrip : public QWidget
+{
+    Q_OBJECT
+
+  public:
+    explicit QgsAppRibbonResizeGrip( QgsAppRibbon *ribbon, QWidget *parent = nullptr );
+
+  protected:
+    void paintEvent( QPaintEvent *event ) override;
+    void enterEvent( QEnterEvent *event ) override;
+    void leaveEvent( QEvent *event ) override;
+    void mousePressEvent( QMouseEvent *event ) override;
+    void mouseMoveEvent( QMouseEvent *event ) override;
+    void mouseReleaseEvent( QMouseEvent *event ) override;
+    void mouseDoubleClickEvent( QMouseEvent *event ) override;
+
+  private:
+    QgsAppRibbon *mRibbon = nullptr;
+    bool mHovered = false;
+    bool mDragging = false;
+    int mDragStartY = 0;
+    int mStartHeightOffset = 0;
 };
 
 #endif // QGSAPPRIBBON_H

@@ -73,6 +73,9 @@ class QgsMapLayer;
 class QgsMapLayerConfigWidgetFactory;
 class QgsMapOverviewCanvas;
 class QgsMapTip;
+class QgsPythonConsoleDockWidget;
+class QgsProcessingToolboxDockWidget;
+class QgsMetaSearchDialog;
 class QgsMapTool;
 class QgsMapToolsDigitizingTechniqueManager;
 class QgsOptions;
@@ -607,6 +610,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QAction *actionShowLayoutManager() { return mActionShowLayoutManager; }
     QAction *actionNewPrintLayout() { return mActionNewPrintLayout; }
     QAction *actionExit() { return mActionExit; }
+    bool isWelcomeScreenVisible() const;
+    void showMapCanvas();
 
     QAction *actionCutFeatures() { return mActionCutFeatures; }
     QAction *actionCopyFeatures() { return mActionCopyFeatures; }
@@ -808,6 +813,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QToolBar *meshToolBar() { return mMeshToolBar; }
     QToolBar *databaseToolBar() { return mDatabaseToolBar; }
     QToolBar *webToolBar() { return mWebToolBar; }
+    QToolBar *appRibbonBar() { return mAppRibbonBar; }
+    QgsAppRibbon *appRibbon() { return mAppRibbon; }
 
     QgsStatusBar *statusBarIface() { return mStatusBar; }
 
@@ -2068,9 +2075,6 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     //! map tool changed
     void mapToolChanged( QgsMapTool *newTool, QgsMapTool *oldTool );
 
-    //! map layers changed
-    void showMapCanvas();
-
     //! change log message icon in statusbar
     void toggleLogMessageIcon( bool hasLogMessage );
 
@@ -2169,6 +2173,15 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     //! show Python console
     void showPythonDialog();
+
+    //! show native Python console dock widget
+    void showNativePythonConsole();
+
+    //! show MetaSearch dialog
+    void showMetaSearch();
+
+    //! show Processing Toolbox dock widget
+    void showProcessingToolbox();
 
     //! add Python console at start up
     void initPythonConsoleOptions();
@@ -2851,6 +2864,10 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QgsLayerStylingWidget *mMapStyleWidget = nullptr;
     QgsDockWidget *mDevToolsDock = nullptr;
     QgsDevToolsPanelWidget *mDevToolsWidget = nullptr;
+    QgsPythonConsoleDockWidget *mPythonConsoleDock = nullptr;
+    QgsProcessingToolboxDockWidget *mProcessingToolboxDock = nullptr;
+    QMenu *mProcessingMenu = nullptr;
+    QPointer<QgsMetaSearchDialog> mMetaSearchDialog;
 
     //! Persistent tile scale slider
     QgsTileScaleWidget *mpTileScaleWidget = nullptr;
@@ -3010,6 +3027,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     friend class QgsCanvasRefreshBlocker;
     friend class QgsMapToolsDigitizingTechniqueManager;
     friend class QgsWelcomeScreenController;
+    friend class QgsAppRibbon;
 
     friend class TestQgisAppPython;
     friend class TestQgisApp;

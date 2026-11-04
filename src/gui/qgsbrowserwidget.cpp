@@ -64,7 +64,11 @@ QgsBrowserWidget::QgsBrowserWidget( QgsBrowserGuiModel *browserModel, QWidget *p
   layout()->setContentsMargins( 0, 0, 0, 0 );
   qgis::down_cast<QVBoxLayout *>( layout() )->setSpacing( 0 );
 
+  mBrowserToolbar->setIconSize( QSize( 22, 22 ) );
+
   mBrowserView = new QgsDockBrowserTreeView( this );
+  mBrowserView->setIconSize( QSize( 22, 22 ) );
+  mBrowserView->setIndentation( 22 );
   mLayoutBrowser->addWidget( mBrowserView );
 
   mWidgetFilter->hide();

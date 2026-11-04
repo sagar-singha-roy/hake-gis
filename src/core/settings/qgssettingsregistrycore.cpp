@@ -220,7 +220,7 @@ const QgsSettingsEntryColor *QgsSettingsRegistryCore::settingsDefaultCanvasColor
   = new QgsSettingsEntryColor( u"default-canvas-color"_s, QgsSettingsTree::sTreeQgis, QColor( 255, 255, 255 ), u"Default canvas background color"_s );
 
 const QgsSettingsEntryColor *QgsSettingsRegistryCore::settingsDefaultSelectionColor
-  = new QgsSettingsEntryColor( u"default-selection-color"_s, QgsSettingsTree::sTreeQgis, QColor( 255, 255, 0, 255 ), u"Default selection color"_s );
+  = new QgsSettingsEntryColor( u"default-selection-color"_s, QgsSettingsTree::sTreeQgis, QColor( 14, 165, 233, 200 ), u"Default selection color"_s );
 
 QgsSettingsRegistryCore::QgsSettingsRegistryCore()
   : QgsSettingsRegistry()

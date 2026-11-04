@@ -219,7 +219,7 @@
         </div>
         <div>
           <dt>Product version</dt>
-          <dd>2026.0.0</dd>
+          <dd>2026.0.1</dd>
         </div>
         <div>
           <dt>Company</dt>

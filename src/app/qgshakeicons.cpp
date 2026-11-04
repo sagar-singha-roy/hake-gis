@@ -740,8 +740,8 @@ namespace
 
   // Hake Light: the authored colors themselves.
   constexpr HakeIconPalette LIGHT_ICON_PALETTE { HAKE_STROKE, HAKE_FILL, HAKE_PAPER, "#0E3858", "#A9BCCB", "#EEF3F7" };
-  // Hake Night: pale glyphs on dark surfaces.
-  constexpr HakeIconPalette NIGHT_ICON_PALETTE { "#CFE0F0", "#2B4A6B", "#1A2533", "#8EC5F5", "#5C6F84", "#1F2C3C" };
+  // Hake Night: crisp high-contrast silver/white linework on dark surfaces with vibrant cyan active accents.
+  constexpr HakeIconPalette NIGHT_ICON_PALETTE { "#F1F5F9", "#1E3A5F", "#0F172A", "#38BDF8", "#64748B", "#1E293B" };
 
   /**
    * Replaces the authored stroke, fill and paper colors in one pass, so a replacement
@@ -778,6 +778,136 @@ namespace
     return out;
   }
 
+  HakeIconPalette paletteForResource( const QString &resource, bool night )
+  {
+    // Default palette fallback: Crisp Ocean Blue
+    const char *stroke = night ? "#38BDF8" : "#164A73";
+    const char *fill = night ? "#1E3A5F" : "#D6E4F4";
+    const char *paper = night ? "#0F172A" : "#FFFFFF";
+    const char *active = night ? "#38BDF8" : "#0E3858";
+    const char *disabledStroke = night ? "#64748B" : "#94A3B8";
+    const char *disabledFill = night ? "#1E293B" : "#F1F5F9";
+
+    // 1. Destructive, Remove, Exit, GPS & MSSQL: Rose Red / Crimson
+    if ( resource.contains( "exit"_L1 ) || resource.contains( "close"_L1 ) || resource.contains( "zoom-out"_L1 )
+         || resource.contains( "delete"_L1 ) || resource.contains( "remove"_L1 ) || resource.contains( "cut"_L1 )
+         || resource.contains( "split"_L1 ) || resource.contains( "cancel"_L1 ) || resource.contains( "gpx"_L1 )
+         || resource.contains( "gps"_L1 ) || resource.contains( "mssql"_L1 ) || resource.contains( "force"_L1 ) )
+    {
+      stroke = night ? "#FB7185" : "#E11D48";
+      fill = night ? "#881337" : "#FFE4E6";
+      active = night ? "#FDA4AF" : "#BE123C";
+    }
+    // 2. Analysis, Calculations, Attributes, Plugins, Virtual & Point Cloud: Royal Violet / Purple
+    else if ( resource.contains( "identify"_L1 ) || resource.contains( "processing"_L1 ) || resource.contains( "toolbox"_L1 )
+              || resource.contains( "calculator"_L1 ) || resource.contains( "statistical"_L1 ) || resource.contains( "statistics"_L1 )
+              || resource.contains( "gamma"_L1 ) || resource.contains( "extensions"_L1 ) || resource.contains( "manage-plugins"_L1 )
+              || resource.contains( "bookmark"_L1 ) || resource.contains( "message"_L1 ) || resource.contains( "attribute"_L1 )
+              || resource.contains( "pointcloud"_L1 ) || resource.contains( "point-cloud"_L1 ) || resource.contains( "virtual"_L1 )
+              || resource.contains( "stac"_L1 ) )
+    {
+      stroke = night ? "#A78BFA" : "#7C3AED";
+      fill = night ? "#4C1D95" : "#EDE9FE";
+      active = night ? "#C4B5FD" : "#6D28D9";
+    }
+    // 3. Warm Amber, Gold & Tangerine: Delimited Text, Vector Tiles, Editing, Rotate, Magnifier, Oracle
+    else if ( resource.contains( "delimited"_L1 ) || resource.contains( "csv"_L1 ) || resource.contains( "vector-tile"_L1 )
+              || resource.contains( "vectortile"_L1 ) || resource.contains( "oracle"_L1 ) || resource.contains( "project-open"_L1 )
+              || resource.contains( "undo"_L1 ) || resource.contains( "toggle-editing"_L1 ) || resource.contains( "rotate"_L1 )
+              || resource.contains( "magnifier"_L1 ) || resource.contains( "brightness"_L1 ) || resource.contains( "bearing"_L1 )
+              || resource.contains( "mesh-digitize"_L1 ) )
+    {
+      stroke = night ? "#FBBF24" : "#D97706";
+      fill = night ? "#78350F" : "#FEF3C7";
+      active = night ? "#FDE68A" : "#B45309";
+    }
+    // 4. Web XYZ & Tile sources: Lime Green / Chartreuse
+    else if ( resource.contains( "xyz"_L1 ) || resource.contains( "tiles"_L1 ) )
+    {
+      stroke = night ? "#A3E635" : "#65A30D";
+      fill = night ? "#365314" : "#ECFCCB";
+      active = night ? "#BEF264" : "#4D7C0F";
+    }
+    // 5. Raster, 3D, Layouts, Postgres & 3D Scenes: Deep Indigo
+    else if ( resource.contains( "raster"_L1 ) || resource.contains( "gdal"_L1 ) || resource.contains( "dem"_L1 )
+              || resource.contains( "hillshade"_L1 ) || resource.contains( "3d"_L1 ) || resource.contains( "globe"_L1 )
+              || resource.contains( "print-layout"_L1 ) || resource.contains( "layout"_L1 ) || resource.contains( "postgres"_L1 )
+              || resource.contains( "hana"_L1 ) || resource.contains( "scene"_L1 ) || resource.contains( "tiledscene"_L1 )
+              || resource.contains( "project-save-as"_L1 ) || resource.contains( "reindex"_L1 ) )
+    {
+      stroke = night ? "#818CF8" : "#4F46E5";
+      fill = night ? "#312E81" : "#E0E7FF";
+      active = night ? "#A5B4FC" : "#4338CA";
+    }
+    // 6. Database, SpatiaLite, Selection, Redo, Save: Royal Sapphire Blue
+    else if ( resource.contains( "database"_L1 ) || resource.contains( "db-manager"_L1 ) || resource.contains( "spatialite"_L1 )
+              || resource.contains( "arcgis"_L1 ) || resource.contains( "selection"_L1 ) || resource.contains( "select"_L1 )
+              || resource.contains( "redo"_L1 ) || resource.contains( "project-save"_L1 ) || resource.contains( "full-extent"_L1 ) )
+    {
+      stroke = night ? "#60A5FA" : "#2563EB";
+      fill = night ? "#1E3A8A" : "#DBEAFE";
+      active = night ? "#93C5FD" : "#1D4ED8";
+    }
+    // 7. Web services, Navigation, Browser/Geo Explorer, CRS & Tracking: Ocean Cyan / Sky Blue
+    else if ( resource.contains( "browser"_L1 ) || resource.contains( "pan"_L1 ) || resource.contains( "refresh"_L1 )
+              || resource.contains( "projection"_L1 ) || resource.contains( "crs"_L1 ) || resource.contains( "wms"_L1 )
+              || resource.contains( "wmts"_L1 ) || resource.contains( "wcs"_L1 ) || resource.contains( "cloud"_L1 )
+              || resource.contains( "web"_L1 ) || resource.contains( "line"_L1 ) || resource.contains( "distance"_L1 )
+              || resource.contains( "help"_L1 ) || resource.contains( "map-view"_L1 ) || resource.contains( "temporal"_L1 )
+              || resource.contains( "about"_L1 ) || resource.contains( "tool-search"_L1 ) || resource.contains( "contrast"_L1 )
+              || resource.contains( "coordinate"_L1 ) || resource.contains( "tracking"_L1 ) )
+    {
+      stroke = night ? "#38BDF8" : "#0284C7";
+      fill = night ? "#0C4A6E" : "#E0F2FE";
+      active = night ? "#7DD3FC" : "#0369A1";
+    }
+    // 8. Style, Colors & Symbology: Fuchsia / Magenta
+    else if ( resource.contains( "style"_L1 ) || resource.contains( "color"_L1 ) || resource.contains( "symbology"_L1 ) )
+    {
+      stroke = night ? "#F472B6" : "#DB2777";
+      fill = night ? "#831843" : "#FCE7F3";
+      active = night ? "#FBCFE8" : "#BE185D";
+    }
+    // 9. Options, Settings & Snapping: Slate Steel
+    else if ( resource.contains( "options"_L1 ) || resource.contains( "settings"_L1 ) || resource.contains( "snapping"_L1 ) )
+    {
+      stroke = night ? "#94A3B8" : "#475569";
+      fill = night ? "#334155" : "#CBD5E1";
+      active = night ? "#CBD5E1" : "#334155";
+    }
+    // 10. Properties, WFS, Mesh defaults, Vertex, Area: Teal / Mint
+    else if ( resource.contains( "properties"_L1 ) || resource.contains( "wfs"_L1 ) || resource.contains( "mesh"_L1 )
+              || resource.contains( "mdal"_L1 ) || resource.contains( "vertex"_L1 ) || resource.contains( "area"_L1 )
+              || resource.contains( "label"_L1 ) || resource.contains( "data-source-manager"_L1 ) )
+    {
+      stroke = night ? "#2DD4BF" : "#0D9488";
+      fill = night ? "#134E4A" : "#CCFBF1";
+      active = night ? "#5EEAD4" : "#0F766E";
+    }
+    // 11. Vector digitizing, GeoPackage, Features, Transform, Rendering & Scale: Emerald Green
+    else if ( resource.contains( "vector"_L1 ) || resource.contains( "add-vector"_L1 ) || resource.contains( "project-new"_L1 )
+              || resource.contains( "zoom-in"_L1 ) || resource.contains( "save-edits"_L1 ) || resource.contains( "paste"_L1 )
+              || resource.contains( "all-edits"_L1 ) || resource.contains( "add-feature"_L1 ) || resource.contains( "add-point"_L1 )
+              || resource.contains( "new-scratch"_L1 ) || resource.contains( "new-shapefile"_L1 ) || resource.contains( "new-geopackage"_L1 )
+              || resource.contains( "geopackage"_L1 ) || resource.contains( "home-page"_L1 ) || resource.contains( "scale"_L1 )
+              || resource.contains( "rendering"_L1 ) || resource.contains( "transform"_L1 ) || resource.contains( "sensorthings"_L1 )
+              || resource.contains( "sensor"_L1 ) )
+    {
+      stroke = night ? "#34D399" : "#059669";
+      fill = night ? "#064E3B" : "#D1FAE5";
+      active = night ? "#6EE7B7" : "#047857";
+    }
+    // 12. Python
+    else if ( resource.contains( "python"_L1 ) )
+    {
+      stroke = night ? "#60A5FA" : "#0284C7";
+      fill = night ? "#FDE047" : "#FEF08A";
+      active = night ? "#93C5FD" : "#0369A1";
+    }
+
+    return HakeIconPalette { stroke, fill, paper, active, disabledStroke, disabledFill };
+  }
+
   /**
    * Renders a Hake SVG at the exact device pixel size requested, with muted colors
    * for QIcon::Disabled and the active stroke for QIcon::On (checked actions), in the
@@ -786,9 +916,10 @@ namespace
   class QgsHakeIconEngine : public QIconEngine
   {
     public:
-      QgsHakeIconEngine( const QByteArray &svg, bool night )
+      QgsHakeIconEngine( const QByteArray &svg, bool night, const QString &resource = QString() )
         : mSvg( svg )
         , mNight( night )
+        , mResource( resource )
       {}
 
       void paint( QPainter *painter, const QRect &rect, QIcon::Mode mode, QIcon::State state ) override
@@ -831,25 +962,24 @@ namespace
     private:
       QByteArray svgFor( QIcon::Mode mode, QIcon::State state ) const
       {
-        const HakeIconPalette &palette = mNight ? NIGHT_ICON_PALETTE : LIGHT_ICON_PALETTE;
+        const HakeIconPalette palette = paletteForResource( mResource, mNight );
         if ( mode == QIcon::Disabled )
           return substituteColors( mSvg, palette.disabledStroke, palette.disabledFill, palette.paper );
         if ( state == QIcon::On )
           return substituteColors( mSvg, palette.activeStroke, palette.fill, palette.paper );
-        if ( !mNight )
-          return mSvg;
         return substituteColors( mSvg, palette.stroke, palette.fill, palette.paper );
       }
 
       QByteArray mSvg;
       bool mNight = false;
+      QString mResource;
       QHash<QString, QPixmap> mPixmaps;
   };
 } // namespace
 
 bool QgsHakeIcons::isHakeTheme( const QString &themeName )
 {
-  return QgsHakeTheme::variantForTheme( themeName ) == QgsHakeTheme::Variant::Night;
+  return QgsHakeTheme::variantForTheme( themeName ) != QgsHakeTheme::Variant::None;
 }
 
 QIcon QgsHakeIcons::icon( const QString &resource )
@@ -877,7 +1007,7 @@ QIcon QgsHakeIcons::icon( const QString &resource, QgsHakeTheme::Variant variant
   QIcon result;
   QFile file( u":/hake/icons/"_s + resource );
   if ( file.open( QIODevice::ReadOnly ) )
-    result = QIcon( new QgsHakeIconEngine( file.readAll(), night ) );
+    result = QIcon( new QgsHakeIconEngine( file.readAll(), night, resource ) );
   sIcons.insert( cacheKey, result );
   return result;
 }
@@ -897,7 +1027,7 @@ namespace
   template<typename Item> void applyToSidebarItem( Item *item, const QString &resource, QgsHakeTheme::Variant variant )
   {
     const QVariant stockIcon = item->data( PROPERTIES_STOCK_ICON_ROLE );
-    if ( variant == QgsHakeTheme::Variant::Night )
+    if ( variant != QgsHakeTheme::Variant::None )
     {
       const QIcon hakeIcon = QgsHakeIcons::icon( resource, variant );
       if ( hakeIcon.isNull() )
@@ -922,7 +1052,7 @@ namespace
     const QVariant hakeKey = target->property( HAKE_ICON_KEY_PROPERTY );
     const bool showingHakeIcon = hakeKey.isValid() && hakeKey.toLongLong() == current.cacheKey();
 
-    if ( variant == QgsHakeTheme::Variant::Night )
+    if ( variant != QgsHakeTheme::Variant::None )
     {
       const QIcon hakeIcon = QgsHakeIcons::icon( resource, variant );
       if ( hakeIcon.isNull() )
@@ -1063,7 +1193,7 @@ void QgsHakeIcons::applyToActions( QObject *root, const QString &themeName )
     return;
 
   const QgsHakeTheme::Variant hakeTheme = QgsHakeTheme::variantForTheme( themeName );
-  if ( hakeTheme != QgsHakeTheme::Variant::Night )
+  if ( hakeTheme == QgsHakeTheme::Variant::None )
     return;
 
   // Plugin and Processing actions can share an objectName (e.g. stale copies after a plugin reload), so look them all up.
@@ -1082,7 +1212,9 @@ void QgsHakeIcons::applyToActions( QObject *root, const QString &themeName )
     {
       case HakeIconKind::Action:
       {
-        // Preserve desktop theme icons as usual (hand pan map, colorful art, small Hake Technology badge)
+        const auto range = namedActions.equal_range( key );
+        for ( auto it = range.first; it != range.second; ++it )
+          applyToAction( *it, entry.resource, hakeTheme );
         break;
       }
 
@@ -1225,7 +1357,7 @@ void QgsHakeIcons::applyToDataSourceManager( QWidget *dialog, const QString &the
     if ( it == resources.constEnd() )
       continue;
 
-    if ( variant == QgsHakeTheme::Variant::Night )
+    if ( variant != QgsHakeTheme::Variant::None )
     {
       const QIcon hakeIcon = icon( QLatin1String( *it ), variant );
       if ( hakeIcon.isNull() )
@@ -1289,7 +1421,49 @@ void QgsHakeIcons::applyToLayerProperties( QWidget *dialog, const QString &theme
 
 void QgsHakeIcons::applyToProjectProperties( QWidget *dialog, const QString &themeName )
 {
-  applyToListSidebar( dialog, HAKE_PROJECT_PAGE_ICONS, themeName, true );
+  Q_UNUSED( themeName );
+  if ( !dialog )
+    return;
+  QListWidget *list = dialog->findChild<QListWidget *>( u"mOptionsListWidget"_s );
+  QStackedWidget *stack = dialog->findChild<QStackedWidget *>( u"mOptionsStackedWidget"_s );
+  if ( !list || !stack )
+    return;
+
+  const QList<QPair<QString, QString>> icons = {
+    { u"mProjOptsGeneral"_s, u":/images/themes/default/propertyicons/general.svg"_s },
+    { u"mMetadataPage"_s, u":/images/themes/default/propertyicons/editmetadata.svg"_s },
+    { u"mViewSettingsPage"_s, u":/images/themes/default/propertyicons/overlay.svg"_s },
+    { u"mProjOptsCRS"_s, u":/images/themes/default/propertyicons/CRS.svg"_s },
+    { u"mProjTransformations"_s, u":/images/themes/default/transformation.svg"_s },
+    { u"mProjOptsSymbols"_s, u":/images/themes/default/propertyicons/symbology.svg"_s },
+    { u"mTabColors"_s, u":/images/themes/default/propertyicons/colors.svg"_s },
+    { u"mTab_DataSources"_s, u":/images/themes/default/propertyicons/attributes.svg"_s },
+    { u"mTabRelations"_s, u":/images/themes/default/relation.svg"_s },
+    { u"mTab_Variables"_s, u":/images/themes/default/propertyicons/variables.svg"_s },
+    { u"mProjOptsMacros"_s, u":/images/themes/default/propertyicons/action.svg"_s },
+    { u"mProjOptsOWS"_s, u":/images/themes/default/propertyicons/network_and_proxy.svg"_s },
+    { u"mTemporalOptions"_s, u":/images/themes/default/propertyicons/temporal.svg"_s },
+    { u"QgsProjectElevationSettingsWidget"_s, u":/images/themes/default/propertyicons/elevationscale.svg"_s },
+    { u"QgsProjectSensorSettingsWidget"_s, u":/images/themes/default/propertyicons/sensor.svg"_s }
+  };
+
+  const int rows = std::min( list->count(), stack->count() );
+  for ( int row = 0; row < rows; ++row )
+  {
+    QWidget *page = stack->widget( row );
+    if ( !page )
+      continue;
+    QString pageName = page->objectName();
+    QString className = QString::fromLatin1( page->metaObject()->className() );
+    for ( const auto &pair : icons )
+    {
+      if ( pair.first == pageName || pair.first == className )
+      {
+        list->item( row )->setIcon( QIcon( pair.second ) );
+        break;
+      }
+    }
+  }
 }
 
 void QgsHakeIcons::applyToOptions( QWidget *dialog, const QString &themeName )
@@ -1396,7 +1570,7 @@ void QgsHakeIcons::applyToBrowserModel( QgsBrowserModel *model, const QString &t
       continue;
 
     const QVariant hakeKey = item->property( HAKE_ICON_KEY_PROPERTY );
-    if ( variant == QgsHakeTheme::Variant::Night )
+    if ( variant != QgsHakeTheme::Variant::None )
     {
       const QIcon hakeIcon = icon( QLatin1String( resource ), variant );
       if ( hakeIcon.isNull() || ( hakeKey.isValid() && hakeKey.toLongLong() == hakeIcon.cacheKey() ) )

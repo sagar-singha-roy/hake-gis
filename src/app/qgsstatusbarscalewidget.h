@@ -64,6 +64,11 @@ class APP_EXPORT QgsStatusBarScaleWidget : public QWidget
       */
     void setFont( const QFont &font );
 
+    /**
+     * Refreshes the scale icon when theme changes.
+     */
+    void refreshIcons();
+
   public slots:
     void updateScales();
 

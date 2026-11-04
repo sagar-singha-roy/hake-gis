@@ -14,6 +14,9 @@ set(QGIS_APP_SRCS
   qgshakebuildinfo.cpp
   qgshakeicons.cpp
   qgshaketheme.cpp
+  qgspythonconsoledockwidget.cpp
+  qgsprocessingtoolboxdockwidget.cpp
+  qgsmetasearchdialog.cpp
   ${CMAKE_SOURCE_DIR}/resources/icons/hake/hake_icons.qrc
   qgsabout.cpp
   qgsappauthrequesthandler.cpp

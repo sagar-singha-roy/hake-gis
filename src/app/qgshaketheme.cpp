@@ -55,7 +55,7 @@ QString QgsHakeTheme::nightTheme()
 
 QgsHakeTheme::Variant QgsHakeTheme::variantForTheme( const QString &themeName )
 {
-  if ( themeName == lightTheme() )
+  if ( themeName == lightTheme() || themeName == "default"_L1 || themeName.isEmpty() )
     return Variant::Light;
   if ( themeName == nightTheme() )
     return Variant::Night;

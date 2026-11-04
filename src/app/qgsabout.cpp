@@ -127,11 +127,33 @@ void QgsAbout::updateWindowTitle()
 
 void QgsAbout::setLicence()
 {
-  QFile licenceFile( QgsApplication::licenceFilePath() );
+  QString licencePath = QgsApplication::licenceFilePath();
+  QFile licenceFile( licencePath );
+  if ( !licenceFile.exists() )
+  {
+    const QStringList fallbacks = {
+      QgsApplication::buildSourcePath() + u"/doc/LICENSE"_s,
+      QgsApplication::buildOutputPath() + u"/data/doc/LICENSE"_s,
+      QDir( QgsApplication::pkgDataPath() ).filePath( u"doc/LICENSE"_s ),
+      QCoreApplication::applicationDirPath() + u"/../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../../data/doc/LICENSE"_s,
+      QDir::current().filePath( u"doc/LICENSE"_s )
+    };
+    for ( const QString &fb : fallbacks )
+    {
+      if ( QFile::exists( fb ) )
+      {
+        licenceFile.setFileName( fb );
+        break;
+      }
+    }
+  }
+
   QgsDebugMsgLevel( u"Reading licence file %1"_s.arg( licenceFile.fileName() ), 2 );
   if ( licenceFile.open( QIODevice::ReadOnly ) )
   {
-    txtLicense->setText( licenceFile.readAll() );
+    txtLicense->setText( QString::fromUtf8( licenceFile.readAll() ) );
   }
 }
 
@@ -141,6 +163,25 @@ void QgsAbout::setVersion( const QString &v )
   txtVersion->setAutoFillBackground( true );
   txtVersion->setHtml( v );
   mVersionString = v;
+}
+
+QString QgsAbout::defaultWhatsNewHtml()
+{
+  const QString ver = Qgis::productVersionLabel();
+  return u"<h3>HAKE GEOSPATIAL</h3>"
+         "<h4>Hake GeoDesk – Desktop GIS</h4>"
+         "<p>Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
+         "<p><b>Latest Hake GeoDesk Release</b></p>"
+         "<h3 style=\"color: #2ea44f;\">Version %1</h3>"
+         "<p>Hake GeoDesk – Desktop GIS. Professional GIS for Mapping, Analysis & Spatial Intelligence.</p>"
+         "<p>Product Hake GeoDesk – Desktop GIS<br>"
+         "Version %1<br>"
+         "Company Hake Technologies</p>"
+         "<h4>Product & branding</h4>"
+         "<ul>"
+         "<li>Desktop product identity: Hake GeoDesk – Desktop GIS with product version label %1.</li>"
+         "<li>Modern Qt6 desktop foundation for mapping, analysis, and spatial intelligence workflows.</li>"
+         "</ul>"_s.arg( ver );
 }
 
 QString QgsAbout::whatsNewCachePath()
@@ -170,7 +211,11 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
     QgsDebugError( u"Could not write What's New cache %1"_s.arg( path ) );
     return;
   }
-  file.write( data );
+  QString content = QString::fromUtf8( data );
+  content.replace( u"2026.0.0"_s, Qgis::productVersionLabel() );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  content.replace( verRe, Qgis::productVersionLabel() );
+  file.write( content.toUtf8() );
 
   const QString logoPath = info.absolutePath() + u"/logo.png"_s;
   if ( !QFile::exists( logoPath ) )
@@ -196,6 +241,11 @@ void QgsAbout::showWhatsNewHtml( const QString &html )
   QString processedHtml = html;
   static const QRegularExpression logoRe( u"src=[\"'](?:https?://[^/\"'>]+)?/?(?:[^/\"'>]+/)*logo\\.png[\"']"_s, QRegularExpression::CaseInsensitiveOption );
   processedHtml.replace( logoRe, u"src=\"qrc:/images/icons/hake-gis-full.png\""_s );
+
+  const QString curVersion = Qgis::productVersionLabel();
+  processedHtml.replace( u"2026.0.0"_s, curVersion );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  processedHtml.replace( verRe, curVersion );
 
   txtWhatsNew->setHtml( processedHtml );
 }
@@ -233,10 +283,7 @@ void QgsAbout::setWhatsNew()
   if ( QFile::exists( cachePath ) )
     showWhatsNewFile( cachePath );
   else
-  {
-    txtWhatsNew->clear();
-    txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  }
+    showWhatsNewHtml( defaultWhatsNewHtml() );
 
   QNetworkRequest request{ QUrl{ Qgis::whatsNewUrl() } };
   request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
@@ -261,16 +308,26 @@ void QgsAbout::whatsNewReplyFinished()
   if ( reply->error() != QNetworkReply::NoError )
   {
     QgsDebugMsgLevel( u"What's New fetch failed: %1"_s.arg( reply->errorString() ), 2 );
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 
   const QByteArray data = reply->readAll();
   if ( data.isEmpty() )
   {
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 

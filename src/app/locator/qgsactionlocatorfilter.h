@@ -26,6 +26,7 @@
 using namespace Qt::StringLiterals;
 
 class QAction;
+class QgsAppRibbon;
 
 
 class APP_EXPORT QgsActionLocatorFilter : public QgsLocatorFilter
@@ -33,11 +34,12 @@ class APP_EXPORT QgsActionLocatorFilter : public QgsLocatorFilter
     Q_OBJECT
 
   public:
+    QgsActionLocatorFilter( QgsAppRibbon *ribbon, const QList<QWidget *> &parentObjectsForActions, QObject *parent = nullptr );
     QgsActionLocatorFilter( const QList<QWidget *> &parentObjectsForActions, QObject *parent = nullptr );
     QgsActionLocatorFilter *clone() const override;
     QString name() const override { return u"actions"_s; }
-    QString displayName() const override { return tr( "Actions" ); }
-    Priority priority() const override { return Lowest; }
+    QString displayName() const override { return tr( "Actions and Tools" ); }
+    Priority priority() const override { return Highest; }
     QString prefix() const override { return u"."_s; }
     QgsLocatorFilter::Flags flags() const override { return QgsLocatorFilter::FlagFast; }
 
@@ -45,9 +47,10 @@ class APP_EXPORT QgsActionLocatorFilter : public QgsLocatorFilter
     void triggerResult( const QgsLocatorResult &result ) override;
 
   private:
+    QPointer<QgsAppRibbon> mRibbon;
     QList<QWidget *> mActionParents;
 
-    void searchActions( const QString &string, QWidget *parent, QList<QAction *> &found );
+    void searchActions( const QString &string, QWidget *parent, QSet<QAction *> &found );
 };
 
 

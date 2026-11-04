@@ -52,6 +52,7 @@ class APP_EXPORT QgsAbout : public QgsOptionsDialogBase, private Ui::QgsAbout
 
     void showWhatsNewHtml( const QString &html );
     void showWhatsNewFile( const QString &path );
+    static QString defaultWhatsNewHtml();
     static QString whatsNewCachePath();
     static bool isWhatsNewCacheFresh( const QString &path );
     static void writeWhatsNewCache( const QString &path, const QByteArray &data );

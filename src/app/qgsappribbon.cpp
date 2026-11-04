@@ -25,6 +25,10 @@
 #include "qgsapplication.h"
 #include "qgsfloatingwidget.h"
 #include "qgslocatorwidget.h"
+#include "qgspythonrunner.h"
+#include "qgshakeicons.h"
+#include "qgshaketheme.h"
+#include "qgssettings.h"
 
 #include <QAction>
 #include <QApplication>
@@ -90,6 +94,9 @@ namespace
       return false;
     if ( const QMenu *menu = dropDownMenu( action ) )
     {
+      if ( menu->objectName() == "mWebMenu"_L1 || menu->objectName() == "mDatabaseMenu"_L1
+           || menu->objectName() == "mVectorMenu"_L1 || menu->objectName() == "mRasterMenu"_L1 )
+        return true;
       const QList<QAction *> actions = menu->actions();
       return std::any_of( actions.cbegin(), actions.cend(), []( const QAction *a ) { return !a->isSeparator() && a->isVisible(); } );
     }
@@ -111,10 +118,157 @@ namespace
   {
     if ( auto *widgetAction = qobject_cast<QWidgetAction *>( action ) )
     {
-      auto *button = qobject_cast<QToolButton *>( widgetAction->defaultWidget() );
-      return button ? button->defaultAction() : nullptr;
+      if ( auto *button = qobject_cast<QToolButton *>( widgetAction->defaultWidget() ) )
+      {
+        if ( button->defaultAction() )
+          return button->defaultAction();
+        if ( !button->actions().isEmpty() )
+          return button->actions().first();
+        if ( button->menu() )
+          return button->menu()->menuAction();
+      }
+      return nullptr;
     }
     return action;
+  }
+  QString cleanActionLabel( const QAction *action, const QString &overrideLabel )
+  {
+    if ( !overrideLabel.isEmpty() )
+      return overrideLabel;
+    if ( !action )
+      return QString();
+
+    const QString obj = action->objectName();
+    if ( obj == "mActionNewProject"_L1 ) return QObject::tr( "New" );
+    if ( obj == "mActionOpenProject"_L1 ) return QObject::tr( "Open" );
+    if ( obj == "mActionSaveProject"_L1 ) return QObject::tr( "Save" );
+    if ( obj == "mActionSaveProjectAs"_L1 ) return QObject::tr( "Save As" );
+    if ( obj == "mActionProjectProperties"_L1 ) return QObject::tr( "Properties" );
+    if ( obj == "mActionExit"_L1 ) return QObject::tr( "Exit" );
+    if ( obj == "mActionUndo"_L1 ) return QObject::tr( "Undo" );
+    if ( obj == "mActionRedo"_L1 ) return QObject::tr( "Redo" );
+    if ( obj == "mActionPan"_L1 ) return QObject::tr( "Pan Map" );
+    if ( obj == "mActionZoomIn"_L1 ) return QObject::tr( "Zoom In" );
+    if ( obj == "mActionZoomOut"_L1 ) return QObject::tr( "Zoom Out" );
+    if ( obj == "mActionZoomFullExtent"_L1 ) return QObject::tr( "Full Extent" );
+    if ( obj == "mActionDraw"_L1 ) return QObject::tr( "Refresh" );
+    if ( obj == "mActionPanToSelected"_L1 ) return QObject::tr( "Pan Select" );
+    if ( obj == "mActionZoomToSelected"_L1 ) return QObject::tr( "Zoom Select" );
+    if ( obj == "mActionZoomToLayers"_L1 ) return QObject::tr( "Zoom Layer" );
+    if ( obj == "mActionZoomActualSize"_L1 ) return QObject::tr( "100%" );
+    if ( obj == "mActionZoomLast"_L1 ) return QObject::tr( "Previous" );
+    if ( obj == "mActionZoomNext"_L1 ) return QObject::tr( "Next" );
+    if ( obj == "mActionIdentify"_L1 ) return QObject::tr( "Identify" );
+    if ( obj == "mActionOpenTable"_L1 ) return QObject::tr( "Attributes" );
+    if ( obj == "mActionOptions"_L1 ) return QObject::tr( "Options" );
+    if ( obj == "mActionStyleManager"_L1 ) return QObject::tr( "Styles" );
+    if ( obj == "mActionCustomProjection"_L1 ) return QObject::tr( "Projections" );
+    if ( obj == "mActionDataSourceManager"_L1 ) return QObject::tr( "Data Source" );
+    if ( obj == "mActionAddOgrLayer"_L1 ) return QObject::tr( "Vector" );
+    if ( obj == "mActionAddRasterLayer"_L1 ) return QObject::tr( "Raster" );
+    if ( obj == "mActionAddMeshLayer"_L1 ) return QObject::tr( "Mesh" );
+    if ( obj == "mActionAddDelimitedText"_L1 ) return QObject::tr( "Delimited" );
+    if ( obj == "mActionAddSpatiaLiteLayer"_L1 ) return QObject::tr( "SpatiaLite" );
+    if ( obj == "mActionAddVirtualLayer"_L1 ) return QObject::tr( "Virtual" );
+    if ( obj == "mActionAddWmsLayer"_L1 ) return QObject::tr( "WMS / WMTS" );
+    if ( obj == "mActionAddWfsLayer"_L1 ) return QObject::tr( "WFS" );
+    if ( obj == "mActionLayerProperties"_L1 ) return QObject::tr( "Properties" );
+    if ( obj == "mActionRemoveLayer"_L1 ) return QObject::tr( "Remove" );
+    if ( obj == "mActionMeasure"_L1 ) return QObject::tr( "Line" );
+    if ( obj == "mActionMeasureArea"_L1 ) return QObject::tr( "Area" );
+    if ( obj == "mActionMeasureBearing"_L1 ) return QObject::tr( "Bearing" );
+    if ( obj == "mActionMeasureAngle"_L1 ) return QObject::tr( "Angle" );
+    if ( obj == "mActionStatisticalSummary"_L1 ) return QObject::tr( "Statistics" );
+    if ( obj == "mActionOpenFieldCalc"_L1 ) return QObject::tr( "Field Calc" );
+    if ( obj == "mActionShowPythonDialog"_L1 ) return QObject::tr( "Python" );
+    if ( obj == "mActionToggleEditing"_L1 ) return QObject::tr( "Edit" );
+    if ( obj == "mActionSaveLayerEdits"_L1 ) return QObject::tr( "Save Edits" );
+    if ( obj == "mActionAllEdits"_L1 ) return QObject::tr( "All Edits" );
+    if ( obj == "mActionAddFeature"_L1 ) return QObject::tr( "Add Feature" );
+    if ( obj == "mActionDigitizeWithCurve"_L1 ) return QObject::tr( "Curve" );
+    if ( obj == "mActionStreamDigitize"_L1 ) return QObject::tr( "Stream" );
+    if ( obj == "mActionVertexTool"_L1 ) return QObject::tr( "Vertex Tool" );
+    if ( obj == "mActionVertexToolActiveLayer"_L1 ) return QObject::tr( "Vertex" );
+    if ( obj == "mActionMultiEditAttributes"_L1 ) return QObject::tr( "Multi-Edit" );
+    if ( obj == "mActionMoveFeature"_L1 ) return QObject::tr( "Move" );
+    if ( obj == "mActionDeleteSelected"_L1 ) return QObject::tr( "Delete" );
+    if ( obj == "mActionCutFeatures"_L1 ) return QObject::tr( "Cut" );
+    if ( obj == "mActionCopyFeatures"_L1 ) return QObject::tr( "Copy" );
+    if ( obj == "mActionPasteFeatures"_L1 ) return QObject::tr( "Paste" );
+    if ( obj == "mActionSnappingOptions"_L1 ) return QObject::tr( "Snapping" );
+    if ( obj == "mActionSplitFeatures"_L1 ) return QObject::tr( "Split" );
+    if ( obj == "mActionSelectFeatures"_L1 ) return QObject::tr( "Select" );
+    if ( obj == "mActionSelectPolygon"_L1 ) return QObject::tr( "Polygon" );
+    if ( obj == "mActionSelectFreehand"_L1 ) return QObject::tr( "Freehand" );
+    if ( obj == "mActionSelectRadius"_L1 ) return QObject::tr( "Radius" );
+    if ( obj == "mActionSelectByValue"_L1 ) return QObject::tr( "By Value" );
+    if ( obj == "mActionSelectByExpression"_L1 ) return QObject::tr( "Expression" );
+    if ( obj == "mActionDeselectAll"_L1 ) return QObject::tr( "Deselect" );
+    if ( obj == "mActionInvertSelection"_L1 ) return QObject::tr( "Invert" );
+    if ( obj == "mActionSelectAll"_L1 ) return QObject::tr( "Select All" );
+    if ( obj == "mActionLabeling"_L1 ) return QObject::tr( "Labels" );
+    if ( obj == "mActionMoveLabel"_L1 ) return QObject::tr( "Move Label" );
+    if ( obj == "mActionRotateLabel"_L1 ) return QObject::tr( "Rotate" );
+    if ( obj == "mActionShowPinnedLabels"_L1 ) return QObject::tr( "Pin Labels" );
+    if ( obj == "mActionShowHideLabels"_L1 ) return QObject::tr( "Show/Hide" );
+    if ( obj == "mActionLocalHistogramStretch"_L1 ) return QObject::tr( "Local" );
+    if ( obj == "mActionFullHistogramStretch"_L1 ) return QObject::tr( "Full" );
+    if ( obj == "mActionLocalCumulativeCutStretch"_L1 ) return QObject::tr( "Cumulative" );
+    if ( obj == "mActionFullCumulativeCutStretch"_L1 ) return QObject::tr( "2% - 98%" );
+    if ( obj == "mActionIncreaseBrightness"_L1 ) return QObject::tr( "Bright +" );
+    if ( obj == "mActionDecreaseBrightness"_L1 ) return QObject::tr( "Bright -" );
+    if ( obj == "mActionIncreaseContrast"_L1 ) return QObject::tr( "Contrast +" );
+    if ( obj == "mActionDecreaseContrast"_L1 ) return QObject::tr( "Contrast -" );
+    if ( obj == "mActionIncreaseGamma"_L1 ) return QObject::tr( "Gamma +" );
+    if ( obj == "mActionDecreaseGamma"_L1 ) return QObject::tr( "Gamma -" );
+    if ( obj == "mActionManagePlugins"_L1 ) return QObject::tr( "Manage" );
+    if ( obj == "mActionNewMeshLayer"_L1 ) return QObject::tr( "New Mesh" );
+    if ( obj == "mActionShowMeshCalculator"_L1 ) return QObject::tr( "Calculator" );
+    if ( obj == "mActionNewMapCanvas"_L1 ) return QObject::tr( "New View" );
+    if ( obj == "mActionNew3DMapCanvas"_L1 ) return QObject::tr( "3D View" );
+    if ( obj == "mActionNew3DMapCanvasGlobe"_L1 ) return QObject::tr( "Globe 3D" );
+    if ( obj == "mActionNewBookmark"_L1 ) return QObject::tr( "New" );
+    if ( obj == "mActionShowBookmarks"_L1 ) return QObject::tr( "Show" );
+    if ( obj == "mActionTemporalController"_L1 ) return QObject::tr( "Temporal" );
+    if ( obj == "mActionToggleFullScreen"_L1 ) return QObject::tr( "Full Screen" );
+    if ( obj == "mActionHelpAPI"_L1 ) return QObject::tr( "API Docs" );
+    if ( obj == "mActionAbout"_L1 ) return QObject::tr( "About" );
+    if ( obj == "mActionQgisHomePage"_L1 ) return QObject::tr( "Home Page" );
+    if ( obj == "mActionNewPrintLayout"_L1 ) return QObject::tr( "New Layout" );
+    if ( obj == "mActionShowLayoutManager"_L1 ) return QObject::tr( "Layouts" );
+    if ( obj == "mActionShowRasterCalculator"_L1 ) return QObject::tr( "Calculator" );
+    if ( obj == "mActionToolSearch"_L1 ) return QObject::tr( "Search" );
+    if ( obj == "mActionShowDbManager"_L1 || obj == "mActionDbManager"_L1 || action->text().contains( "DB Manager", Qt::CaseInsensitive ) ) return QObject::tr( "Database" );
+    if ( obj == "mActionShowMetaSearch"_L1 || obj == "action_run"_L1 || action->text().contains( "MetaSearch", Qt::CaseInsensitive ) ) return QObject::tr( "Web" );
+    if ( obj == "mVectorMenu"_L1 || action->text().contains( "Vector", Qt::CaseInsensitive ) ) return QObject::tr( "Vector" );
+    if ( obj == "mRasterMenu"_L1 || action->text().contains( "Raster", Qt::CaseInsensitive ) ) return QObject::tr( "Raster" );
+    if ( obj == "mViewMenu"_L1 || action->text().contains( "View", Qt::CaseInsensitive ) ) return QObject::tr( "View" );
+    if ( obj == "mMeshMenu"_L1 || action->text().contains( "Mesh", Qt::CaseInsensitive ) ) return QObject::tr( "Mesh" );
+    if ( obj == "mHelpMenu"_L1 || obj == "mActionHelpContents"_L1 || action->text().contains( "Help", Qt::CaseInsensitive ) ) return QObject::tr( "Help" );
+    if ( obj == "mPluginMenu"_L1 || action->text().contains( "Plugin", Qt::CaseInsensitive ) || action->text().contains( "Extension", Qt::CaseInsensitive ) ) return QObject::tr( "Extensions" );
+
+    QString text = action->text();
+    int tabIdx = text.indexOf( '\t' );
+    if ( tabIdx != -1 )
+      text = text.left( tabIdx );
+    text.remove( '&' );
+    text.remove( u"…"_s );
+    text.remove( "..."_L1 );
+    text.replace( "Hake GeoDesk – Desktop GIS", QString() );
+    text.replace( "Hake GeoDesk", QString() );
+    text = text.trimmed();
+    if ( text.startsWith( "Show " ) )
+      text = text.mid( 5 );
+    if ( text.startsWith( "Toggle " ) )
+      text = text.mid( 7 );
+    if ( text.startsWith( "Add " ) )
+      text = text.mid( 4 );
+    if ( text.contains( "Circle", Qt::CaseInsensitive ) ) return QObject::tr( "Circle" );
+    if ( text.contains( "Rectangle", Qt::CaseInsensitive ) ) return QObject::tr( "Rectangle" );
+    if ( text.contains( "Ellipse", Qt::CaseInsensitive ) ) return QObject::tr( "Ellipse" );
+    if ( text.contains( "Regular Polygon", Qt::CaseInsensitive ) ) return QObject::tr( "Polygon" );
+    if ( text.contains( "Circular String", Qt::CaseInsensitive ) ) return QObject::tr( "Curve" );
+    return text.trimmed();
   }
 } // namespace
 
@@ -144,7 +298,8 @@ class QgsAppRibbonCaption : public QWidget
     void paintEvent( QPaintEvent * ) override
     {
       QPainter p( this );
-      p.setPen( palette().color( QPalette::WindowText ) );
+      const bool isNight = ( QgsHakeTheme::variantForTheme( QgsApplication::themeName() ) == QgsHakeTheme::Variant::Night );
+      p.setPen( isNight ? QColor( 148, 163, 184 ) : QColor( 96, 125, 148 ) );
       const QString shown = fontMetrics().elidedText( mText, Qt::ElideRight, width() );
       p.drawText( rect(), Qt::AlignHCenter | Qt::AlignVCenter, shown );
     }
@@ -154,37 +309,56 @@ class QgsAppRibbonCaption : public QWidget
 };
 
 /**
- * The one command button used everywhere in the ribbon: a fixed square cell with the icon
- * centred in it, plus a fixed caret strip for menu drop-downs. Only the icon is painted; the
- * button keeps the action's text and tooltip for accessibility and hover help. Commands that
- * cannot be shown icon-only paint their label instead, at the same height and centre line.
- * Size depends only on the shared metrics, icon and label, never on enabled/checked/hover
- * state, and painting never offsets the icon, so the ribbon does not move when actions change state.
- * Styled through #HakeAppRibbonButton in the theme QSS.
+ * The ribbon command button: presents a crisp vector icon at the top with a clear,
+ * concise label directly beneath it (TextUnderIcon style), matching professional desktop
+ * GIS suites. Shows active states cleanly without shifting geometry.
  */
 class QgsAppRibbonButton : public QToolButton
 {
   public:
     QgsAppRibbonButton( QWidget *parent, const QgsAppRibbonMetrics &metrics )
       : QToolButton( parent )
-      , mCell( metrics.cellSize )
+      , mButtonHeight( metrics.buttonAreaHeight )
       , mCaret( metrics.caretWidth )
-      , mInset( metrics.spaceSm )
-      , mGap( metrics.spaceXs )
-      , mLabelMax( metrics.labelMax )
     {
       setObjectName( u"HakeAppRibbonButton"_s );
       setAutoRaise( true );
       // Reachable by keyboard, but a mouse click must not steal focus from the map canvas.
       setFocusPolicy( Qt::TabFocus );
-      setToolButtonStyle( Qt::ToolButtonIconOnly );
-      setIconSize( QSize( metrics.cellIcon, metrics.cellIcon ) );
-      setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-      setFixedHeight( mCell );
+      setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+      setIconSize( QSize( 28, 28 ) );
+      setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed );
+      setFixedHeight( mButtonHeight );
+    }
+
+    void setDefaultAction( QAction *action )
+    {
+      QToolButton::setDefaultAction( action );
+      if ( action )
+      {
+        connect( action, &QAction::toggled, this, [this]( bool ) { update(); } );
+        connect( action, &QAction::changed, this, [this] { update(); } );
+      }
+    }
+
+    void mousePressEvent( QMouseEvent *e ) override
+    {
+      QToolButton::mousePressEvent( e );
+      update();
+    }
+
+    void mouseReleaseEvent( QMouseEvent *e ) override
+    {
+      QToolButton::mouseReleaseEvent( e );
+      update();
     }
 
     //! Shown instead of the action text; the action itself is not modified.
-    void setLabel( const QString &label ) { mLabel = label; }
+    void setLabel( const QString &label )
+    {
+      mLabel = label;
+      updateGeometry();
+    }
 
     void setDropDown( bool dropDown )
     {
@@ -193,17 +367,43 @@ class QgsAppRibbonButton : public QToolButton
         setPopupMode( QToolButton::InstantPopup );
     }
 
-    //! Shows only the icon; otherwise the label (beside the icon, if any) is painted.
+    //! Shows only the icon; otherwise the label under the icon is painted.
     void setIconOnly( bool iconOnly )
     {
       mIconOnly = iconOnly;
       updateGeometry();
     }
 
+    void setCompact( bool compact )
+    {
+      mCompact = compact;
+      updateGeometry();
+    }
+
+    QString shownLabel() const
+    {
+      if ( mIconOnly )
+        return QString();
+      return cleanActionLabel( defaultAction(), mLabel );
+    }
+
     QSize sizeHint() const override
     {
-      const int body = mIconOnly ? mCell : labelledWidth();
-      return QSize( body + ( mDropDown ? mCaret : 0 ), mCell );
+      const QString lbl = shownLabel();
+      if ( lbl.isEmpty() )
+        return QSize( 38 + ( mDropDown ? mCaret : 0 ), mButtonHeight );
+
+      QFont f = font();
+      f.setPixelSize( 10 );
+      const QFontMetrics fm( f );
+      int textW = fm.horizontalAdvance( lbl );
+      if ( mCompact )
+      {
+        int w = std::clamp( textW + 8, 42, 84 );
+        return QSize( w + ( mDropDown ? mCaret : 0 ), mButtonHeight );
+      }
+      int w = std::clamp( textW + 12, 48, 98 );
+      return QSize( w + ( mDropDown ? mCaret : 0 ), mButtonHeight );
     }
 
     QSize minimumSizeHint() const override { return sizeHint(); }
@@ -211,77 +411,162 @@ class QgsAppRibbonButton : public QToolButton
   protected:
     void paintEvent( QPaintEvent * ) override
     {
-      QStylePainter p( this );
+      QPainter p( this );
       QStyleOptionToolButton opt;
       initStyleOption( &opt );
 
-      // Panel only (background, border and state from the theme QSS); content is placed below
-      // so icons sit on the same centre line in every state.
-      QStyleOptionToolButton panel = opt;
-      panel.text.clear();
-      panel.icon = QIcon();
-      panel.features &= ~( QStyleOptionToolButton::HasMenu | QStyleOptionToolButton::MenuButtonPopup );
-      p.drawComplexControl( QStyle::CC_ToolButton, panel );
+      bool active = isChecked() || ( defaultAction() && defaultAction()->isChecked() );
+      if ( active && QgisApp::instance() && QgisApp::instance()->isWelcomeScreenVisible() )
+      {
+        active = false;
+      }
+
+      const bool isNight = ( QgsHakeTheme::variantForTheme( QgsApplication::themeName() ) == QgsHakeTheme::Variant::Night );
+
+      QColor bg = Qt::transparent;
+      QColor border = Qt::transparent;
+      QColor textColor;
+
+      if ( active )
+      {
+        if ( isNight )
+        {
+          bg = QColor( 56, 189, 248, 55 );
+          border = QColor( 56, 189, 248 );
+          textColor = QColor( 56, 189, 248 );
+        }
+        else
+        {
+          bg = QColor( 214, 228, 244 );
+          border = QColor( 22, 74, 115 );
+          textColor = QColor( 22, 74, 115 );
+        }
+      }
+      else if ( isDown() || ( opt.state & QStyle::State_Sunken ) )
+      {
+        if ( isNight )
+        {
+          bg = QColor( 15, 23, 42 );
+          border = QColor( 56, 189, 248, 120 );
+          textColor = QColor( 241, 245, 249 );
+        }
+        else
+        {
+          bg = QColor( 226, 234, 243 );
+          border = QColor( 160, 185, 210 );
+          textColor = QColor( 22, 74, 115 );
+        }
+      }
+      else if ( ( opt.state & QStyle::State_MouseOver ) && isEnabled() )
+      {
+        if ( isNight )
+        {
+          bg = QColor( 30, 41, 59 );
+          border = QColor( 51, 65, 85 );
+          textColor = QColor( 241, 245, 249 );
+        }
+        else
+        {
+          bg = QColor( 241, 245, 249 );
+          border = QColor( 203, 213, 225 );
+          textColor = QColor( 15, 23, 42 );
+        }
+      }
+      else
+      {
+        if ( isNight )
+          textColor = isEnabled() ? QColor( 226, 232, 240 ) : QColor( 100, 116, 139 );
+        else
+          textColor = isEnabled() ? QColor( 51, 65, 85 ) : QColor( 156, 163, 175 );
+      }
+
+      if ( bg != Qt::transparent || border != Qt::transparent )
+      {
+        p.save();
+        p.setRenderHint( QPainter::Antialiasing );
+        p.setBrush( bg );
+        p.setPen( QPen( border, active ? 1.5 : 1.0 ) );
+        p.drawRoundedRect( rect().adjusted( 1, 1, -1, -1 ), 4, 4 );
+        p.restore();
+      }
 
       QIcon::Mode mode = QIcon::Normal;
       if ( !isEnabled() )
         mode = QIcon::Disabled;
       else if ( ( opt.state & QStyle::State_MouseOver ) && ( opt.state & QStyle::State_AutoRaise ) )
         mode = QIcon::Active;
-      const QIcon::State state = isChecked() ? QIcon::On : QIcon::Off;
-      const QColor textColor = palette().color( isEnabled() ? QPalette::Normal : QPalette::Disabled, QPalette::ButtonText );
-      const QRect body = QStyle::visualRect( layoutDirection(), rect(), QRect( 0, 0, width() - ( mDropDown ? mCaret : 0 ), height() ) );
+      const QIcon::State state = active ? QIcon::On : QIcon::Off;
 
-      if ( mIconOnly )
+      const QString text = shownLabel();
+      const int contentW = width() - ( mDropDown ? mCaret : 0 );
+      const int iconX = ( contentW - iconSize().width() ) / 2;
+      const int iconY = 3;
+      const QRect iconRect( iconX, iconY, iconSize().width(), iconSize().height() );
+      if ( !icon().isNull() )
       {
-        const QRect iconRect = QStyle::alignedRect( layoutDirection(), Qt::AlignCenter, iconSize(), body );
         icon().paint( &p, iconRect, Qt::AlignCenter, mode, state );
       }
       else
       {
-        int x = mInset;
-        if ( !icon().isNull() )
+        QIcon fallback = QgsHakeIcons::icon( u"app/hake-theme-sun.svg"_s );
+        if ( mDropDown )
         {
-          const QRect iconRect = QStyle::visualRect( layoutDirection(), rect(), QRect( QPoint( x, ( height() - iconSize().height() ) / 2 ), iconSize() ) );
-          icon().paint( &p, iconRect, Qt::AlignCenter, mode, state );
-          x += iconSize().width() + mGap;
+          if ( text.contains( "Vector", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-vector.svg"_s );
+          else if ( text.contains( "Raster", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-raster.svg"_s );
+          else if ( text.contains( "Web", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+          else if ( text.contains( "Database", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-database.svg"_s );
+          else if ( text.contains( "View", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-view.svg"_s );
+          else if ( text.contains( "Mesh", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-mesh.svg"_s );
+          else if ( text.contains( "Help", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-help.svg"_s );
+          else if ( text.contains( "Extension", Qt::CaseInsensitive ) || text.contains( "Plugin", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+          else if ( text.contains( "Layer", Qt::CaseInsensitive ) )
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-layer.svg"_s );
+          else
+            fallback = QgsHakeIcons::icon( u"menus/hake-menu-processing.svg"_s );
         }
-        const QRect textRect = QStyle::visualRect( layoutDirection(), rect(), QRect( x, 0, std::max( 0, body.width() - x - mInset ), height() ) );
+        if ( !fallback.isNull() )
+          fallback.paint( &p, iconRect, Qt::AlignCenter, mode, state );
+      }
+
+      if ( !text.isEmpty() )
+      {
+        p.save();
+        QFont f = font();
+        f.setPixelSize( 10 );
+        if ( active )
+          f.setWeight( QFont::DemiBold );
+        else
+          f.setWeight( QFont::Medium );
+        p.setFont( f );
         p.setPen( textColor );
-        p.drawText( textRect, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextHideMnemonic, shownLabel() );
+        const QRect textRect( 2, iconY + iconSize().height() + 2, contentW - 4, height() - ( iconY + iconSize().height() + 4 ) );
+        p.drawText( textRect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, text );
+        p.restore();
       }
 
       if ( mDropDown )
       {
-        const QRect caretRect = QStyle::visualRect( layoutDirection(), rect(), QRect( width() - mCaret, 0, mCaret, height() ) );
+        const QRect caretRect( width() - mCaret, 0, mCaret, height() );
         p.setPen( textColor );
         p.drawText( caretRect, Qt::AlignCenter, u"\u25BE"_s );
       }
     }
 
   private:
-    QString shownLabel() const
-    {
-      const QString text = mLabel.isEmpty() ? this->text() : mLabel;
-      return fontMetrics().elidedText( text, Qt::ElideRight, mLabelMax, Qt::TextShowMnemonic );
-    }
-
-    int labelledWidth() const
-    {
-      int w = 2 * mInset + fontMetrics().size( Qt::TextShowMnemonic, shownLabel() ).width();
-      if ( !icon().isNull() )
-        w += iconSize().width() + mGap;
-      return std::max( w, mCell );
-    }
-
-    int mCell = 0;
+    int mButtonHeight = 54;
     int mCaret = 0;
-    int mInset = 0;
-    int mGap = 0;
-    int mLabelMax = 0;
     QString mLabel;
     bool mDropDown = false;
     bool mIconOnly = false;
+    bool mCompact = false;
 };
 
 //! Subtle vertical group separator, inset from the page edges; color from the theme QSS via the palette.
@@ -308,7 +593,9 @@ class QgsAppRibbonSeparator : public QWidget
     void paintEvent( QPaintEvent * ) override
     {
       QPainter p( this );
-      p.fillRect( QRect( 0, mTop, width(), std::max( 0, height() - mTop - mBottom ) ), palette().color( QPalette::WindowText ) );
+      const bool isNight = ( QgsHakeTheme::variantForTheme( QgsApplication::themeName() ) == QgsHakeTheme::Variant::Night );
+      p.fillRect( QRect( 0, mTop, width(), std::max( 0, height() - mTop - mBottom ) ),
+                  isNight ? QColor( 42, 59, 80 ) : QColor( 216, 223, 229 ) );
     }
 
   private:
@@ -335,6 +622,8 @@ class QgsAppRibbonGroup : public QWidget
         QString dockObjectName;
         //! Menu whose menuAction() fills this entry once the menu exists
         QString menuObjectName;
+        //! Action whose objectName fills this entry once created
+        QString actionObjectName;
         //! Button label overriding the action text for presentation only
         QString label;
     };
@@ -347,10 +636,18 @@ class QgsAppRibbonGroup : public QWidget
     bool resolveDeferred( QObject *root );
     QList<QAction *> commands() const;
     bool hasCommands() const { return !commands().isEmpty(); }
+    const QList<Entry> &entries() const { return mEntries; }
 
     void setMetrics( const QgsAppRibbonMetrics &metrics );
     void rebuild();
     void scheduleRebuild();
+
+    bool isToolsPalette() const { return mToolsPalette; }
+    void setToolsPalette( bool toolsPalette )
+    {
+      mToolsPalette = toolsPalette;
+      scheduleRebuild();
+    }
 
     Level level() const { return mLevel; }
     void setLevel( Level level );
@@ -380,6 +677,7 @@ class QgsAppRibbonGroup : public QWidget
     //! Icon-only decision each action was last built with
     QHash<const QAction *, bool> mBuiltIconOnly;
     bool mRebuildPending = false;
+    bool mToolsPalette = false;
 };
 
 class QgsAppRibbonPage : public QWidget
@@ -469,10 +767,11 @@ void QgsAppRibbonGroup::addEntry( const Entry &entry )
 {
   if ( entry.action && !isPresentableAction( entry.action ) )
     return;
-  if ( !entry.action && entry.dockObjectName.isEmpty() && entry.menuObjectName.isEmpty() )
+  if ( !entry.action && entry.dockObjectName.isEmpty() && entry.menuObjectName.isEmpty() && entry.actionObjectName.isEmpty() )
     return;
   mEntries.append( entry );
-  watchAction( entry.action );
+  if ( entry.action )
+    watchAction( entry.action );
 }
 
 void QgsAppRibbonGroup::setEntries( const QList<Entry> &entries )
@@ -488,22 +787,161 @@ bool QgsAppRibbonGroup::resolveDeferred( QObject *root )
   bool resolved = false;
   for ( Entry &entry : mEntries )
   {
-    if ( entry.action )
-      continue;
     if ( !entry.dockObjectName.isEmpty() )
     {
       if ( QDockWidget *dock = root->findChild<QDockWidget *>( entry.dockObjectName ) )
-        entry.action = dock->toggleViewAction();
+      {
+        QAction *toggle = dock->toggleViewAction();
+        if ( entry.action != toggle )
+        {
+          entry.action = toggle;
+          if ( entry.dockObjectName == "ProcessingToolbox"_L1 )
+          {
+            entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+            if ( entry.label.isEmpty() )
+              entry.label = tr( "Processing Toolbox" );
+          }
+          watchAction( entry.action );
+          resolved = true;
+        }
+      }
     }
     else if ( !entry.menuObjectName.isEmpty() )
     {
       if ( QMenu *menu = root->findChild<QMenu *>( entry.menuObjectName ) )
-        entry.action = menu->menuAction();
+      {
+        QAction *act = menu->menuAction();
+        if ( entry.action != act )
+        {
+          entry.action = act;
+          if ( entry.menuObjectName == "processing"_L1 )
+          {
+            entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+            if ( entry.label.isEmpty() )
+              entry.label = tr( "Processing" );
+          }
+          watchAction( entry.action );
+          resolved = true;
+        }
+      }
     }
+    else if ( !entry.actionObjectName.isEmpty() )
+    {
+      if ( QAction *act = root->findChild<QAction *>( entry.actionObjectName ) )
+      {
+        if ( entry.action != act )
+        {
+          entry.action = act;
+          if ( entry.actionObjectName == "mActionShowPythonDialog"_L1 )
+          {
+            entry.action->setIcon( QgsHakeIcons::icon( u"analysis/hake-analysis-python-console.svg"_s ) );
+            if ( entry.label.isEmpty() )
+              entry.label = tr( "Python" );
+          }
+          watchAction( entry.action );
+          resolved = true;
+        }
+      }
+      else if ( entry.actionObjectName == "mActionShowPythonDialog"_L1 )
+      {
+        if ( auto *app = qobject_cast<QgisApp *>( root ) )
+        {
+          if ( QAction *py = app->actionShowPythonDialog() )
+          {
+            if ( entry.action != py )
+            {
+              entry.action = py;
+              entry.action->setIcon( QgsHakeIcons::icon( u"analysis/hake-analysis-python-console.svg"_s ) );
+              if ( entry.label.isEmpty() )
+                entry.label = tr( "Python" );
+              watchAction( entry.action );
+              resolved = true;
+            }
+          }
+        }
+      }
+      else if ( entry.actionObjectName == "mActionShowMetaSearch"_L1 )
+      {
+        for ( QAction *act : root->findChildren<QAction *>() )
+        {
+          if ( act->objectName() == "action_run"_L1 && act != entry.action )
+          {
+            entry.action = act;
+            entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+            entry.label = tr( "Web" );
+            watchAction( entry.action );
+            resolved = true;
+            break;
+          }
+        }
+      }
+      else if ( entry.actionObjectName == "mActionShowDbManager"_L1 )
+      {
+        for ( QAction *act : root->findChildren<QAction *>() )
+        {
+          if ( act->objectName() == "mActionDbManager"_L1 || act->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+          {
+            if ( entry.action != act )
+            {
+              entry.action = act;
+              entry.action->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+              entry.label = tr( "Database" );
+              watchAction( entry.action );
+              resolved = true;
+            }
+            break;
+          }
+        }
+      }
+    }
+
     if ( entry.action )
     {
-      watchAction( entry.action );
-      resolved = true;
+      if ( entry.dockObjectName == "ProcessingToolbox"_L1 && ( entry.action->icon().isNull() || entry.label != tr( "Processing Toolbox" ) ) )
+      {
+        entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+        entry.label = tr( "Processing Toolbox" );
+        resolved = true;
+      }
+      if ( entry.menuObjectName == "processing"_L1 && entry.action->icon().isNull() )
+      {
+        entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+        if ( entry.label.isEmpty() )
+          entry.label = tr( "Processing" );
+        resolved = true;
+      }
+      if ( entry.actionObjectName == "mActionShowPythonDialog"_L1 && entry.action->icon().isNull() )
+      {
+        entry.action->setIcon( QgsHakeIcons::icon( u"analysis/hake-analysis-python-console.svg"_s ) );
+        if ( entry.label.isEmpty() )
+          entry.label = tr( "Python" );
+        resolved = true;
+      }
+      if ( entry.actionObjectName == "mActionShowMetaSearch"_L1 && ( entry.action->icon().isNull() || entry.label != tr( "Web" ) ) )
+      {
+        entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+        entry.label = tr( "Web" );
+        resolved = true;
+      }
+      if ( entry.actionObjectName == "mActionShowDbManager"_L1 && ( entry.action->icon().isNull() || entry.label != tr( "Database" ) ) )
+      {
+        entry.action->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+        entry.label = tr( "Database" );
+        resolved = true;
+      }
+      if ( auto *app = qobject_cast<QgisApp *>( root ) )
+      {
+        if ( app->vectorMenu() && entry.action == app->vectorMenu()->menuAction() && entry.action->icon().isNull() )
+        {
+          entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-vector.svg"_s ) );
+          resolved = true;
+        }
+        if ( app->rasterMenu() && entry.action == app->rasterMenu()->menuAction() && entry.action->icon().isNull() )
+        {
+          entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-raster.svg"_s ) );
+          resolved = true;
+        }
+      }
     }
   }
   return resolved;
@@ -581,8 +1019,20 @@ QgsAppRibbonButton *QgsAppRibbonGroup::makeButton( QWidget *parent, const Entry 
   auto *button = new QgsAppRibbonButton( parent, mMetrics );
   button->setDefaultAction( entry.action );
   button->setLabel( entry.label );
-  button->setDropDown( dropDownMenu( entry.action ) != nullptr );
-  button->setIconOnly( presentsIconOnly( entry.action ) );
+  QMenu *menu = dropDownMenu( entry.action );
+  if ( !menu && entry.action && entry.action->menu() )
+    menu = entry.action->menu();
+  if ( menu )
+  {
+    button->setDropDown( true );
+    button->setMenu( menu );
+  }
+  else
+  {
+    button->setDropDown( false );
+  }
+  const bool iconOnly = ( mLevel == IconsOnly );
+  button->setIconOnly( iconOnly );
   return button;
 }
 
@@ -614,9 +1064,9 @@ QWidget *QgsAppRibbonGroup::buildVariant( Level level )
     button->setText( mTitle );
     button->setToolTip( mTitle );
     button->setAccessibleName( mTitle );
-    button->setIcon( visibleEntries.first().action->icon() );
+    button->setIcon( visibleEntries.first().action ? visibleEntries.first().action->icon() : QIcon() );
     button->setDropDown( true );
-    button->setIconOnly( !button->icon().isNull() );
+    button->setIconOnly( true );
     auto *menu = new QMenu( button );
     menu->addActions( commands() );
     button->setMenu( menu );
@@ -625,7 +1075,14 @@ QWidget *QgsAppRibbonGroup::buildVariant( Level level )
   }
 
   for ( const Entry &entry : std::as_const( visibleEntries ) )
-    row->addWidget( makeButton( variant, entry ), 0, Qt::AlignVCenter );
+  {
+    auto *btn = makeButton( variant, entry );
+    if ( level == IconsOnly )
+      btn->setIconOnly( true );
+    if ( level == Compact )
+      btn->setCompact( true );
+    row->addWidget( btn, 0, Qt::AlignVCenter );
+  }
   return variant;
 }
 
@@ -780,8 +1237,9 @@ void QgsAppRibbonPage::relayout()
 
   // Compress one level at a time, rightmost group first, so the most-used
   // commands on the left stay expanded longest.
+  // Always preserve text labels under icons for all visible groups (never downgrade to IconsOnly).
   bool done = fits();
-  for ( int level = QgsAppRibbonGroup::Compact; !done && level <= QgsAppRibbonGroup::Collapsed; ++level )
+  for ( int level : { QgsAppRibbonGroup::Compact, QgsAppRibbonGroup::Collapsed } )
   {
     for ( int i = n - 1; !done && i >= 0; --i )
     {
@@ -846,6 +1304,71 @@ void QgsAppRibbonPage::showEvent( QShowEvent *event )
   relayout();
 }
 
+class QgsAppRibbonTabBar : public QTabBar
+{
+  public:
+    explicit QgsAppRibbonTabBar( QWidget *parent = nullptr )
+      : QTabBar( parent )
+    {
+      setAttribute( Qt::WA_StyledBackground, true );
+      setDrawBase( false );
+      setElideMode( Qt::ElideNone );
+      setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
+    }
+
+  protected:
+    void paintEvent( QPaintEvent *event ) override
+    {
+      Q_UNUSED( event )
+      QPainter p( this );
+      p.setRenderHint( QPainter::Antialiasing );
+
+      const int current = currentIndex();
+      const int nTabs = count();
+
+      for ( int i = 0; i < nTabs; ++i )
+      {
+        const QRect rect = tabRect( i );
+        if ( !rect.isValid() || rect.width() <= 0 )
+          continue;
+
+        const bool isSelected = ( i == current );
+
+        QFont f = font();
+        if ( isSelected )
+          f.setWeight( QFont::DemiBold );
+        else
+          f.setWeight( QFont::Medium );
+        p.setFont( f );
+
+        const bool isNight = ( QgsHakeTheme::variantForTheme( QgsApplication::themeName() ) == QgsHakeTheme::Variant::Night );
+        const QColor activeColor = isNight ? QColor( 56, 189, 248 ) : QColor( 22, 74, 115 ); // #38BDF8 Cyan in Dark, #164A73 Navy in Light
+        const QColor inactiveColor = isNight ? QColor( 148, 163, 184 ) : QColor( 96, 125, 148 ); // #94A3B8 in Dark, #607D94 in Light
+        const QColor textColor = isSelected ? activeColor : inactiveColor;
+
+        if ( isSelected )
+        {
+          // Active Tab indicator: solid 3px line at bottom
+          p.fillRect( QRect( rect.left() + 6, rect.bottom() - 2, rect.width() - 12, 3 ), activeColor );
+        }
+
+        const QIcon icon = tabIcon( i );
+        int textLeft = rect.left();
+        if ( !icon.isNull() )
+        {
+          const QSize isize = iconSize();
+          const QRect irect( rect.left() + 8, rect.top() + ( rect.height() - isize.height() ) / 2, isize.width(), isize.height() );
+          icon.paint( &p, irect, Qt::AlignCenter, isSelected ? QIcon::Active : QIcon::Normal );
+          textLeft = irect.right() + 6;
+        }
+
+        p.setPen( textColor );
+        const QRect textRect( textLeft, rect.top(), rect.right() - textLeft, rect.height() - ( isSelected ? 3 : 0 ) );
+        p.drawText( textRect, Qt::AlignCenter | Qt::TextShowMnemonic, tabText( i ) );
+      }
+    }
+};
+
 //
 // QgsAppRibbon
 //
@@ -854,10 +1377,16 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
   : QTabWidget( parent )
   , mApp( app )
 {
+  setTabBar( new QgsAppRibbonTabBar( this ) );
   setObjectName( u"HakeAppRibbon"_s );
   setDocumentMode( true );
   setMovable( false );
   setUsesScrollButtons( true );
+  connect( this, &QTabWidget::currentChanged, this, [this]( int ) {
+    refreshOptionalActions();
+    if ( tabBar() )
+      tabBar()->update();
+  } );
   // Height comes from measured metrics (sizeHint), never from a fixed pixel value.
   setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
   // Fusion leaves the empty region after the last tab unpainted unless QSS backgrounds are forced.
@@ -900,12 +1429,10 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( project, u"mActionSaveProjectAs"_s );
     addNamedAction( project, u"mActionProjectProperties"_s );
     addNamedAction( project, u"mActionExit"_s );
-    addMenu( project, mApp->projectMenu() );
 
     QgsAppRibbonGroup *edit = addGroup( page, tr( "Editing" ) );
     addNamedAction( edit, u"mActionUndo"_s );
     addNamedAction( edit, u"mActionRedo"_s );
-    addMenu( edit, mApp->editMenu() );
 
     QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
     addNamedAction( navigation, u"mActionPan"_s, true );
@@ -922,7 +1449,6 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( application, u"mActionOptions"_s, true );
     addNamedAction( application, u"mActionStyleManager"_s );
     addNamedAction( application, u"mActionCustomProjection"_s );
-    addMenu( application, mApp->settingsMenu() );
   }
 
   // Data: layer sources, layouts, database and web services
@@ -941,29 +1467,34 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( layers, u"mActionLayerProperties"_s );
     addNamedAction( layers, u"mActionRemoveLayer"_s );
     addNamedAction( layers, u"mActionOpenTable"_s );
-    addMenu( layers, mApp->layerMenu() );
-
-    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
-    addNamedAction( navigation, u"mActionPan"_s, true );
 
     QgsAppRibbonGroup *layout = addGroup( page, tr( "Layout" ) );
     addNamedAction( layout, u"mActionNewPrintLayout"_s, true );
     addNamedAction( layout, u"mActionShowLayoutManager"_s );
 
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+    addNamedAction( navigation, u"mActionZoomIn"_s );
+    addNamedAction( navigation, u"mActionZoomOut"_s );
+    addNamedAction( navigation, u"mActionZoomFullExtent"_s );
+
     QgsAppRibbonGroup *services = addGroup( page, tr( "Services" ) );
-    addMenu( services, mApp->databaseMenu() );
-    addMenu( services, mApp->webMenu() );
+    addMenu( services, mApp->databaseMenu(), tr( "Database" ) );
+    addMenu( services, mApp->webMenu(), tr( "Web" ) );
 
     // Plugins (e.g. DB Manager, MetaSearch) populate these toolbars at runtime.
-    mirrorToolbar( addGroup( page, tr( "Database" ) ), mApp->databaseToolBar() );
-    mirrorToolbar( addGroup( page, tr( "Web" ) ), mApp->webToolBar() );
+    QgsAppRibbonGroup *dbGroup = addGroup( page, tr( "Database" ) );
+    addNamedAction( dbGroup, u"mActionShowDbManager"_s, true );
+    mirrorToolbar( dbGroup, mApp->databaseToolBar() );
+
+    QgsAppRibbonGroup *webGroup = addGroup( page, tr( "Web" ) );
+    addNamedAction( webGroup, u"mActionShowMetaSearch"_s, true );
+    mirrorToolbar( webGroup, mApp->webToolBar() );
   }
 
   // Analysis
   {
     QgsAppRibbonPage *page = addPage( tr( "Analysis" ) );
-    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
-    addNamedAction( navigation, u"mActionPan"_s, true );
 
     QgsAppRibbonGroup *measure = addGroup( page, tr( "Measure" ) );
     addNamedAction( measure, u"mActionMeasure"_s, true );
@@ -979,6 +1510,12 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addDockToggle( processing, u"ProcessingToolbox"_s, tr( "Processing Toolbox" ), true );
     addNamedAction( processing, u"mActionShowPythonDialog"_s, true );
     addDeferredMenu( processing, u"processing"_s );
+
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+    addNamedAction( navigation, u"mActionZoomIn"_s );
+    addNamedAction( navigation, u"mActionZoomOut"_s );
+    addNamedAction( navigation, u"mActionZoomFullExtent"_s );
   }
 
   // Map: navigation, map views, bookmarks and panels
@@ -1009,74 +1546,97 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( bookmarks, u"mActionShowBookmarks"_s );
 
     QgsAppRibbonGroup *panels = addGroup( page, tr( "Panels" ) );
-    addDockToggle( panels, u"Browser"_s, tr( "Browser" ) );
-    addDockToggle( panels, u"Layers"_s, tr( "Layers" ) );
+    addDockToggle( panels, u"Browser"_s, tr( "Geo Explorer" ) );
+    addDockToggle( panels, u"Layers"_s, tr( "GIS Layer" ) );
     addNamedAction( panels, u"mActionTemporalController"_s );
     addNamedAction( panels, u"mActionToggleFullScreen"_s );
-    addMenu( panels, mApp->viewMenu() );
+    addMenu( panels, mApp->viewMenu(), tr( "View" ) );
   }
 
   // Vector
   {
     QgsAppRibbonPage *page = addPage( tr( "Vector" ) );
-    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
-    addNamedAction( navigation, u"mActionPan"_s, true );
+
+    QgsAppRibbonGroup *edit = addGroup( page, tr( "Edit" ) );
+    addNamedAction( edit, u"mActionToggleEditing"_s );
+    addNamedAction( edit, u"mActionSaveLayerEdits"_s );
+    addNamedAction( edit, u"mActionAllEdits"_s );
+    addNamedAction( edit, u"mActionUndo"_s );
+    addNamedAction( edit, u"mActionRedo"_s );
 
     QgsAppRibbonGroup *digitize = addGroup( page, tr( "Digitizing" ) );
-    addNamedAction( digitize, u"mActionToggleEditing"_s, true );
-    addNamedAction( digitize, u"mActionSaveLayerEdits"_s );
     addNamedAction( digitize, u"mActionAddFeature"_s );
-    addNamedAction( digitize, u"mActionVertexTool"_s );
-    addNamedAction( digitize, u"mActionMoveFeature"_s );
-    addNamedAction( digitize, u"mActionDeleteSelected"_s );
-    addNamedAction( digitize, u"mActionCutFeatures"_s );
-    addNamedAction( digitize, u"mActionCopyFeatures"_s );
-    addNamedAction( digitize, u"mActionPasteFeatures"_s );
+    addNamedAction( digitize, u"mActionDigitizeWithCurve"_s );
+    addNamedAction( digitize, u"mActionStreamDigitize"_s );
+    if ( mApp->shapeDigitizeToolBar() )
+    {
+      const QList<QAction *> shapeActions = mApp->shapeDigitizeToolBar()->actions();
+      for ( QAction *act : shapeActions )
+      {
+        if ( QAction *presented = presentableToolbarAction( act ) )
+          digitize->addEntry( { presented, false, QString(), QString(), QString(), QString() } );
+      }
+    }
+
+    QgsAppRibbonGroup *modify = addGroup( page, tr( "Modify" ) );
+    addNamedAction( modify, u"mActionVertexTool"_s );
+    addNamedAction( modify, u"mActionSplitFeatures"_s );
+    addNamedAction( modify, u"mActionSnappingOptions"_s );
+    addNamedAction( modify, u"mActionDeleteSelected"_s );
+    addNamedAction( modify, u"mActionCutFeatures"_s );
+    addNamedAction( modify, u"mActionCopyFeatures"_s );
+    addNamedAction( modify, u"mActionPasteFeatures"_s );
 
     QgsAppRibbonGroup *selection = addGroup( page, tr( "Selection" ) );
-    addNamedAction( selection, u"mActionSelectFeatures"_s, true );
+    addNamedAction( selection, u"mActionSelectFeatures"_s );
     addNamedAction( selection, u"mActionSelectPolygon"_s );
+    addNamedAction( selection, u"mActionSelectFreehand"_s );
     addNamedAction( selection, u"mActionSelectByExpression"_s );
     addNamedAction( selection, u"mActionDeselectAll"_s );
+    addNamedAction( selection, u"mActionSelectAll"_s );
 
     QgsAppRibbonGroup *labels = addGroup( page, tr( "Labels" ) );
-    addNamedAction( labels, u"mActionLabeling"_s, true );
+    addNamedAction( labels, u"mActionLabeling"_s );
     addNamedAction( labels, u"mActionMoveLabel"_s );
     addNamedAction( labels, u"mActionRotateLabel"_s );
-    addNamedAction( labels, u"mActionShowPinnedLabels"_s );
     addNamedAction( labels, u"mActionShowHideLabels"_s );
 
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+    addNamedAction( navigation, u"mActionZoomIn"_s );
+    addNamedAction( navigation, u"mActionZoomOut"_s );
+    addNamedAction( navigation, u"mActionZoomFullExtent"_s );
+
     QgsAppRibbonGroup *tools = addGroup( page, tr( "Tools" ) );
-    addMenu( tools, mApp->vectorMenu() );
+    addMenu( tools, mApp->vectorMenu(), tr( "Vector" ) );
   }
 
   // Raster
   {
     QgsAppRibbonPage *page = addPage( tr( "Raster" ) );
-    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
-    addNamedAction( navigation, u"mActionPan"_s, true );
 
     QgsAppRibbonGroup *stretch = addGroup( page, tr( "Stretch" ) );
-    addNamedAction( stretch, u"mActionLocalHistogramStretch"_s, true );
+    addNamedAction( stretch, u"mActionLocalHistogramStretch"_s );
     addNamedAction( stretch, u"mActionFullHistogramStretch"_s );
     addNamedAction( stretch, u"mActionLocalCumulativeCutStretch"_s );
     addNamedAction( stretch, u"mActionFullCumulativeCutStretch"_s );
 
-    QgsAppRibbonGroup *brightness = addGroup( page, tr( "Brightness" ) );
-    addNamedAction( brightness, u"mActionIncreaseBrightness"_s );
-    addNamedAction( brightness, u"mActionDecreaseBrightness"_s );
+    QgsAppRibbonGroup *adjust = addGroup( page, tr( "Adjust" ) );
+    addNamedAction( adjust, u"mActionIncreaseBrightness"_s );
+    addNamedAction( adjust, u"mActionDecreaseBrightness"_s );
+    addNamedAction( adjust, u"mActionIncreaseContrast"_s );
+    addNamedAction( adjust, u"mActionDecreaseContrast"_s );
+    addNamedAction( adjust, u"mActionIncreaseGamma"_s );
+    addNamedAction( adjust, u"mActionDecreaseGamma"_s );
 
-    QgsAppRibbonGroup *contrast = addGroup( page, tr( "Contrast" ) );
-    addNamedAction( contrast, u"mActionIncreaseContrast"_s );
-    addNamedAction( contrast, u"mActionDecreaseContrast"_s );
-
-    QgsAppRibbonGroup *gamma = addGroup( page, tr( "Gamma" ) );
-    addNamedAction( gamma, u"mActionIncreaseGamma"_s );
-    addNamedAction( gamma, u"mActionDecreaseGamma"_s );
+    QgsAppRibbonGroup *navigation = addGroup( page, tr( "Navigation" ) );
+    addNamedAction( navigation, u"mActionPan"_s, true );
+    addNamedAction( navigation, u"mActionZoomIn"_s );
+    addNamedAction( navigation, u"mActionZoomOut"_s );
+    addNamedAction( navigation, u"mActionZoomFullExtent"_s );
 
     QgsAppRibbonGroup *tools = addGroup( page, tr( "Tools" ) );
-    addNamedAction( tools, u"mActionShowRasterCalculator"_s );
-    addMenu( tools, mApp->rasterMenu() );
+    addMenu( tools, mApp->rasterMenu(), tr( "Raster" ) );
   }
 
   // Extensions: extension management (existing plugin manager), plugin toolbar actions,
@@ -1085,10 +1645,12 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     QgsAppRibbonPage *page = addPage( tr( "Extensions" ) );
     QgsAppRibbonGroup *manage = addGroup( page, tr( "Manage" ) );
     addNamedAction( manage, u"mActionManagePlugins"_s, true );
-    addNamedAction( manage, u"mActionShowPythonDialog"_s );
-    addMenu( manage, mApp->pluginMenu() );
+    addMenu( manage, mApp->pluginMenu(), tr( "Extensions" ) );
 
-    mirrorToolbar( addGroup( page, tr( "Installed" ) ), mApp->pluginToolBar() );
+    QgsAppRibbonGroup *installed = addGroup( page, tr( "Installed" ) );
+    addNamedAction( installed, u"mActionShowPythonDialog"_s );
+    mirrorToolbar( installed, mApp->pluginToolBar() );
+
     mExtensionMenus = addGroup( page, tr( "Installed Menus" ) );
   }
 
@@ -1103,15 +1665,14 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
 
     QgsAppRibbonGroup *tools = addGroup( page, tr( "Tools" ) );
     addNamedAction( tools, u"mActionShowMeshCalculator"_s, true );
-    addMenu( tools, mApp->meshMenu() );
+    addMenu( tools, mApp->meshMenu(), tr( "Mesh" ) );
   }
 
   // Help
   {
     QgsAppRibbonPage *page = addPage( tr( "Help" ) );
     QgsAppRibbonGroup *help = addGroup( page, tr( "Help" ) );
-    addNamedAction( help, u"mActionHelpContents"_s, true );
-    addMenu( help, mApp->helpMenu() );
+    addMenu( help, mApp->helpMenu(), tr( "Help" ) );
     addNamedAction( help, u"mActionToolSearch"_s );
 
     QgsAppRibbonGroup *documentation = addGroup( page, tr( "Documentation" ) );
@@ -1124,6 +1685,7 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
 
   watchMenuBar( mApp->menuBar() );
   refreshOptionalActions();
+  loadUserHeightOffset();
   updateMetrics();
 }
 
@@ -1221,20 +1783,28 @@ void QgsAppRibbon::updateMetrics()
 
   // Page margins (top SM, bottom XS plus the 1px border), command area, the XS gap above
   // the caption, and the caption row.
+  const int baseButtonHeight = 58;
+  m.buttonAreaHeight = baseButtonHeight;
+  m.captionHeight = QFontMetrics( ribbonCaptionFont( font() ) ).height();
+
   const int chrome = m.spaceSm + m.spaceXs + 1;
-  const int command = chrome + m.tallHeight + m.spaceXs + m.captionHeight;
-  m.buttonAreaHeight = m.tallHeight;
+  const int command = chrome + m.buttonAreaHeight + m.spaceXs + m.captionHeight;
+  mCommandHeight = command;
   m.captions = true;
 
   if ( m != mMetrics || command != mCommandHeight )
   {
     mMetrics = m;
-    mCommandHeight = command;
     for ( QgsAppRibbonPage *page : std::as_const( mPages ) )
       page->setMetrics( m );
   }
+  setFixedHeight( tabBar()->sizeHint().height() + mCommandHeight );
   updateGeometry();
   syncChromeTabBarGeometry();
+  if ( parentWidget() )
+    parentWidget()->updateGeometry();
+  if ( mApp && mApp->appRibbonBar() )
+    mApp->appRibbonBar()->updateGeometry();
   mUpdatingMetrics = false;
 }
 
@@ -1309,6 +1879,20 @@ bool QgsAppRibbon::eventFilter( QObject *watched, QEvent *event )
       if ( !mPendingMirrorSyncs.contains( toolbar ) )
         mPendingMirrorSyncs << toolbar;
     }
+    else if ( qobject_cast<QMenu *>( watched ) )
+    {
+      for ( QgsAppRibbonPage *page : std::as_const( mPages ) )
+      {
+        if ( page )
+        {
+          for ( QgsAppRibbonGroup *grp : page->groups() )
+          {
+            if ( grp )
+              grp->scheduleRebuild();
+          }
+        }
+      }
+    }
   }
   return QTabWidget::eventFilter( watched, event );
 }
@@ -1380,8 +1964,8 @@ void QgsAppRibbon::refreshOptionalActions()
   {
     for ( QgsAppRibbonGroup *group : page->groups() )
     {
-      if ( group->resolveDeferred( mApp ) )
-        group->scheduleRebuild();
+      group->resolveDeferred( mApp );
+      group->scheduleRebuild();
     }
   }
 }
@@ -1393,6 +1977,134 @@ void QgsAppRibbon::refreshIcons()
     for ( QgsAppRibbonGroup *group : page->groups() )
       group->scheduleRebuild();
   }
+}
+
+QList<QgsAppRibbon::RibbonCommandInfo> QgsAppRibbon::ribbonCommands() const
+{
+  QList<RibbonCommandInfo> list;
+  QSet<QAction *> seen;
+
+  std::function<void( QMenu *, int, const QString &, const QString & )> extractMenuActions;
+  extractMenuActions = [&]( QMenu *menu, int pageIdx, const QString &pageTitle, const QString &parentHierarchy ) {
+    if ( !menu )
+      return;
+    const QList<QAction *> actions = menu->actions();
+    for ( QAction *act : actions )
+    {
+      if ( !act || act->isSeparator() )
+        continue;
+      if ( QMenu *sub = act->menu() )
+      {
+        QString cleanSubTitle = sub->title();
+        cleanSubTitle.remove( '&' );
+        const QString subHierarchy = parentHierarchy + u" \u25B8 "_s + cleanSubTitle.trimmed();
+        extractMenuActions( sub, pageIdx, pageTitle, subHierarchy );
+      }
+      else
+      {
+        if ( !seen.contains( act ) )
+        {
+          seen.insert( act );
+          RibbonCommandInfo info;
+          info.action = act;
+          info.pageIndex = pageIdx;
+          info.pageTitle = pageTitle;
+          info.ribbonLabel = cleanActionLabel( act, QString() );
+          info.fullHierarchy = parentHierarchy;
+          list.append( info );
+        }
+      }
+    }
+  };
+
+  for ( int pageIdx = 0; pageIdx < mPages.size(); ++pageIdx )
+  {
+    QgsAppRibbonPage *page = mPages[pageIdx];
+    if ( !page )
+      continue;
+    const QString pageTitle = tabText( pageIdx );
+
+    for ( QgsAppRibbonGroup *group : page->groups() )
+    {
+      if ( !group )
+        continue;
+      const QString groupTitle = group->title();
+      const QString baseHierarchy = pageTitle + u" \u25B8 "_s + groupTitle;
+
+      for ( const QgsAppRibbonGroup::Entry &entry : group->entries() )
+      {
+        QAction *act = entry.action.data();
+        if ( !act )
+          continue;
+
+        if ( QMenu *menu = dropDownMenu( act ) )
+        {
+          extractMenuActions( menu, pageIdx, pageTitle, baseHierarchy );
+        }
+        else if ( act->menu() )
+        {
+          extractMenuActions( act->menu(), pageIdx, pageTitle, baseHierarchy );
+        }
+
+        if ( !seen.contains( act ) )
+        {
+          seen.insert( act );
+          RibbonCommandInfo info;
+          info.action = act;
+          info.pageIndex = pageIdx;
+          info.pageTitle = pageTitle;
+          info.groupTitle = groupTitle;
+          info.ribbonLabel = !entry.label.isEmpty() ? entry.label : cleanActionLabel( act, QString() );
+          info.fullHierarchy = baseHierarchy;
+          list.append( info );
+        }
+      }
+    }
+  }
+
+  return list;
+}
+
+void QgsAppRibbon::activateRibbonCommand( QAction *action )
+{
+  if ( !action )
+    return;
+
+  // 1. Switch Ribbon tab to the page containing this command
+  const QList<RibbonCommandInfo> cmds = ribbonCommands();
+  for ( const RibbonCommandInfo &cmd : cmds )
+  {
+    if ( cmd.action == action && cmd.pageIndex >= 0 && cmd.pageIndex < count() )
+    {
+      setCurrentIndex( cmd.pageIndex );
+      break;
+    }
+  }
+
+  // 2. If it's a map navigation / interaction tool, ensure map canvas is visible
+  if ( mApp )
+  {
+    const QString objName = action->objectName();
+    const QString txt = action->text();
+    if ( mApp->isWelcomeScreenVisible() )
+    {
+      if ( objName.contains( "Pan", Qt::CaseInsensitive )
+           || objName.contains( "Zoom", Qt::CaseInsensitive )
+           || objName.contains( "Select", Qt::CaseInsensitive )
+           || objName.contains( "Identify", Qt::CaseInsensitive )
+           || objName.contains( "Measure", Qt::CaseInsensitive )
+           || objName.contains( "Feature", Qt::CaseInsensitive )
+           || objName.contains( "Draw", Qt::CaseInsensitive )
+           || txt.contains( "Pan", Qt::CaseInsensitive )
+           || txt.contains( "Zoom", Qt::CaseInsensitive ) )
+      {
+        mApp->showMapCanvas();
+      }
+    }
+  }
+
+  // 3. Trigger the action
+  action->trigger();
 }
 
 void QgsAppRibbon::setThemeToggleAction( QAction *action )
@@ -1617,26 +2329,206 @@ void QgsAppRibbon::addNamedAction( QgsAppRibbonGroup *group, const QString &obje
 {
   if ( !mApp || !group )
     return;
-  if ( QAction *action = mApp->findChild<QAction *>( objectName ) )
-    group->addEntry( { action, primary, QString(), QString(), QString() } );
+  QAction *action = mApp->findChild<QAction *>( objectName );
+  if ( !action && objectName == "mActionShowPythonDialog"_L1 )
+    action = mApp->actionShowPythonDialog();
+  if ( !action && objectName == "mActionAllEdits"_L1 )
+    action = mApp->actionAllEdits();
+  if ( !action && objectName == "mActionShowPythonDialog"_L1 )
+  {
+    action = new QAction( QgsHakeIcons::icon( u"analysis/hake-analysis-python-console.svg"_s ), tr( "Python" ), this );
+    action->setObjectName( objectName );
+    connect( action, &QAction::triggered, this, [this]() {
+      if ( mApp )
+      {
+        mApp->showNativePythonConsole();
+      }
+    } );
+  }
+  if ( !action && objectName == "mActionShowMetaSearch"_L1 )
+  {
+    action = new QAction( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ), tr( "Web" ), this );
+    action->setObjectName( objectName );
+    action->setToolTip( tr( "MetaSearch (Metadata Catalog Search)" ) );
+    connect( action, &QAction::triggered, this, [this]() {
+      if ( mApp )
+      {
+        mApp->showMetaSearch();
+      }
+    } );
+  }
+  if ( !action && objectName == "mActionShowDbManager"_L1 )
+  {
+    action = new QAction( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ), tr( "Database" ), this );
+    action->setObjectName( objectName );
+    action->setToolTip( tr( "Database Manager" ) );
+    connect( action, &QAction::triggered, this, [this]() {
+      if ( mApp )
+      {
+        for ( QAction *act : mApp->findChildren<QAction *>() )
+        {
+          if ( act->objectName() == "mActionDbManager"_L1 || act->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+          {
+            act->trigger();
+            return;
+          }
+        }
+        if ( QAction *qh = mApp->findChild<QAction *>( u"mActionQueryHistory"_s ) )
+        {
+          qh->trigger();
+        }
+        else if ( mApp->visibleMessageBar() )
+        {
+          mApp->visibleMessageBar()->pushMessage( tr( "Database" ), tr( "Database Manager is loading or unavailable." ), Qgis::MessageLevel::Info );
+        }
+      }
+    } );
+  }
+  if ( action )
+  {
+    if ( objectName == "mActionShowPythonDialog"_L1 )
+    {
+      action->setIcon( QgsHakeIcons::icon( u"analysis/hake-analysis-python-console.svg"_s ) );
+      group->addEntry( { action, primary, QString(), QString(), objectName, tr( "Python" ) } );
+    }
+    else if ( objectName == "mActionShowMetaSearch"_L1 )
+    {
+      action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+      group->addEntry( { action, primary, QString(), QString(), objectName, tr( "Web" ) } );
+    }
+    else if ( objectName == "mActionShowDbManager"_L1 )
+    {
+      action->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+      group->addEntry( { action, primary, QString(), QString(), objectName, tr( "Database" ) } );
+    }
+    else
+    {
+      group->addEntry( { action, primary, QString(), QString(), objectName, QString() } );
+    }
+  }
+  else
+  {
+    group->addEntry( { nullptr, primary, QString(), QString(), objectName, QString() } );
+  }
 }
 
 void QgsAppRibbon::addDockToggle( QgsAppRibbonGroup *group, const QString &dockObjectName, const QString &label, bool primary )
 {
-  if ( group )
-    group->addEntry( { nullptr, primary, dockObjectName, QString(), label } );
+  if ( !group )
+    return;
+  QAction *action = nullptr;
+  if ( mApp )
+  {
+    if ( QDockWidget *dock = mApp->findChild<QDockWidget *>( dockObjectName ) )
+    {
+      action = dock->toggleViewAction();
+      if ( dockObjectName == "ProcessingToolbox"_L1 )
+        action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+    }
+  }
+  if ( !action && dockObjectName == "ProcessingToolbox"_L1 )
+  {
+    action = new QAction( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ), label.isEmpty() ? tr( "Processing Toolbox" ) : label, this );
+    action->setObjectName( u"mRibbonActionProcessingToolbox"_s );
+    action->setCheckable( true );
+    connect( action, &QAction::triggered, this, [this, action]() {
+      if ( mApp )
+      {
+        if ( QDockWidget *dock = mApp->findChild<QDockWidget *>( u"ProcessingToolbox"_s ) )
+        {
+          const bool vis = !dock->isVisible();
+          dock->setVisible( vis );
+          if ( vis )
+            dock->raise();
+          action->setChecked( vis );
+          return;
+        }
+        if ( QAction *act = mApp->findChild<QAction *>( u"toolboxAction"_s ) )
+        {
+          act->trigger();
+          return;
+        }
+        if ( mApp->visibleMessageBar() )
+        {
+          mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Processing Toolbox dock is loading or unavailable." ), Qgis::MessageLevel::Info );
+        }
+      }
+      action->setChecked( false );
+    } );
+  }
+  group->addEntry( { action, primary, dockObjectName, QString(), QString(), label } );
 }
 
-void QgsAppRibbon::addMenu( QgsAppRibbonGroup *group, QMenu *menu )
+void QgsAppRibbon::addMenu( QgsAppRibbonGroup *group, QMenu *menu, const QString &overrideLabel )
 {
   if ( group && menu )
-    group->addEntry( { menu->menuAction(), false, QString(), QString(), QString() } );
+  {
+    group->addEntry( { menu->menuAction(), false, QString(), QString(), QString(), overrideLabel } );
+    menu->installEventFilter( this );
+  }
 }
 
 void QgsAppRibbon::addDeferredMenu( QgsAppRibbonGroup *group, const QString &menuObjectName )
 {
-  if ( group )
-    group->addEntry( { nullptr, false, QString(), menuObjectName, QString() } );
+  if ( !group )
+    return;
+  QAction *action = nullptr;
+  if ( mApp )
+  {
+    if ( QMenu *menu = mApp->findChild<QMenu *>( menuObjectName ) )
+    {
+      action = menu->menuAction();
+      if ( menuObjectName == "processing"_L1 )
+        action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+    }
+  }
+  if ( !action && menuObjectName == "processing"_L1 )
+  {
+    QMenu *menu = new QMenu( tr( "Processing" ), this );
+    menu->setObjectName( menuObjectName );
+
+    QAction *actToolbox = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ), tr( "Toolbox" ) );
+    connect( actToolbox, &QAction::triggered, this, [this]() {
+      if ( mApp )
+      {
+        if ( QDockWidget *dock = mApp->findChild<QDockWidget *>( u"ProcessingToolbox"_s ) )
+        {
+          dock->setVisible( true );
+          dock->raise();
+        }
+        else if ( QAction *act = mApp->findChild<QAction *>( u"toolboxAction"_s ) )
+        {
+          act->trigger();
+        }
+        else if ( mApp->visibleMessageBar() )
+        {
+          mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Processing Toolbox is loading or unavailable." ), Qgis::MessageLevel::Info );
+        }
+      }
+    } );
+
+    QAction *actModeler = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-model-designer.svg"_s ), tr( "Model Designer…" ) );
+    connect( actModeler, &QAction::triggered, this, [this]() {
+      if ( mApp && mApp->visibleMessageBar() )
+        mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Model Designer requires Python Processing support." ), Qgis::MessageLevel::Info );
+    } );
+
+    QAction *actHistory = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-history.svg"_s ), tr( "History…" ) );
+    connect( actHistory, &QAction::triggered, this, [this]() {
+      if ( mApp && mApp->visibleMessageBar() )
+        mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Processing history is empty or unavailable." ), Qgis::MessageLevel::Info );
+    } );
+
+    QAction *actResults = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-results-viewer.svg"_s ), tr( "Results Viewer" ) );
+    connect( actResults, &QAction::triggered, this, [this]() {
+      if ( mApp && mApp->visibleMessageBar() )
+        mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Results Viewer is unavailable." ), Qgis::MessageLevel::Info );
+    } );
+
+    action = menu->menuAction();
+    action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+  }
+  group->addEntry( { action, false, QString(), menuObjectName, QString(), menuObjectName == "processing"_L1 ? tr( "Processing" ) : QString() } );
 }
 
 void QgsAppRibbon::mirrorToolbar( QgsAppRibbonGroup *group, QToolBar *toolbar )
@@ -1649,7 +2541,7 @@ void QgsAppRibbon::mirrorToolbar( QgsAppRibbonGroup *group, QToolBar *toolbar )
   for ( QAction *action : actions )
   {
     if ( QAction *presented = presentableToolbarAction( action ) )
-      group->addEntry( { presented, false, QString(), QString(), QString() } );
+      group->addEntry( { presented, false, QString(), QString(), QString(), QString() } );
   }
 }
 
@@ -1663,7 +2555,7 @@ void QgsAppRibbon::syncMirroredGroup( QToolBar *toolbar )
   for ( QAction *action : actions )
   {
     if ( QAction *presented = presentableToolbarAction( action ) )
-      entries.append( QgsAppRibbonGroup::Entry { presented, false, QString(), QString(), QString() } );
+      entries.append( QgsAppRibbonGroup::Entry { presented, false, QString(), QString(), QString(), QString() } );
   }
   group->setEntries( entries );
 }
@@ -1726,9 +2618,121 @@ void QgsAppRibbon::syncMenuBar()
 
     QMenu *menu = action->menu();
     if ( menu && !isStandardMenu( menu ) )
-      extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString() } );
+      extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString(), QString() } );
   }
 
   if ( mExtensionMenus )
     mExtensionMenus->setEntries( extensionEntries );
+}
+
+void QgsAppRibbon::setUserHeightOffset( int offset )
+{
+  Q_UNUSED( offset )
+  mUserHeightOffset = 0;
+}
+
+void QgsAppRibbon::loadUserHeightOffset()
+{
+  QgsSettings settings;
+  settings.remove( u"/Hake/Ribbon/ExtraHeight"_s );
+  mUserHeightOffset = 0;
+}
+
+void QgsAppRibbon::saveUserHeightOffset() const
+{
+  QgsSettings settings;
+  settings.remove( u"/Hake/Ribbon/ExtraHeight"_s );
+}
+
+//
+// QgsAppRibbonResizeGrip
+//
+
+QgsAppRibbonResizeGrip::QgsAppRibbonResizeGrip( QgsAppRibbon *ribbon, QWidget *parent )
+  : QWidget( parent )
+  , mRibbon( ribbon )
+{
+  setObjectName( u"HakeAppRibbonResizeGrip"_s );
+  setFixedHeight( 6 );
+  setCursor( Qt::SplitVCursor );
+  setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+  setMouseTracking( true );
+  setToolTip( tr( "Drag to resize upper navbar height; double-click to reset" ) );
+}
+
+void QgsAppRibbonResizeGrip::paintEvent( QPaintEvent * )
+{
+  QPainter p( this );
+  const bool isNight = ( QgsHakeTheme::variantForTheme( QgsApplication::themeName() ) == QgsHakeTheme::Variant::Night );
+
+  p.setPen( isNight ? QColor( 30, 41, 59 ) : QColor( 210, 220, 230 ) );
+  p.drawLine( 0, 0, width(), 0 );
+
+  if ( mHovered || mDragging )
+  {
+    p.setPen( isNight ? QColor( 56, 189, 248, 180 ) : QColor( 22, 74, 115, 180 ) );
+    p.drawLine( 0, 2, width(), 2 );
+
+    const int cx = width() / 2;
+    p.fillRect( cx - 12, 1, 6, 2, isNight ? QColor( 56, 189, 248 ) : QColor( 22, 74, 115 ) );
+    p.fillRect( cx - 2, 1, 6, 2, isNight ? QColor( 56, 189, 248 ) : QColor( 22, 74, 115 ) );
+    p.fillRect( cx + 8, 1, 6, 2, isNight ? QColor( 56, 189, 248 ) : QColor( 22, 74, 115 ) );
+  }
+}
+
+void QgsAppRibbonResizeGrip::enterEvent( QEnterEvent * )
+{
+  mHovered = true;
+  update();
+}
+
+void QgsAppRibbonResizeGrip::leaveEvent( QEvent * )
+{
+  mHovered = false;
+  update();
+}
+
+void QgsAppRibbonResizeGrip::mousePressEvent( QMouseEvent *event )
+{
+  if ( event->button() == Qt::LeftButton )
+  {
+    mDragging = true;
+    mDragStartY = event->globalPosition().toPoint().y();
+    mStartHeightOffset = mRibbon ? mRibbon->userHeightOffset() : 0;
+    event->accept();
+    update();
+  }
+}
+
+void QgsAppRibbonResizeGrip::mouseMoveEvent( QMouseEvent *event )
+{
+  if ( mDragging && mRibbon )
+  {
+    const int deltaY = event->globalPosition().toPoint().y() - mDragStartY;
+    mRibbon->setUserHeightOffset( mStartHeightOffset + deltaY );
+    event->accept();
+  }
+}
+
+void QgsAppRibbonResizeGrip::mouseReleaseEvent( QMouseEvent *event )
+{
+  if ( mDragging )
+  {
+    mDragging = false;
+    if ( mRibbon )
+      mRibbon->saveUserHeightOffset();
+    event->accept();
+    update();
+  }
+}
+
+void QgsAppRibbonResizeGrip::mouseDoubleClickEvent( QMouseEvent *event )
+{
+  if ( event->button() == Qt::LeftButton && mRibbon )
+  {
+    mRibbon->setUserHeightOffset( 0 );
+    mRibbon->saveUserHeightOffset();
+    event->accept();
+    update();
+  }
 }

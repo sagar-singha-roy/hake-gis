@@ -6,6 +6,7 @@ on:
       - master
       - release-**
       - ribbon-ui
+      - ribbon-ui-enhancements
   pull_request:
   workflow_dispatch:
 

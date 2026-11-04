@@ -308,6 +308,11 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
 
     void showHelp();
 
+    void setupRemixIcons();
+
+  protected:
+    void updateOptionsListVerticalTabs() override;
+
     friend class TestQgsProjectProperties;
 };
 #endif // QGSPROJECTPROPERTIES_H

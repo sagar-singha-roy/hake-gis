@@ -94,6 +94,13 @@ QgsLocatorWidget::QgsLocatorWidget( QWidget *parent )
 
   connect( mLineEdit, &QLineEdit::textChanged, this, &QgsLocatorWidget::scheduleDelayedPopup );
   connect( mResultsView, &QAbstractItemView::activated, this, &QgsLocatorWidget::acceptCurrentEntry );
+  connect( mResultsView, &QAbstractItemView::clicked, this, [this]( const QModelIndex &index ) {
+    if ( index.isValid() )
+    {
+      mResultsView->setCurrentIndex( index );
+      acceptCurrentEntry();
+    }
+  } );
   connect( mResultsView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &QgsLocatorWidget::selectionChanged );
   connect( mResultsView, &QAbstractItemView::customContextMenuRequested, this, &QgsLocatorWidget::showContextMenu );
 

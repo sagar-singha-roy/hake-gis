@@ -93,7 +93,7 @@ int QgisEvent = QEvent::User + 1;
     static QString productDisplayName();
 
     /**
-     * User-facing product version label (e.g. "2026.0.0").
+     * User-facing product version label (e.g. "2026.0.1").
      *
      * \since QGIS 4.0
      */

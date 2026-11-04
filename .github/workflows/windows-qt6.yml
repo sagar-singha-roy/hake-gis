@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - release-**
+      - ribbon-ui-enhancements
   pull_request:
   release:
     types: ['published']

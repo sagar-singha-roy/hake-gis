@@ -381,6 +381,9 @@ void registerMetaTypes()
 
 void QgsApplication::init( QString profileFolder )
 {
+  // Automatically restore/reconstruct missing or corrupted .shx shapefile index files on the fly
+  CPLSetConfigOption( "SHAPE_RESTORE_SHX", "YES" );
+
   // Initialize application members in desktop app (at this point, profile folder is known)
   if ( platform() == "desktop"_L1 )
   {
@@ -1447,34 +1450,56 @@ QHash<QString, QString> QgsApplication::uiThemes()
   return mapping;
 }
 
+static QString findDocFilePath( const QString &fileName )
+{
+  if ( QgsApplication::isRunningFromBuildDir() )
+  {
+    const QString buildDoc = *sBuildOutputPath() + u"/data/doc/"_s + fileName;
+    if ( QFile::exists( buildDoc ) )
+      return buildDoc;
+    const QString srcDoc = *sBuildSourcePath() + u"/doc/"_s + fileName;
+    if ( QFile::exists( srcDoc ) )
+      return srcDoc;
+  }
+  const QString pkgDoc = QgsApplication::pkgDataPath() + u"/doc/"_s + fileName;
+  if ( QFile::exists( pkgDoc ) )
+    return pkgDoc;
+
+  const QString bundleDoc = QCoreApplication::applicationDirPath() + u"/../Resources/hake-gis/doc/"_s + fileName;
+  if ( QFile::exists( bundleDoc ) )
+    return bundleDoc;
+
+  return pkgDoc;
+}
+
 QString QgsApplication::authorsFilePath()
 {
-  return pkgDataPath() + u"/doc/AUTHORS"_s;
+  return findDocFilePath( u"AUTHORS"_s );
 }
 
 QString QgsApplication::contributorsFilePath()
 {
-  return pkgDataPath() + u"/doc/CONTRIBUTORS"_s;
+  return findDocFilePath( u"CONTRIBUTORS"_s );
 }
 
 QString QgsApplication::sponsorsFilePath()
 {
-  return pkgDataPath() + u"/doc/SPONSORS"_s;
+  return findDocFilePath( u"SPONSORS"_s );
 }
 
 QString QgsApplication::donorsFilePath()
 {
-  return pkgDataPath() + u"/doc/DONORS"_s;
+  return findDocFilePath( u"DONORS"_s );
 }
 
 QString QgsApplication::translatorsFilePath()
 {
-  return pkgDataPath() + u"/doc/TRANSLATORS"_s;
+  return findDocFilePath( u"TRANSLATORS"_s );
 }
 
 QString QgsApplication::licenceFilePath()
 {
-  return pkgDataPath() + u"/doc/LICENSE"_s;
+  return findDocFilePath( u"LICENSE"_s );
 }
 
 QString QgsApplication::i18nPath()

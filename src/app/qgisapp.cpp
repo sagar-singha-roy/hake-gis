@@ -247,6 +247,10 @@ using namespace Qt::StringLiterals;
 #include "qgshakeicons.h"
 #include "qgis.h"
 #include "qgsabout.h"
+#include "qgspythonconsoledockwidget.h"
+#include "qgsprocessingtoolboxdockwidget.h"
+#include "qgsprocessinghistorywidget.h"
+#include "qgsmetasearchdialog.h"
 #include "qgsabstractmaptoolhandler.h"
 #include "qgsappauthrequesthandler.h"
 #include "qgsappbrowserproviders.h"
@@ -614,30 +618,21 @@ class QgsUserProfile;
 static void setTitleBarText_( QWidget &qgisApp )
 {
   QString caption;
-  if ( QgsProject::instance()->title().isEmpty() )
-  {
-    if ( QgsProject::instance()->fileName().isEmpty() )
-    {
-      // new project
-      caption = QgisApp::tr( "Untitled Project" );
-    }
-    else
-    {
-      caption = QgsProject::instance()->baseName();
-    }
-  }
-  else
+  if ( !QgsProject::instance()->title().isEmpty() )
   {
     caption = QgsProject::instance()->title();
   }
+  else if ( !QgsProject::instance()->fileName().isEmpty() )
+  {
+    caption = QgsProject::instance()->baseName();
+  }
+
   if ( !caption.isEmpty() )
   {
     caption += u" %1 "_s.arg( QChar( 0x2014 ) );
   }
-  if ( QgsProject::instance()->isDirty() )
-    caption.prepend( '*' );
 
-  caption += Qgis::productDisplayName();
+  caption += u"Hake GeoDesk"_s;
 
   if ( Qgis::version().endsWith( "Master"_L1 ) )
   {
@@ -652,6 +647,7 @@ static void setTitleBarText_( QWidget &qgisApp )
       caption += u" [%1]"_s.arg( profile->name() );
   }
 
+  qgisApp.setWindowModified( QgsProject::instance()->isDirty() );
   qgisApp.setWindowTitle( caption );
 }
 
@@ -1466,7 +1462,7 @@ QgisApp::QgisApp(
   endProfile();
 
   mBrowserModel = new QgsBrowserGuiModel( this );
-  mBrowserWidget = new QgsBrowserDockWidget( tr( "Browser" ).toUpper(), mBrowserModel, this );
+  mBrowserWidget = new QgsBrowserDockWidget( tr( "Geo Explorer" ), mBrowserModel, this );
   mBrowserWidget->setObjectName( u"Browser"_s );
   mBrowserWidget->setMessageBar( mInfoBar );
   mBrowserWidget->setMapCanvas( mMapCanvas );
@@ -1500,7 +1496,7 @@ QgisApp::QgisApp(
   QShortcut *showBrowserDock = new QShortcut( QKeySequence( tr( "Ctrl+2" ) ), this );
   connect( showBrowserDock, &QShortcut::activated, mBrowserWidget, &QgsDockWidget::toggleUserVisible );
   showBrowserDock->setObjectName( u"ShowBrowserPanel"_s );
-  showBrowserDock->setWhatsThis( tr( "Show Browser Panel" ) );
+  showBrowserDock->setWhatsThis( tr( "Show Geo Explorer Panel" ) );
 
   addDockWidget( Qt::LeftDockWidgetArea, mBrowserWidget );
   mBrowserWidget->hide();
@@ -1517,19 +1513,10 @@ QgisApp::QgisApp(
   connect( mBrowserWidget, &QgsBrowserDockWidget::openFile, this, [this]( const QString &file ) { openFile( file ); } );
   connect( mBrowserWidget, &QgsBrowserDockWidget::handleDropUriList, this, [this]( const QgsMimeDataUtils::UriList &list ) { handleDropUriList( list ); } );
 
-  mBrowserWidget2 = new QgsBrowserDockWidget( tr( "Browser (2)" ).toUpper(), mBrowserModel, this );
-  mBrowserWidget2->setObjectName( u"Browser2"_s );
-  addDockWidget( Qt::LeftDockWidgetArea, mBrowserWidget2 );
-  mBrowserWidget2->hide();
-  connect( mBrowserWidget2, &QgsBrowserDockWidget::connectionsChanged, this, [this] {
-    mBlockBrowser2Refresh++;
-    emit connectionsChanged();
-    mBlockBrowser2Refresh--;
-  } );
-  connect( mBrowserWidget2, &QgsBrowserDockWidget::openFile, this, [this]( const QString &file ) { openFile( file ); } );
-  connect( mBrowserWidget2, &QgsBrowserDockWidget::handleDropUriList, this, [this]( const QgsMimeDataUtils::UriList &list ) { handleDropUriList( list ); } );
+  // Single Geo Explorer dock widget. Secondary browser (mBrowserWidget2) removed to keep clean UI.
+  mBrowserWidget2 = nullptr;
 
-  // Hake icons for the Browser panels. Root items are created silently when a view first
+  // Hake icons for the Browser panel. Root items are created silently when a view first
   // initializes the shared model, and later as providers are added, so re-apply at each point.
   const auto applyBrowserIcons = [this] { QgsHakeIcons::applyToBrowserModel( mBrowserModel, QgsApplication::themeName() ); };
   connect( mBrowserModel, &QAbstractItemModel::rowsInserted, this, [applyBrowserIcons]( const QModelIndex &parent ) {
@@ -1537,7 +1524,7 @@ QgisApp::QgisApp(
       applyBrowserIcons();
   } );
   connect( mBrowserModel, &QAbstractItemModel::modelReset, this, applyBrowserIcons );
-  for ( QgsBrowserDockWidget *browserDock : { mBrowserWidget, mBrowserWidget2 } )
+  for ( QgsBrowserDockWidget *browserDock : { mBrowserWidget } )
   {
     QgsHakeIcons::setPanelIcon( browserDock->findChild<QObject *>( u"mActionAddLayers"_s ), u"browser/hake-browser-add-layer.svg"_s );
     QgsHakeIcons::setPanelIcon( browserDock->findChild<QObject *>( u"mActionRefresh"_s ), u"navigation/hake-navigation-refresh.svg"_s );
@@ -1559,6 +1546,11 @@ QgisApp::QgisApp(
 
   addDockWidget( Qt::LeftDockWidgetArea, mBookMarksDockWidget );
   mBookMarksDockWidget->hide();
+
+  mProcessingToolboxDock = new QgsProcessingToolboxDockWidget( this );
+  mProcessingToolboxDock->setObjectName( u"ProcessingToolbox"_s );
+  addDockWidget( Qt::RightDockWidgetArea, mProcessingToolboxDock );
+  mProcessingToolboxDock->hide();
 
   // create the GPS tool on starting QGIS - this is like the browser
   mGpsConnection = new QgsAppGpsConnection( this );
@@ -1772,14 +1764,7 @@ QgisApp::QgisApp(
     initPythonConsoleOptions();
     endProfile();
   }
-  else if ( mActionShowPythonDialog )
 #endif
-  {
-    // python is disabled so get rid of the action for python console
-    // and installing plugin from ZUIP
-    delete mActionShowPythonDialog;
-    mActionShowPythonDialog = nullptr;
-  }
 
   functionProfile( &QgisApp::readSettings, this, u"Read theme settings"_s );
 
@@ -2189,6 +2174,10 @@ QgisApp::QgisApp(
   if ( !mProjOpen )
   {
     mWelcomeScreen->showScene();
+    if ( mMapCanvas )
+      mMapCanvas->unsetMapTool( mMapCanvas->mapTool() );
+    if ( mActionPan )
+      mActionPan->setChecked( false );
   }
   endProfile();
 }
@@ -3436,29 +3425,87 @@ void QgisApp::initPythonConsoleOptions()
 void QgisApp::showPythonDialog()
 {
 #ifdef WITH_BINDINGS
-  if ( !mPythonUtils || !mPythonUtils->isEnabled() )
-    return;
-
-  bool res = mPythonUtils->runString(
-    "import console\n"
-    "console.show_console()\n",
-    tr( "Failed to open Python console:" ),
-    false
-  );
-
-  if ( !res )
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
-    QString className, text;
-    mPythonUtils->getError( className, text );
-    visibleMessageBar()->pushMessage( tr( "Error" ), tr( "Failed to open Python console:" ) + '\n' + className + ": " + text, Qgis::MessageLevel::Warning );
-  }
+    bool res = mPythonUtils->runString(
+      "import console\n"
+      "console.show_console()\n",
+      tr( "Failed to open Python console:" ),
+      false
+    );
+
+    if ( res )
+    {
 #ifdef Q_OS_MAC
-  else
-  {
-    addWindow( mActionShowPythonDialog );
+      addWindow( mActionShowPythonDialog );
+#endif
+      return;
+    }
   }
 #endif
+
+  showNativePythonConsole();
+}
+
+void QgisApp::showNativePythonConsole()
+{
+  if ( !mPythonConsoleDock )
+  {
+    mPythonConsoleDock = new QgsPythonConsoleDockWidget( this );
+    addDockWidget( Qt::BottomDockWidgetArea, mPythonConsoleDock );
+    resizeDocks( { mPythonConsoleDock }, { 240 }, Qt::Vertical );
+    if ( mPanelMenu )
+      mPanelMenu->addAction( mPythonConsoleDock->toggleViewAction() );
+    connect( mPythonConsoleDock, &QDockWidget::visibilityChanged, this, [this]( bool visible ) {
+      if ( mActionShowPythonDialog )
+        mActionShowPythonDialog->setChecked( visible );
+    } );
+#ifdef Q_OS_MAC
+    addWindow( mActionShowPythonDialog );
 #endif
+  }
+
+  const bool shouldShow = !mPythonConsoleDock->isVisible();
+  mPythonConsoleDock->setVisible( shouldShow );
+  if ( shouldShow )
+  {
+    mPythonConsoleDock->show();
+    mPythonConsoleDock->raise();
+    mPythonConsoleDock->activate();
+  }
+  if ( mActionShowPythonDialog )
+    mActionShowPythonDialog->setChecked( shouldShow );
+}
+
+void QgisApp::showMetaSearch()
+{
+  if ( !mMetaSearchDialog )
+  {
+    mMetaSearchDialog = new QgsMetaSearchDialog( this );
+  }
+  mMetaSearchDialog->show();
+  mMetaSearchDialog->raise();
+  mMetaSearchDialog->activateWindow();
+}
+
+void QgisApp::showProcessingToolbox()
+{
+  if ( !mProcessingToolboxDock )
+  {
+    mProcessingToolboxDock = new QgsProcessingToolboxDockWidget( this );
+    mProcessingToolboxDock->setObjectName( u"ProcessingToolbox"_s );
+    addDockWidget( Qt::RightDockWidgetArea, mProcessingToolboxDock );
+    if ( mPanelMenu )
+      mPanelMenu->addAction( mProcessingToolboxDock->toggleViewAction() );
+  }
+
+  const bool shouldShow = !mProcessingToolboxDock->isVisible();
+  mProcessingToolboxDock->setVisible( shouldShow );
+  if ( shouldShow )
+  {
+    mProcessingToolboxDock->show();
+    mProcessingToolboxDock->raise();
+  }
 }
 
 void QgisApp::createActionGroups()
@@ -3626,11 +3673,64 @@ void QgisApp::createMenus()
 
   // Database Menu
   mDatabaseMenu->setObjectName( u"mDatabaseMenu"_s );
+  if ( mDatabaseMenu )
+  {
+    mDatabaseMenu->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+    mDatabaseMenu->menuAction()->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+  }
+
+  if ( mVectorMenu )
+  {
+    mVectorMenu->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-vector.svg"_s ) );
+    mVectorMenu->menuAction()->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-vector.svg"_s ) );
+  }
+
+  if ( mRasterMenu )
+  {
+    mRasterMenu->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-raster.svg"_s ) );
+    mRasterMenu->menuAction()->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-raster.svg"_s ) );
+  }
 
   // Web Menu
-  // don't add it yet, wait for a plugin
   mWebMenu = new QMenu( tr( "&Web" ), menuBar() );
   mWebMenu->setObjectName( u"mWebMenu"_s );
+  mWebMenu->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+  mWebMenu->menuAction()->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+
+  QAction *actionMetaSearch = mWebMenu->addAction( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ), tr( "MetaSearch (Catalog Search)…" ) );
+  actionMetaSearch->setObjectName( u"mActionShowMetaSearch"_s );
+  connect( actionMetaSearch, &QAction::triggered, this, &QgisApp::showMetaSearch );
+
+  // Processing Menu
+  mProcessingMenu = new QMenu( tr( "Pro&cessing" ), menuBar() );
+  mProcessingMenu->setObjectName( u"processing"_s );
+  mProcessingMenu->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+  mProcessingMenu->menuAction()->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+
+  if ( mProcessingToolboxDock )
+  {
+    QAction *actToolbox = mProcessingToolboxDock->toggleViewAction();
+    actToolbox->setObjectName( u"toolboxAction"_s );
+    actToolbox->setText( tr( "&Toolbox" ) );
+    actToolbox->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+    mProcessingMenu->addAction( actToolbox );
+  }
+
+  QAction *actModeler = mProcessingMenu->addAction( QgsApplication::getThemeIcon( u"processingModel.svg"_s ), tr( "&Model Designer…" ) );
+  actModeler->setObjectName( u"modelerAction"_s );
+  connect( actModeler, &QAction::triggered, this, [this]() {
+    if ( visibleMessageBar() )
+      visibleMessageBar()->pushInfo( tr( "Processing" ), tr( "Graphical Model Designer requires Python plugin support." ) );
+  } );
+
+  QAction *actHistory = mProcessingMenu->addAction( QgsApplication::getThemeIcon( u"mIconHistory.svg"_s ), tr( "&History…" ) );
+  actHistory->setObjectName( u"historyAction"_s );
+  connect( actHistory, &QAction::triggered, this, [this]() {
+    QgsProcessingHistoryDialog dlg( this );
+    dlg.exec();
+  } );
+
+  menuBar()->insertMenu( mHelpMenu->menuAction(), mProcessingMenu );
 
   createProfileMenu();
 }
@@ -4162,13 +4262,14 @@ void QgisApp::createAppRibbon()
   ribbonHost->setObjectName( u"HakeAppRibbonHost"_s );
   ribbonHost->setAttribute( Qt::WA_StyledBackground, true );
   ribbonHost->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
-  auto *ribbonHostLayout = new QHBoxLayout( ribbonHost );
+  auto *ribbonHostLayout = new QVBoxLayout( ribbonHost );
   ribbonHostLayout->setContentsMargins( 0, 0, 0, 0 );
   ribbonHostLayout->setSpacing( 0 );
 
   mAppRibbon = new QgsAppRibbon( ribbonHost, this );
   mAppRibbon->setThemeToggleAction( mActionToggleTheme );
   ribbonHostLayout->addWidget( mAppRibbon, 1 );
+
   mAppRibbonBar->addWidget( ribbonHost );
   // QToolBar style metrics can still inset the hosted widget; force flush geometry.
   if ( QLayout *ribbonBarLayout = mAppRibbonBar->layout() )
@@ -4306,28 +4407,40 @@ void QgisApp::createStatusBar()
   mCoordsEdit->setFont( statusBarFont );
   mStatusBar->addPermanentWidget( mCoordsEdit, 0 );
 
+  // On the fly projection status bar icon (EPSG right after Coordinate)
+  // Changed this to a tool button since a QPushButton is
+  // sculpted on OS X and the icon is never displayed [gsherman]
+  mOnTheFlyProjectionStatusButton = new QToolButton( mStatusBar );
+  mOnTheFlyProjectionStatusButton->setAutoRaise( true );
+  mOnTheFlyProjectionStatusButton->setFont( statusBarFont );
+  mOnTheFlyProjectionStatusButton->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+  mOnTheFlyProjectionStatusButton->setObjectName( u"mOntheFlyProjectionStatusButton"_s );
+  mOnTheFlyProjectionStatusButton->setMaximumHeight( 26 );
+  mOnTheFlyProjectionStatusButton->setIcon( QgsHakeIcons::icon( u"options/hake-options-crs-handling.svg"_s ) );
+  mOnTheFlyProjectionStatusButton->setIconSize( QSize( 16, 16 ) );
+  mOnTheFlyProjectionStatusButton->setToolTip( tr(
+    "CRS status - Click "
+    "to open coordinate reference system dialog"
+  ) );
+  connect( mOnTheFlyProjectionStatusButton, &QAbstractButton::clicked, this, &QgisApp::projectPropertiesProjections ); //bring up the project props dialog when clicked
+  mStatusBar->addPermanentWidget( mOnTheFlyProjectionStatusButton, 0 );
+
   mScaleWidget = new QgsStatusBarScaleWidget( mMapCanvas, mStatusBar );
   mScaleWidget->setObjectName( u"mScaleWidget"_s );
   mScaleWidget->setFont( statusBarFont );
   mStatusBar->addPermanentWidget( mScaleWidget, 0 );
 
-  // zoom widget
-  mMagnifierWidget = new QgsStatusBarMagnifierWidget( mStatusBar );
-  mMagnifierWidget->setObjectName( u"mMagnifierWidget"_s );
-  mMagnifierWidget->setFont( statusBarFont );
-  connect( mMapCanvas, &QgsMapCanvas::magnificationChanged, mMagnifierWidget, &QgsStatusBarMagnifierWidget::updateMagnification );
-  connect( mMapCanvas, &QgsMapCanvas::scaleLockChanged, mMagnifierWidget, &QgsStatusBarMagnifierWidget::updateScaleLock );
-  connect( mMagnifierWidget, &QgsStatusBarMagnifierWidget::magnificationChanged, mMapCanvas, [this]( double factor ) { mMapCanvas->setMagnificationFactor( factor ); } );
-  connect( mMagnifierWidget, &QgsStatusBarMagnifierWidget::scaleLockChanged, mMapCanvas, &QgsMapCanvas::setScaleLocked );
-  mMagnifierWidget->updateMagnification( QgsSettingsRegistryGui::settingsMagnifierFactorDefault->value() );
-  mStatusBar->addPermanentWidget( mMagnifierWidget, 0 );
-
   // add a widget to show/set current rotation
+  QLabel *rotationIcon = new QLabel( mStatusBar );
+  rotationIcon->setObjectName( u"mRotationIcon"_s );
+  rotationIcon->setPixmap( QgsHakeIcons::icon( u"vector/hake-vector-rotate-feature.svg"_s ).pixmap( 16, 16 ) );
+  rotationIcon->setToolTip( tr( "Current clockwise map rotation in degrees" ) );
+  mStatusBar->addPermanentWidget( rotationIcon, 0 );
+
   mRotationLabel = new QLabel( QString(), mStatusBar );
   mRotationLabel->setObjectName( u"mRotationLabel"_s );
   mRotationLabel->setFont( statusBarFont );
   mRotationLabel->setMinimumWidth( 10 );
-  //mRotationLabel->setMaximumHeight( 20 );
   mRotationLabel->setMargin( 3 );
   mRotationLabel->setAlignment( Qt::AlignCenter );
   mRotationLabel->setFrameStyle( QFrame::NoFrame );
@@ -4339,7 +4452,7 @@ void QgisApp::createStatusBar()
   mRotationEdit->setObjectName( u"mRotationEdit"_s );
   mRotationEdit->setClearValue( 0.0 );
   mRotationEdit->setKeyboardTracking( false );
-  mRotationEdit->setMaximumWidth( 120 );
+  mRotationEdit->setMaximumWidth( 75 );
   mRotationEdit->setDecimals( 1 );
   mRotationEdit->setRange( -360.0, 360.0 );
   mRotationEdit->setWrapping( true );
@@ -4352,40 +4465,36 @@ void QgisApp::createStatusBar()
 
   showRotation();
 
+  // zoom widget (magnifier after rotation)
+  mMagnifierWidget = new QgsStatusBarMagnifierWidget( mStatusBar );
+  mMagnifierWidget->setObjectName( u"mMagnifierWidget"_s );
+  mMagnifierWidget->setFont( statusBarFont );
+  connect( mMapCanvas, &QgsMapCanvas::magnificationChanged, mMagnifierWidget, &QgsStatusBarMagnifierWidget::updateMagnification );
+  connect( mMapCanvas, &QgsMapCanvas::scaleLockChanged, mMagnifierWidget, &QgsStatusBarMagnifierWidget::updateScaleLock );
+  connect( mMagnifierWidget, &QgsStatusBarMagnifierWidget::magnificationChanged, mMapCanvas, [this]( double factor ) { mMapCanvas->setMagnificationFactor( factor ); } );
+  connect( mMagnifierWidget, &QgsStatusBarMagnifierWidget::scaleLockChanged, mMapCanvas, &QgsMapCanvas::setScaleLocked );
+  mMagnifierWidget->updateMagnification( QgsSettingsRegistryGui::settingsMagnifierFactorDefault->value() );
+  mStatusBar->addPermanentWidget( mMagnifierWidget, 0 );
+
   // render suppression status bar widget
   mRenderSuppressionCBox = new QCheckBox( tr( "Render" ), mStatusBar );
   mRenderSuppressionCBox->setObjectName( u"mRenderSuppressionCBox"_s );
   mRenderSuppressionCBox->setChecked( true );
   mRenderSuppressionCBox->setFont( statusBarFont );
+  mRenderSuppressionCBox->setIcon( QgsHakeIcons::icon( u"properties/hake-properties-rendering.svg"_s ) );
+  mRenderSuppressionCBox->setIconSize( QSize( 16, 16 ) );
   mRenderSuppressionCBox->setToolTip( tr( "Toggle map rendering" ) );
   mStatusBar->addPermanentWidget( mRenderSuppressionCBox, 0 );
 
-  // On the fly projection status bar icon
-  // Changed this to a tool button since a QPushButton is
-  // sculpted on OS X and the icon is never displayed [gsherman]
-  mOnTheFlyProjectionStatusButton = new QToolButton( mStatusBar );
-  mOnTheFlyProjectionStatusButton->setAutoRaise( true );
-  mOnTheFlyProjectionStatusButton->setFont( statusBarFont );
-  mOnTheFlyProjectionStatusButton->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-  mOnTheFlyProjectionStatusButton->setObjectName( u"mOntheFlyProjectionStatusButton"_s );
-  // Maintain uniform widget height in status bar by setting button height same as labels
-  // For Qt/Mac 3.3, the default toolbutton height is 30 and labels were expanding to match
-  mOnTheFlyProjectionStatusButton->setMaximumHeight( mScaleWidget->height() );
-  mOnTheFlyProjectionStatusButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:crs"_s, u"mIconProjectionEnabled.svg"_s ) );
-  mOnTheFlyProjectionStatusButton->setToolTip( tr(
-    "CRS status - Click "
-    "to open coordinate reference system dialog"
-  ) );
-  connect( mOnTheFlyProjectionStatusButton, &QAbstractButton::clicked, this, &QgisApp::projectPropertiesProjections ); //bring up the project props dialog when clicked
-  mStatusBar->addPermanentWidget( mOnTheFlyProjectionStatusButton, 0 );
   mStatusBar->showMessage( tr( "Ready" ) );
 
   mMessageButton = new QToolButton( mStatusBar );
   mMessageButton->setAutoRaise( true );
-  mMessageButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:messages-read"_s, u"/mMessageLogRead.svg"_s ) );
+  mMessageButton->setIcon( QgsHakeIcons::icon( u"app/hake-status-messages-read.svg"_s ) );
+  mMessageButton->setIconSize( QSize( 16, 16 ) );
   mMessageButton->setToolTip( tr( "Messages" ) );
   mMessageButton->setObjectName( u"mMessageLogViewerButton"_s );
-  mMessageButton->setMaximumHeight( mScaleWidget->height() );
+  mMessageButton->setMaximumHeight( 26 );
   mMessageButton->setCheckable( true );
   mStatusBar->addPermanentWidget( mMessageButton, 0 );
 
@@ -4433,7 +4542,12 @@ void QgisApp::createStatusBar()
     << mWebToolBar
     << mSnappingToolBar;
 
-  mLocatorWidget->locator()->registerFilter( new QgsActionLocatorFilter( actionObjects ) );
+  auto *actionFilter = new QgsActionLocatorFilter( mAppRibbon, actionObjects );
+  mLocatorWidget->locator()->registerFilter( actionFilter );
+  actionFilter->setEnabled( true );
+  actionFilter->setUseWithoutPrefix( true );
+  QgsLocator::settingsLocatorFilterDefault->setValue( true, u"actions"_s );
+  QgsLocator::settingsLocatorFilterEnabled->setValue( true, u"actions"_s );
   mLocatorWidget->locator()->registerFilter( new QgsActiveLayerFeaturesLocatorFilter() );
   mLocatorWidget->locator()->registerFilter( new QgsAllLayersFeaturesLocatorFilter() );
   mLocatorWidget->locator()->registerFilter( new QgsExpressionCalculatorLocatorFilter() );
@@ -4694,12 +4808,14 @@ void QgisApp::setTheme( const QString &themeName )
     QgsHakeIcons::applyToDataSourceManager( mDataSourceManagerDialog, theme );
   QgsHakeIcons::applyToBrowserModel( mBrowserModel, theme );
   QgsHakeIcons::applyToPanel( mBrowserWidget, theme );
-  QgsHakeIcons::applyToPanel( mBrowserWidget2, theme );
+  if ( mBrowserWidget2 )
+    QgsHakeIcons::applyToPanel( mBrowserWidget2, theme );
   QgsHakeIcons::applyToPanel( mLayerTreeDock, theme );
   QgsHakeIcons::applyToPanel( mLocatorWidget, theme );
   if ( mAppRibbon )
   {
     QgsHakeIcons::applyToPanel( mAppRibbon->searchEntryWidget(), theme );
+    mAppRibbon->refreshOptionalActions();
     mAppRibbon->refreshIcons();
   }
 
@@ -4710,8 +4826,21 @@ void QgisApp::setTheme( const QString &themeName )
     toggleLogMessageIcon( mLogMessageUnread );
   if ( mCoordsEdit )
     mCoordsEdit->refreshIcons();
+  if ( mScaleWidget )
+    mScaleWidget->refreshIcons();
   if ( mMagnifierWidget )
     mMagnifierWidget->refreshIcons();
+  if ( mRenderSuppressionCBox )
+  {
+    mRenderSuppressionCBox->setIcon( QgsHakeIcons::icon( u"properties/hake-properties-rendering.svg"_s ) );
+    mRenderSuppressionCBox->setIconSize( QSize( 16, 16 ) );
+  }
+  if ( mStatusBar )
+  {
+    QLabel *rotIcon = mStatusBar->findChild<QLabel *>( u"mRotationIcon"_s );
+    if ( rotIcon )
+      rotIcon->setPixmap( QgsHakeIcons::icon( u"vector/hake-vector-rotate-feature.svg"_s ).pixmap( 16, 16 ) );
+  }
 
   // The geometry-specific digitizing icons are chosen per active layer; refresh them on live switches.
   if ( mThemeApplied && mLayerTreeView )
@@ -5311,7 +5440,7 @@ void QgisApp::addUserInputWidget( QWidget *widget )
 
 void QgisApp::initLayerTreeView()
 {
-  mLayerTreeDock = new QgsDockWidget( tr( "GIS Layer" ).toUpper(), this );
+  mLayerTreeDock = new QgsDockWidget( tr( "GIS Layer" ), this );
   mLayerTreeDock->setObjectName( u"Layers"_s );
   mLayerTreeDock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea );
 
@@ -6008,7 +6137,8 @@ void QgisApp::restoreWindowState()
   if ( settings.value( u"UI/hidebrowser"_s, false ).toBool() )
   {
     mBrowserWidget->hide();
-    mBrowserWidget2->hide();
+    if ( mBrowserWidget2 )
+      mBrowserWidget2->hide();
     settings.remove( u"UI/hidebrowser"_s );
   }
 
@@ -6485,6 +6615,10 @@ void QgisApp::fileClose()
   if ( fileNewBlank() )
   {
     mWelcomeScreen->showScene();
+    if ( mMapCanvas )
+      mMapCanvas->unsetMapTool( mMapCanvas->mapTool() );
+    if ( mActionPan )
+      mActionPan->setChecked( false );
   }
 }
 
@@ -8156,13 +8290,14 @@ void QgisApp::showSelectedLayers()
 void QgisApp::zoomIn()
 {
   QgsDebugMsgLevel( u"Setting map tool to zoomIn"_s, 2 );
-
+  showMapCanvas();
   mMapCanvas->setMapTool( mMapTools->mapTool( QgsAppMapTools::ZoomIn ) );
 }
 
 
 void QgisApp::zoomOut()
 {
+  showMapCanvas();
   mMapCanvas->setMapTool( mMapTools->mapTool( QgsAppMapTools::ZoomOut ) );
 }
 
@@ -8189,6 +8324,7 @@ void QgisApp::panToSelected()
 
 void QgisApp::pan()
 {
+  showMapCanvas();
   mMapCanvas->setMapTool( mMapTools->mapTool( QgsAppMapTools::Pan ) );
 }
 
@@ -8214,6 +8350,7 @@ void QgisApp::zoomActualSize()
 
 void QgisApp::identify()
 {
+  showMapCanvas();
   mMapCanvas->setMapTool( mMapTools->mapTool( QgsAppMapTools::Identify ) );
 }
 
@@ -13079,6 +13216,7 @@ void QgisApp::loadPythonSupport()
   QgsDebugMsgLevel( u"load library %1 (%2)"_s.arg( pythonlibName, version ), 2 );
   QLibrary pythonlib( pythonlibName, version );
   // It's necessary to set these two load hints, otherwise Python library won't work correctly
+  //
   // see http://lists.kde.org/?l=pykde&m=117190116820758&w=2
   pythonlib.setLoadHints( QLibrary::ResolveAllSymbolsHint | QLibrary::ExportExternalSymbolsHint );
   if ( !pythonlib.load() )
@@ -15423,13 +15561,23 @@ void QgisApp::mapToolChanged( QgsMapTool *newTool, QgsMapTool *oldTool )
   }
 }
 
+bool QgisApp::isWelcomeScreenVisible() const
+{
+  return mWelcomeScreen && mWelcomeScreen->isVisible();
+}
+
 void QgisApp::showMapCanvas()
 {
   // Map layers changed -> switch to map canvas
   if ( mCentralContainer )
   {
     mCentralContainer->setCurrentIndex( 0 );
-    mWelcomeScreen->hideScene();
+    if ( mWelcomeScreen )
+      mWelcomeScreen->hideScene();
+  }
+  if ( mMapCanvas && !mMapCanvas->mapTool() && mMapTools )
+  {
+    mMapCanvas->setMapTool( mMapTools->mapTool( QgsAppMapTools::Pan ) );
   }
 }
 
@@ -17799,6 +17947,19 @@ void QgisApp::completeInitialization()
 {
   mInitializationHasCompleted = true;
 
+  if ( mAppRibbon )
+    mAppRibbon->refreshOptionalActions();
+
+  if ( isWelcomeScreenVisible() )
+  {
+    if ( mActionPan )
+      mActionPan->setChecked( false );
+    if ( mMapCanvas )
+      mMapCanvas->unsetMapTool( mMapCanvas->mapTool() );
+    if ( mAppRibbon )
+      mAppRibbon->update();
+  }
+
   const QStringList deferredFileOpenPaths = mDeferredFileOpenPaths;
   mDeferredFileOpenPaths.clear();
   for ( const QString &path : deferredFileOpenPaths )
@@ -18319,6 +18480,13 @@ void QgisApp::showEvent( QShowEvent *event )
       hideClassicToolBars();
     else if ( mAppRibbonBar )
       mAppRibbonBar->show();
+
+    if ( mBrowserWidget )
+      mBrowserWidget->setWindowTitle( tr( "Geo Explorer" ) );
+    if ( mBrowserWidget2 )
+      mBrowserWidget2->setWindowTitle( tr( "Geo Explorer (2)" ) );
+    if ( mLayerTreeDock )
+      mLayerTreeDock->setWindowTitle( tr( "GIS Layer" ) );
   } );
 }
 
