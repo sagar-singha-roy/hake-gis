@@ -65,7 +65,7 @@ QgsStatusBarMagnifierWidget::QgsStatusBarMagnifierWidget( QWidget *parent )
   connect( mSpinBox, static_cast<void ( QgsDoubleSpinBox::* )( double )>( &QgsDoubleSpinBox::valueChanged ), this, &QgsStatusBarMagnifierWidget::setMagnification );
 
   mLockButton = new QToolButton();
-  mLockButton->setIcon( QgsHakeIcons::icon( u"app/hake-status-magnifier-lock.svg"_s ) );
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
   mLockButton->setIconSize( QSize( 16, 16 ) );
   mLockButton->setToolTip( tr( "Lock the scale to use magnifier to zoom in or out." ) );
   mLockButton->setCheckable( true );
@@ -108,7 +108,7 @@ void QgsStatusBarMagnifierWidget::refreshIcons()
   QLabel *iconLabel = findChild<QLabel *>( u"mMagnifierIconLabel"_s );
   if ( iconLabel )
     iconLabel->setPixmap( QgsHakeIcons::icon( u"navigation/hake-navigation-zoom-in.svg"_s ).pixmap( 16, 16 ) );
-  mLockButton->setIcon( QgsHakeIcons::icon( u"app/hake-status-magnifier-lock.svg"_s ) );
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
   mLockButton->setIconSize( QSize( 16, 16 ) );
 }
 

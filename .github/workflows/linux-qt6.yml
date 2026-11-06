@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - release-**
+      - ribbon-ui-enhancements
   pull_request:
   release:
     types: ['published']
@@ -131,7 +132,7 @@ jobs:
                 -D WITH_SFCGAL=OFF \
                 -D WITH_QTWEBENGINE=OFF \
                 -D ENABLE_TESTS=OFF \
-                -D ENABLE_UNITY_BUILDS=OFF \
+                -D ENABLE_UNITY_BUILDS=ON \
                 -D WITH_INTERNAL_SPATIALINDEX=ON \
                 -D WITH_SERVER=ON \
                 -D CREATE_ZIP=ON \
@@ -198,5 +199,7 @@ jobs:
         with:
           name: build-logs-linux-${{ matrix.suffix }}
           path: |
+            build/CMakeFiles/CMakeConfigureLog.yaml
             build/CMakeFiles/CMakeOutput.log
             build/CMakeFiles/CMakeError.log
+            build/.ninja_log

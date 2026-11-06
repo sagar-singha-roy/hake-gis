@@ -32,7 +32,7 @@ QWidget:item:selected
 QWebView, QTextBrowser
 {
     color: @text;
-    background-color: @itemdarkbackground;
+    background-color: @itembackground;
 }
 
 QToolTip

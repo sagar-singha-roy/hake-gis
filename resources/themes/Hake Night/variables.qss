@@ -23,11 +23,11 @@
 @chromeTextMuted: #9FB3C8
 @chromeHover: #3A73A8
 @chromeActive: #5B9BD8
-@chromeBorder: #0B121B
+@chromeBorder: #162332
 @chromeText: #F2F7FC
 @chrome: #1F5A8C
-@ribbonBorder: #2A3B50
+@ribbonBorder: #283E54
 @ribbonPressed: #24496F
 @ribbonSurface: #18222F
-@ribbonCaption: #8FA6BD
+@ribbonCaption: #80A0AF
 @ribbonDisabled: #5C6F84

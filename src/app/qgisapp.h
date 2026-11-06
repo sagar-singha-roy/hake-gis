@@ -2554,6 +2554,11 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void applyProjectSettingsToCanvas( QgsMapCanvas *canvas );
 
     /**
+     * Resolves canvas color based on project color and active theme (dark theme overrides default white to #0E2433).
+     */
+    QColor resolveThemeCanvasColor( const QColor &customColor ) const;
+
+    /**
      * Applies global qgis settings to the specified canvas
      */
     void applyDefaultSettingsToCanvas( QgsMapCanvas *canvas );

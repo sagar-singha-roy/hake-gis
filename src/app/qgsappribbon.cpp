@@ -29,6 +29,8 @@
 #include "qgshakeicons.h"
 #include "qgshaketheme.h"
 #include "qgssettings.h"
+#include "qgsprocessinghistorywidget.h"
+#include "processing/models/qgsmodeldesignerdialog.h"
 
 #include <QAction>
 #include <QApplication>
@@ -2509,14 +2511,19 @@ void QgsAppRibbon::addDeferredMenu( QgsAppRibbonGroup *group, const QString &men
 
     QAction *actModeler = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-model-designer.svg"_s ), tr( "Model Designer…" ) );
     connect( actModeler, &QAction::triggered, this, [this]() {
-      if ( mApp && mApp->visibleMessageBar() )
-        mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Model Designer requires Python Processing support." ), Qgis::MessageLevel::Info );
+      if ( QgsPythonRunner::isValid() )
+      {
+        QgsPythonRunner::run( u"from processing.modeler.ModelerDialog import ModelerDialog; ModelerDialog.create()"_s );
+        return;
+      }
+      QgsModelDesignerDialog *dlg = new QgsModelDesignerDialog( mApp );
+      dlg->show();
     } );
 
     QAction *actHistory = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-history.svg"_s ), tr( "History…" ) );
     connect( actHistory, &QAction::triggered, this, [this]() {
-      if ( mApp && mApp->visibleMessageBar() )
-        mApp->visibleMessageBar()->pushMessage( tr( "Processing" ), tr( "Processing history is empty or unavailable." ), Qgis::MessageLevel::Info );
+      QgsProcessingHistoryDialog dlg( mApp );
+      dlg.exec();
     } );
 
     QAction *actResults = menu->addAction( QgsHakeIcons::icon( u"processing/hake-processing-results-viewer.svg"_s ), tr( "Results Viewer" ) );

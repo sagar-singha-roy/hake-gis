@@ -674,10 +674,21 @@ template QgsTiledSceneLayer *QgsAppLayerHandling::addLayer<QgsTiledSceneLayer>( 
 template QgsPluginLayer *QgsAppLayerHandling::addLayer<QgsPluginLayer>( const QString &uri, const QString &baseName, const QString &provider, bool addToLegend, bool showWarningOnInvalid );
 
 
-bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QList<Qgis::LayerType> &acceptableTypes )
+bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QList<Qgis::LayerType> &acceptableTypes, QList<QgsMapLayer *> *openedLayers )
 {
+  const QString vsiPrefix = QgsGdalUtils::vsiPrefixForPath( path );
+  QString queryPath = path;
+  if ( !vsiPrefix.isEmpty() && !queryPath.startsWith( "/vsi"_L1, Qt::CaseInsensitive ) )
+  {
+    queryPath = vsiPrefix + queryPath;
+  }
+
   // query sublayers
-  QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->querySublayers( path, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->querySublayers( queryPath, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  if ( sublayers.empty() && queryPath != path )
+  {
+    sublayers = QgsProviderRegistry::instance()->querySublayers( path, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  }
 
   // filter out non-matching sublayers
   sublayers.erase(
@@ -745,7 +756,11 @@ bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QL
       base = QgsMapLayer::formatLayerName( base );
     }
 
-    addSublayers( sublayers, base, groupName );
+    const QList<QgsMapLayer *> added = addSublayers( sublayers, base, groupName );
+    if ( openedLayers )
+    {
+      openedLayers->append( added );
+    }
     QgisApp::instance()->activateDeactivateLayerRelatedActions( QgisApp::instance()->activeLayer() );
   }
 
@@ -1009,10 +1024,11 @@ QList<QgsMapLayer *> QgsAppLayerHandling::openLayer( const QString &fileName, bo
   const QString vsiPrefix = QgsGdalUtils::vsiPrefixForPath( fileName );
   if ( QgsGdalUtils::isVsiArchivePrefix( vsiPrefix ) )
   {
-    if ( askUserForZipItemLayers( fileName, {} ) )
+    if ( askUserForZipItemLayers( fileName, {}, &openedLayers ) )
     {
       CPLPopErrorHandler();
       ok = true;
+      postProcessAddedLayers();
       return openedLayers;
     }
   }
@@ -1157,6 +1173,28 @@ QList<QgsMapLayer *> QgsAppLayerHandling::openLayer( const QString &fileName, bo
       ok = true;
       postProcessAddedLayers();
       return openedLayers;
+    }
+
+    const QString vsiFallbackPrefix = QgsGdalUtils::vsiPrefixForPath( fileName );
+    if ( !vsiFallbackPrefix.isEmpty() && !fileName.startsWith( "/vsi"_L1, Qt::CaseInsensitive ) )
+    {
+      const QString vsiPath = vsiFallbackPrefix + fileName;
+      std::unique_ptr<QgsVectorLayer> vLayerVsi = std::make_unique<QgsVectorLayer>( vsiPath, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"ogr"_s );
+      if ( vLayerVsi && vLayerVsi->isValid() )
+      {
+        openedLayers.append( { vLayerVsi.release() } );
+        ok = true;
+        postProcessAddedLayers();
+        return openedLayers;
+      }
+      std::unique_ptr<QgsRasterLayer> rLayerVsi = std::make_unique<QgsRasterLayer>( vsiPath, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"gdal"_s );
+      if ( rLayerVsi && rLayerVsi->isValid() )
+      {
+        openedLayers.append( { rLayerVsi.release() } );
+        ok = true;
+        postProcessAddedLayers();
+        return openedLayers;
+      }
     }
 
     // we have no idea what this file is...

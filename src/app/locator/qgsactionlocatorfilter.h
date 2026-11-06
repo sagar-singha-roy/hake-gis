@@ -21,6 +21,7 @@
 #include "qgis_app.h"
 #include "qgslocatorfilter.h"
 
+#include <QPointer>
 #include <QString>
 
 using namespace Qt::StringLiterals;

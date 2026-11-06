@@ -250,6 +250,7 @@ using namespace Qt::StringLiterals;
 #include "qgspythonconsoledockwidget.h"
 #include "qgsprocessingtoolboxdockwidget.h"
 #include "qgsprocessinghistorywidget.h"
+#include "processing/models/qgsmodeldesignerdialog.h"
 #include "qgsmetasearchdialog.h"
 #include "qgsabstractmaptoolhandler.h"
 #include "qgsappauthrequesthandler.h"
@@ -1173,7 +1174,7 @@ QgisApp::QgisApp(
   mMapCanvas->mapSettings().setFlag( Qgis::MapSettingsFlag::RecordProfile );
 
   // set canvas color right away
-  mMapCanvas->setCanvasColor( QgsSettingsRegistryCore::settingsDefaultCanvasColor->value() );
+  mMapCanvas->setCanvasColor( resolveThemeCanvasColor( QgsSettingsRegistryCore::settingsDefaultCanvasColor->value() ) );
 
   // set project linked to main canvas
   mMapCanvas->setProject( QgsProject::instance() );
@@ -3011,9 +3012,23 @@ void QgisApp::readRecentProjects()
   settings.endGroup();
 }
 
+QColor QgisApp::resolveThemeCanvasColor( const QColor &customColor ) const
+{
+  const QString theme = QgsApplication::themeName();
+  const bool isDark = ( QgsHakeTheme::variantForTheme( theme ) == QgsHakeTheme::Variant::Night ) ||
+                      theme.contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      theme.contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      ( QApplication::palette().color( QPalette::Window ).lightness() < 128 );
+  if ( isDark && ( customColor == Qt::white || ( customColor.red() > 240 && customColor.green() > 240 && customColor.blue() > 240 ) ) )
+  {
+    return QColor( QStringLiteral( "#0E2433" ) );
+  }
+  return customColor;
+}
+
 void QgisApp::applyProjectSettingsToCanvas( QgsMapCanvas *canvas )
 {
-  canvas->setCanvasColor( QgsProject::instance()->backgroundColor() );
+  canvas->setCanvasColor( resolveThemeCanvasColor( QgsProject::instance()->backgroundColor() ) );
   canvas->setSelectionColor( QgsProject::instance()->selectionColor() );
 }
 
@@ -3719,8 +3734,13 @@ void QgisApp::createMenus()
   QAction *actModeler = mProcessingMenu->addAction( QgsApplication::getThemeIcon( u"processingModel.svg"_s ), tr( "&Model Designer…" ) );
   actModeler->setObjectName( u"modelerAction"_s );
   connect( actModeler, &QAction::triggered, this, [this]() {
-    if ( visibleMessageBar() )
-      visibleMessageBar()->pushInfo( tr( "Processing" ), tr( "Graphical Model Designer requires Python plugin support." ) );
+    if ( QgsPythonRunner::isValid() )
+    {
+      QgsPythonRunner::run( u"from processing.modeler.ModelerDialog import ModelerDialog; ModelerDialog.create()"_s );
+      return;
+    }
+    QgsModelDesignerDialog *dlg = new QgsModelDesignerDialog( this );
+    dlg->show();
   } );
 
   QAction *actHistory = mProcessingMenu->addAction( QgsApplication::getThemeIcon( u"mIconHistory.svg"_s ), tr( "&History…" ) );
@@ -4849,6 +4869,19 @@ void QgisApp::setTheme( const QString &themeName )
   mThemeApplied = true;
   updateThemeToggleAction();
 
+  const QColor canvasColor = resolveThemeCanvasColor( QgsProject::instance()->backgroundColor() );
+  const auto constMapCanvases = mapCanvases();
+  for ( QgsMapCanvas *canvas : constMapCanvases )
+  {
+    canvas->setCanvasColor( canvasColor );
+    canvas->refresh();
+  }
+  if ( auto *lMapOverviewCanvas = mapOverviewCanvas() )
+  {
+    lMapOverviewCanvas->setBackgroundColor( canvasColor );
+    lMapOverviewCanvas->refresh();
+  }
+
   emit currentThemeChanged( theme );
 }
 
@@ -4982,7 +5015,7 @@ void QgisApp::setupConnections()
   } );
 
   connect( QgsProject::instance(), &QgsProject::backgroundColorChanged, this, [this] {
-    const QColor backgroundColor = QgsProject::instance()->backgroundColor();
+    const QColor backgroundColor = resolveThemeCanvasColor( QgsProject::instance()->backgroundColor() );
     const auto constMapCanvases = mapCanvases();
     for ( QgsMapCanvas *canvas : constMapCanvases )
     {
@@ -5160,7 +5193,7 @@ void QgisApp::createOverview()
   mOverviewCanvas = new QgsMapOverviewCanvas( nullptr, mMapCanvas );
 
   //set canvas color to default
-  mOverviewCanvas->setBackgroundColor( QgsSettingsRegistryCore::settingsDefaultCanvasColor->value() );
+  mOverviewCanvas->setBackgroundColor( resolveThemeCanvasColor( QgsSettingsRegistryCore::settingsDefaultCanvasColor->value() ) );
 
   mOverviewMapCursor = new QCursor( Qt::OpenHandCursor );
   mOverviewCanvas->setCursor( *mOverviewMapCursor );
@@ -6654,7 +6687,7 @@ bool QgisApp::fileNew( bool promptToSaveFlag, bool forceBlank )
   prj->layerTreeRegistryBridge()->setLayerInsertionMethod( QgsSettingsRegistryCore::settingsLayerTreeInsertionMethod->value() );
 
   //set the canvas to the default project background color
-  mOverviewCanvas->setBackgroundColor( prj->backgroundColor() );
+  mOverviewCanvas->setBackgroundColor( resolveThemeCanvasColor( prj->backgroundColor() ) );
   applyProjectSettingsToCanvas( mMapCanvas );
 
   prj->setDirty( false );
@@ -7319,7 +7352,7 @@ bool QgisApp::addProject( const QString &projectFile )
     mProjectLastModified = QgsProject::instance()->lastModified();
 
     setTitleBarText_( *this );
-    mOverviewCanvas->setBackgroundColor( QgsProject::instance()->backgroundColor() );
+    mOverviewCanvas->setBackgroundColor( resolveThemeCanvasColor( QgsProject::instance()->backgroundColor() ) );
 
     applyProjectSettingsToCanvas( mMapCanvas );
 

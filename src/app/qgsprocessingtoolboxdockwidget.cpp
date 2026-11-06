@@ -18,6 +18,8 @@
 #include "qgsprocessingfavoritealgorithmmanager.h"
 #include "qgsprocessingguiregistry.h"
 #include "qgsprocessinghistorywidget.h"
+#include "processing/models/qgsmodeldesignerdialog.h"
+#include "qgspythonrunner.h"
 #include "qgsprocessingregistry.h"
 #include "qgsprocessingtoolboxtreeview.h"
 #include "qgsprocessingwidgetwrapper.h"
@@ -34,6 +36,8 @@
 #include <QPointer>
 #include <QScrollArea>
 #include <QToolBar>
+
+#include "moc_qgsprocessingtoolboxdockwidget.cpp"
 
 using namespace Qt::StringLiterals;
 
@@ -341,8 +345,13 @@ void QgsProcessingToolboxDockWidget::openAlgorithm( const QgsProcessingAlgorithm
 
 void QgsProcessingToolboxDockWidget::openModelDesigner()
 {
-  if ( QgisApp::instance() && QgisApp::instance()->visibleMessageBar() )
-    QgisApp::instance()->visibleMessageBar()->pushInfo( tr( "Processing" ), tr( "Graphical Model Designer requires Python plugin support." ) );
+  if ( QgsPythonRunner::isValid() )
+  {
+    QgsPythonRunner::run( u"from processing.modeler.ModelerDialog import ModelerDialog; ModelerDialog.create()"_s );
+    return;
+  }
+  QgsModelDesignerDialog *dlg = new QgsModelDesignerDialog( this );
+  dlg->show();
 }
 
 void QgsProcessingToolboxDockWidget::openHistory()
