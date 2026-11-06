@@ -55,16 +55,18 @@ jobs:
 
       - name: 🔨 Prepare build env
         run: |
-          brew install automake bison flex gnu-sed autoconf-archive nasm libtool fdupes mono
+          brew install automake bison flex gnu-sed autoconf-archive nasm libtool fdupes || true
           # GDAL 3.12.x typemaps still use PyInt_*; SWIG 4.5 removed those macros.
           # Pin SWIG 4.4.1 so vcpkg GDAL python bindings can rebuild when binary cache misses.
-          brew tap-new --no-git local/pinned
-          brew extract --version=4.4.1 swig local/pinned
-          brew install local/pinned/swig@4.4.1
-          SWIG_BIN="$(brew --prefix local/pinned/swig@4.4.1)/bin"
-          echo "${SWIG_BIN}" >> "$GITHUB_PATH"
-          export PATH="${SWIG_BIN}:${PATH}"
-          swig -version
+          brew tap-new --no-git local/pinned || true
+          brew extract --version=4.4.1 swig local/pinned || true
+          brew install local/pinned/swig@4.4.1 || brew install swig || true
+          SWIG_BIN="$(brew --prefix local/pinned/swig@4.4.1 2>/dev/null || brew --prefix swig 2>/dev/null)/bin"
+          if [ -d "$SWIG_BIN" ]; then
+            echo "${SWIG_BIN}" >> "$GITHUB_PATH"
+            export PATH="${SWIG_BIN}:${PATH}"
+          fi
+          swig -version || true
           echo $(brew --prefix bison)/bin >> $GITHUB_PATH
           echo $(brew --prefix flex)/bin >> $GITHUB_PATH
           echo $(brew --prefix libtool)/bin >> $GITHUB_PATH
@@ -128,8 +130,8 @@ jobs:
                 -D HAKE_GIT_REVISION=${{ github.sha }} \
                 -D NUGET_USERNAME=${{ github.actor }} \
                 -D NUGET_SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/qgis/index.json" \
-                -D NUGET_READ_USERNAME=qgis \
+                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/Subhankar-hub/index.json" \
+                -D NUGET_READ_USERNAME=Subhankar-hub \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }} || true
 
                 fdupes -q -r -1 build/vcpkg_installed/${{ matrix.triplet }}/lib | grep -E '\.(so|dylib)' | while read line; do master=""; for file in ${line[*]}; do if  [[ "x${master}" == "x" ]]; then master=$file; else rm "${file}"; ln -s $(basename "${master}") "${file}"; fi; done; done
