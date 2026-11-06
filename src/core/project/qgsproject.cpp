@@ -2281,7 +2281,7 @@ bool QgsProject::readProjectFile( const QString &filename, Qgis::ProjectReadFlag
   const QColor backgroundColor( readNumEntry( u"Gui"_s, u"/CanvasColorRedPart"_s, 255 ), readNumEntry( u"Gui"_s, u"/CanvasColorGreenPart"_s, 255 ), readNumEntry( u"Gui"_s, u"/CanvasColorBluePart"_s, 255 ) );
   setBackgroundColor( backgroundColor );
   const QColor
-    selectionColor( readNumEntry( u"Gui"_s, u"/SelectionColorRedPart"_s, 255 ), readNumEntry( u"Gui"_s, u"/SelectionColorGreenPart"_s, 255 ), readNumEntry( u"Gui"_s, u"/SelectionColorBluePart"_s, 255 ), readNumEntry( u"Gui"_s, u"/SelectionColorAlphaPart"_s, 255 ) );
+    selectionColor( readNumEntry( u"Gui"_s, u"/SelectionColorRedPart"_s, 14 ), readNumEntry( u"Gui"_s, u"/SelectionColorGreenPart"_s, 165 ), readNumEntry( u"Gui"_s, u"/SelectionColorBluePart"_s, 233 ), readNumEntry( u"Gui"_s, u"/SelectionColorAlphaPart"_s, 200 ) );
   setSelectionColor( selectionColor );
 
 

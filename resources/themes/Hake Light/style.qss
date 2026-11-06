@@ -32,19 +32,20 @@ QWidget:item:selected
 QWebView, QTextBrowser
 {
     color: @text;
-    background-color: @itemdarkbackground;
+    background-color: @itembackground;
 }
 
 QToolTip
 {
     border: 1px solid @itemdarkbackground;
+    background-color: @itembackground;
     color: @text;
 }
 
 QMenuBar {
-    background-color: @chrome;
-    color: @chromeText;
-    border-bottom: 1px solid @chromeBorder;
+    background-color: @ribbonSurface;
+    color: @text;
+    border: none;
     /* Horizontal padding 0 so item padding (4px 10px) matches ribbon tab insets. */
     padding: 2px 0;
 }
@@ -55,14 +56,14 @@ QMenuBar::item
     padding: 4px 10px;
     margin: 0;
     border: none;
-    border-radius: 0;
-    color: @chromeText;
+    border-radius: 3px;
+    color: @text;
 }
 
 QMenuBar::item:selected
 {
-    background: @chromeHover;
-    color: @chromeText;
+    background: @chromeToolbar;
+    color: @chrome;
     padding: 4px 10px;
     margin: 0;
     border: none;
@@ -70,7 +71,7 @@ QMenuBar::item:selected
 
 QMenuBar::item:pressed
 {
-    background: @chromeActive;
+    background: @chrome;
     color: @chromeText;
     padding: 4px 10px;
     margin: 0;
@@ -577,19 +578,23 @@ QDockWidget::separator
 QDockWidget::title
 {
     text-align: left;
-    spacing: 0.1em; /* spacing between items in the tool bar */
+    spacing: 4px;
     background-color: @panelheader;
     color: @text;
-    font-weight: bold;
-    padding: 0.35em 0.5em;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-bottom: 1px solid @itemdarkbackground;
 }
 
 QDockWidget::close-button, QDockWidget::float-button
 {
     text-align: center;
-    spacing: 1px; /* spacing between items in the tool bar */
+    spacing: 2px;
     border: 1px solid transparent;
-    border-radius: 0.2em;
+    border-radius: 4px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 QDockWidget::close-button:hover, QDockWidget::float-button:hover
@@ -601,6 +606,43 @@ QDockWidget::close-button:hover, QDockWidget::float-button:hover
 QDockWidget::close-button:pressed, QDockWidget::float-button:pressed
 {
     padding: 1px -1px -1px 1px;
+}
+
+/* Panel Toolbars (Geo Explorer, GIS Layer, Processing, etc.) */
+QDockWidget QToolBar
+{
+    background: @chromeToolbar;
+    border: none;
+    border-bottom: 1px solid @itemdarkbackground;
+    padding: 4px 6px;
+    spacing: 4px;
+}
+
+QDockWidget QToolBar QToolButton,
+QDockWidget QToolBar QToolButton::menu-button
+{
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: transparent;
+    color: @text;
+    padding: 4px;
+    min-width: 26px;
+    min-height: 26px;
+}
+
+QDockWidget QToolBar QToolButton:hover
+{
+    background-color: @hover;
+    border: 1px solid @focus;
+    color: @textlight;
+}
+
+QDockWidget QToolBar QToolButton:pressed,
+QDockWidget QToolBar QToolButton:checked
+{
+    background-color: @selection;
+    border: 1px solid @focus;
+    color: @textlight;
 }
 
 QMainWindow::separator
@@ -660,7 +702,7 @@ QToolBar::separator:vertical
 QStatusBar {
     background-color: @statusbar;
     color: @text;
-    border-top: 1px solid @itemdarkbackground;
+    border-top: 1px solid @ribbonBorder;
 }
 
 QStatusBar QLabel {
@@ -1090,11 +1132,14 @@ QAbstractItemView::indicator:selected:disabled, QListView::indicator:selected:di
 QTreeView {
     border: 1px solid @itemdarkbackground;
     alternate-background-color: @background;
+    font-size: 12px;
 }
 
 QTreeView::item, QTreeView::branch {
     background: transparent;
     color: @textlight;
+    min-height: 24px;
+    padding: 3px 4px;
 }
 
 QTreeView::item:disabled {
@@ -1126,8 +1171,8 @@ QTreeView::branch:open:has-children:has-siblings {
 QTreeView::indicator {
     border: 1px solid @itembackground;
     background-color: @toggleoff;
-    width:0.8em;
-    height:0.8em;
+    width: 16px;
+    height: 16px;
 }
 QTreeView::indicator:disabled {
     border-color: @itemdarkbackground;
@@ -1166,15 +1211,20 @@ QTreeView::indicator:selected:disabled {
     background-color: @background;
 }
 
+QgsLayerTreeView {
+    font-size: 12px;
+}
+
 QgsLayerTreeView::item,
 QTreeView#viewGraduated::item,
 QTreeView#viewCategories::item,
 QTreeView#viewRules::item,
 QTreeView#mSubDiagramsView::item
 {
-    border-top: 0.5px solid rgba(108,108,108,50);
-    border-bottom: 0.5px solid rgba(108,108,108,50);
-    padding: 0.1em 0em 0.1em 0em;
+    border-top: 0.5px solid rgba(108,108,108,35);
+    border-bottom: 0.5px solid rgba(108,108,108,35);
+    padding: 4px 6px;
+    min-height: 28px;
 }
 
 QgsLayerTreeView::item:hover, QgsLayerTreeView::branch:hover,
@@ -1195,6 +1245,16 @@ QTreeView#mSubDiagramsView::item:selected:hover, QTreeView#mSubDiagramsView::bra
 {
     background-color: @selection;
     color: @textlight;
+}
+
+QgsLayerTreeView::indicator,
+QTreeView#viewGraduated::indicator,
+QTreeView#viewCategories::indicator,
+QTreeView#viewRules::indicator,
+QTreeView#mSubDiagramsView::indicator
+{
+    width: 18px;
+    height: 18px;
 }
 
 QgsLayerTreeView::indicator:unchecked,
@@ -1492,7 +1552,7 @@ QgsLayoutRuler {
 
 QgsLayoutView QToolTip
 {
-    color: @itembackground;
+    color: @text;
 }
 
 QgsAttributeFormWidget QComboBox:disabled {
@@ -1531,11 +1591,10 @@ QgsLocatorResultsView::item:disabled {
     color: @text;
 }
 
-/* Hake tabbed ribbon — full-width chrome strip; light tool pane below */
+/* Hake tabbed ribbon — full-width white tab strip; light tool pane below */
 QToolBar#HakeAppRibbon {
-    background-color: @chrome;
+    background-color: @ribbonSurface;
     border: none;
-    border-bottom: 1px solid @chromeBorder;
     margin: 0;
     spacing: 0;
     padding: 0;
@@ -1553,12 +1612,17 @@ QToolBar#HakeAppRibbon::handle:vertical {
 }
 
 QWidget#HakeAppRibbonHost {
-    background-color: @chrome;
+    background-color: @ribbonSurface;
+    border: none;
+}
+
+QWidget#HakeAppRibbonResizeGrip {
+    background-color: @chromeToolbar;
     border: none;
 }
 
 QTabWidget#HakeAppRibbon {
-    background-color: @chrome;
+    background-color: @ribbonSurface;
     border: none;
 }
 
@@ -1574,96 +1638,205 @@ QTabWidget#HakeAppRibbon > QStackedWidget {
     background-color: @chromeToolbar;
 }
 
-QTabWidget#HakeAppRibbon > QTabBar {
-    background-color: @chrome;
+/* QgsAppRibbon reserves 1px of bottom margin for this border. */
+QTabWidget#HakeAppRibbon QWidget#HakeAppRibbonPage {
+    background-color: @chromeToolbar;
     border: none;
-    border-bottom: 1px solid @chromeBorder;
+    border-bottom: 1px solid @ribbonBorder;
+}
+
+QTabWidget#HakeAppRibbon > QTabBar {
+    background-color: @ribbonSurface;
+    border: none;
+    border-bottom: 1px solid @ribbonBorder;
     /* Same left content inset as QMenuBar items (item/tab padding 4px 10px). */
     padding: 0;
     min-height: 0;
 }
 
 QWidget#HakeAppRibbonTabFiller {
-    background-color: @chrome;
+    background-color: @ribbonSurface;
     border: none;
-    border-bottom: 1px solid @chromeBorder;
+    border-bottom: 1px solid @ribbonBorder;
 }
 
+QWidget#HakeAppRibbonTabFiller QLabel#HakeAppRibbonBrand {
+    color: @chrome;
+    background: transparent;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonThemeToggle {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0;
+    margin: 0;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonThemeToggle:hover {
+    background-color: @chromeToolbar;
+    border: 1px solid @ribbonBorder;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonThemeToggle:pressed {
+    background-color: @ribbonPressed;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonThemeToggle:focus {
+    border: 1px dotted @focus;
+}
+
+/* Ribbon search: the application locator in the tab strip, or in its narrow-width overlay. */
+QWidget#HakeAppRibbonTabFiller QWidget#LocatorWidget QLineEdit,
+QWidget#HakeAppRibbonSearchOverlay QWidget#LocatorWidget QLineEdit {
+    background-color: @ribbonSurface;
+    color: @ribbonSearchText;
+    border: 1px solid @ribbonBorder;
+    border-radius: 4px;
+    padding: 1px 4px;
+    margin: 0;
+    selection-background-color: @selection;
+    selection-color: @ribbonSearchText;
+}
+
+QWidget#HakeAppRibbonTabFiller QWidget#LocatorWidget QLineEdit:focus,
+QWidget#HakeAppRibbonSearchOverlay QWidget#LocatorWidget QLineEdit:focus {
+    border: 1px solid @focus;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonSearchButton {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0;
+    margin: 0;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonSearchButton:hover {
+    background-color: @chromeToolbar;
+    border: 1px solid @ribbonBorder;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonSearchButton:pressed {
+    background-color: @ribbonPressed;
+}
+
+QWidget#HakeAppRibbonTabFiller QToolButton#HakeAppRibbonSearchButton:focus {
+    border: 1px dotted @focus;
+}
+
+QWidget#HakeAppRibbonSearchOverlay {
+    background-color: @ribbonSurface;
+    border: 1px solid @ribbonBorder;
+    border-radius: 4px;
+}
+
+/* Same border and padding in every state so hover/selected never shift geometry. */
 QTabWidget#HakeAppRibbon > QTabBar::tab,
 QTabWidget#HakeAppRibbon > QTabBar::tab:!selected {
-    background-color: @chrome;
-    color: @chromeText;
+    background-color: transparent;
+    color: @text;
     border: none;
-    /* Reserve 2px bottom border in every state so hover/selected never shift geometry. */
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    padding: 4px 10px;
-    margin: 0;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    padding: 4px 14px;
+    margin: 0 1px;
+}
+
+QTabWidget#HakeAppRibbon > QTabBar::tab:hover:!selected {
+    background-color: @hover;
+    color: @text;
 }
 
 QTabWidget#HakeAppRibbon > QTabBar::tab:selected {
-    background-color: @chromeActive;
-    color: @chromeText;
+    background-color: #FFFFFF;
+    color: #164A73;
+    font-weight: 600;
+    border-bottom: 3px solid #164A73;
+    padding-bottom: 2px;
+}
+
+/* Tab-strip scroll arrows sit on the white strip, not the command area. */
+QTabWidget#HakeAppRibbon > QTabBar QToolButton {
+    background-color: @ribbonSurface;
+    color: @text;
     border: none;
-    border-bottom: 2px solid @chromeToolbar;
     border-radius: 0;
-    padding: 4px 10px;
+    padding: 0;
     margin: 0;
 }
 
-QTabWidget#HakeAppRibbon > QTabBar::tab:hover {
-    background-color: @chromeHover;
-    color: @chromeText;
-    border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    padding: 4px 10px;
-    margin: 0;
+QTabWidget#HakeAppRibbon > QTabBar QToolButton:hover {
+    background-color: @chromeToolbar;
 }
 
-/* ID selectors beat generic QToolBar QToolButton { padding: 0.2em } — keep px geometry stable. */
-QToolBar#HakeAppRibbon QToolButton,
-QTabWidget#HakeAppRibbon QToolButton {
+/* ID selectors beat generic QToolBar QToolButton { padding: 0.2em } — keep px geometry stable.
+   Button height is measured from this padding in QgsAppRibbon, so change both together. */
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton {
     color: @text;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 0;
-    padding: 4px;
+    border-radius: 3px;
+    padding: 1px 3px;
     margin: 0;
 }
 
-QToolBar#HakeAppRibbon QToolButton:hover,
-QTabWidget#HakeAppRibbon QToolButton:hover {
-    background-color: @chromeHover;
-    border: 1px solid @chromeActive;
-    color: @chromeText;
-    padding: 4px;
-    margin: 0;
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:hover {
+    background-color: @ribbonSurface;
+    border: 1px solid @ribbonBorder;
+    color: @text;
 }
 
-QToolBar#HakeAppRibbon QToolButton:checked,
-QToolBar#HakeAppRibbon QToolButton:pressed,
-QTabWidget#HakeAppRibbon QToolButton:checked,
-QTabWidget#HakeAppRibbon QToolButton:pressed {
-    background-color: @chromeActive;
-    border: 1px solid @chromeActive;
-    color: @chromeText;
-    padding: 4px;
-    margin: 0;
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:pressed {
+    background-color: @ribbonPressed;
+    border: 1px solid @chromeHover;
+    color: @text;
 }
 
-QToolBar#HakeAppRibbon QToolButton:disabled,
-QTabWidget#HakeAppRibbon QToolButton:disabled {
-    color: #5B7290;
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:checked {
+    background-color: #D6E4F4;
+    border: 1.5px solid #164A73;
+    color: #164A73;
+}
+
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:checked:hover {
+    background-color: #C5DCF2;
+    border: 1.5px solid #164A73;
+    color: #164A73;
+}
+
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:disabled {
+    color: @ribbonDisabled;
     background: transparent;
     border: 1px solid transparent;
-    padding: 4px;
+}
+
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton:focus {
+    border: 1px dotted @chrome;
+}
+
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton::menu-indicator {
+    image: none;
+    width: 0;
+}
+
+/* Shared geometry of every ribbon command cell.
+   State-independent properties only: this ID selector outranks the :hover/:checked rules above. */
+QTabWidget#HakeAppRibbon > QStackedWidget QToolButton#HakeAppRibbonButton {
+    border-radius: 3px;
+    padding: 1px 3px;
     margin: 0;
 }
 
-QTabWidget#HakeAppRibbon QFrame#HakeAppRibbonSeparator {
-    color: @itemdarkbackground;
-    max-width: 1px;
+QTabWidget#HakeAppRibbon #HakeAppRibbonGroupCaption {
+    color: @ribbonCaption;
+    background: transparent;
+}
+
+/* Painted by QgsAppRibbon from the palette text color. */
+QTabWidget#HakeAppRibbon QWidget#HakeAppRibbonSeparator {
+    color: @ribbonBorder;
+    background: transparent;
 }
 
 

@@ -135,6 +135,20 @@ QgsCodeEditor::QgsCodeEditor( QWidget *parent, const QString &title, bool foldin
     initializeLexer();
   } );
 
+  // Editors that follow the UI theme's qscintilla.ini pick up live theme switches;
+  // an explicit color scheme, custom colors or a custom appearance are left alone.
+  if ( QgsApplication *app = QgsApplication::instance() )
+  {
+    connect( app, &QgsApplication::themeChanged, this, [this] {
+      if ( !mUseDefaultSettings )
+        return;
+      const QgsSettings settings;
+      if ( settings.value( u"codeEditor/overrideColors"_s, false, QgsSettings::Gui ).toBool() || !settings.value( u"codeEditor/colorScheme"_s, QString(), QgsSettings::Gui ).toString().isEmpty() )
+        return;
+      initializeLexer();
+    } );
+  }
+
   switch ( mMode )
   {
     case QgsCodeEditor::Mode::ScriptEditor:

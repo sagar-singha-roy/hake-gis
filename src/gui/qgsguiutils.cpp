@@ -286,10 +286,10 @@ namespace QgsGuiUtils
 
   QSize panelIconSize( QSize size )
   {
-    int adjustedSize = 16;
+    int adjustedSize = 22;
     if ( size.width() > 32 )
     {
-      adjustedSize = size.width() - 16;
+      adjustedSize = std::max( 22, size.width() - 10 );
     }
     else if ( size.width() == 32 )
     {

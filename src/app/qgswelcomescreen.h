@@ -29,6 +29,7 @@
 
 class QgsWelcomeScreen;
 class QgsSettingsEntryBool;
+class QQmlPropertyMap;
 
 
 class QgsWelcomeScreenController : public QObject
@@ -132,7 +133,11 @@ class QgsWelcomeScreen : public QQuickWidget
   private:
     void refreshGeometry();
 
+    //! Updates the "welcomeTheme" colors in place for the active UI theme (dark under Hake Night).
+    void updateThemeColors();
+
     QgsWelcomeScreenController *mWelcomeScreenController = nullptr;
+    QQmlPropertyMap *mThemeColors = nullptr;
 
     QgsRecentProjectItemsModel *mRecentProjectsModel = nullptr;
     QgsTemplateProjectsModel *mTemplateProjectsModel = nullptr;

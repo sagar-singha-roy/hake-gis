@@ -40,7 +40,8 @@ QgsBrowserTreeView::QgsBrowserTreeView( QWidget *parent )
   , mSettingsSection( u"browser"_s )
 {
   setEditTriggers( QAbstractItemView::EditKeyPressed );
-  setIndentation( QgsGuiUtils::scaleIconSize( 16 ) );
+  setIconSize( QSize( 22, 22 ) );
+  setIndentation( 22 );
 }
 
 void QgsBrowserTreeView::keyPressEvent( QKeyEvent *event )

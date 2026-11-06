@@ -297,7 +297,7 @@ class Repositories(QObject):
         try:
             label = Qgis.productVersionLabel()
         except AttributeError:
-            label = "2026.0.0"
+            label = "2026.0.1"
         major = label.split(".", 1)[0]
         return f"?hake-geodesk={major}"
 

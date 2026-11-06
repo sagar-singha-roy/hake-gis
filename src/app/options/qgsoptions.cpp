@@ -40,6 +40,8 @@
 #include "qgsfilebaseddataitemprovider.h"
 #include "qgsgdalutils.h"
 #include "qgsgui.h"
+#include "qgshakeicons.h"
+#include "qgshaketheme.h"
 #include "qgslayertreemodellegendnode.h"
 #include "qgslayout.h"
 #include "qgslayoutitemlegend.h"
@@ -236,8 +238,16 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl, const QList<QgsOpti
   QStringList themes = QgsApplication::uiThemes().keys();
   cmbUITheme->addItems( themes );
 
+  // Light and Dark are Hake Light and Hake Night; Custom keeps every theme (including Hake Dark) selectable.
+  cmbAppearance->addItem( tr( "System" ), QgsHakeTheme::appearanceModeToString( QgsHakeTheme::AppearanceMode::System ) );
+  cmbAppearance->addItem( tr( "Light" ), QgsHakeTheme::appearanceModeToString( QgsHakeTheme::AppearanceMode::Light ) );
+  cmbAppearance->addItem( tr( "Dark" ), QgsHakeTheme::appearanceModeToString( QgsHakeTheme::AppearanceMode::Dark ) );
+  cmbAppearance->addItem( tr( "Custom" ), QgsHakeTheme::appearanceModeToString( QgsHakeTheme::AppearanceMode::Custom ) );
+  connect( cmbAppearance, &QComboBox::currentIndexChanged, this, &QgsOptions::appearanceModeChanged );
+
   // non-default themes are best rendered using the Fusion style, therefore changing themes must require a restart to
-  lblUITheme->setText( u"%1 <i>(%2)</i>"_s.arg( lblUITheme->text(), tr( "Hake Geospatial restart required" ) ) );
+  // take effect, except between Hake Light and Hake Night which both use Fusion and switch live
+  lblUITheme->setText( u"%1 <i>(%2)</i>"_s.arg( lblUITheme->text(), tr( "Hake Geospatial restart required, except between Hake Light and Hake Night" ) ) );
 
   mProjectTrustBehaviorComboBox->addItem( tr( "Never Execute" ), QVariant::fromValue( Qgis::EmbeddedScriptMode::Never ) );
   mProjectTrustBehaviorComboBox->addItem( tr( "Never Ask for Trust" ), QVariant::fromValue( Qgis::EmbeddedScriptMode::NeverAsk ) );
@@ -749,12 +759,14 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl, const QList<QgsOpti
   QString name = mSettings->value( u"/qgis/style"_s ).toString();
   whileBlocking( cmbStyle )->setCurrentIndex( cmbStyle->findText( name, Qt::MatchFixedString ) );
 
-  QString theme = mSettings->value( u"UI/UITheme"_s, u"Hake Light"_s ).toString();
+  QString theme = mSettings->value( u"UI/UITheme"_s, u"default"_s ).toString();
   if ( !QgsApplication::uiThemes().contains( theme ) )
   {
     theme = u"default"_s;
   }
   whileBlocking( cmbUITheme )->setCurrentIndex( cmbUITheme->findText( theme, Qt::MatchFixedString ) );
+  whileBlocking( cmbAppearance )->setCurrentIndex( cmbAppearance->findData( QgsHakeTheme::appearanceModeToString( QgsHakeTheme::appearanceMode() ) ) );
+  appearanceModeChanged();
 
   mNativeColorDialogsChkBx->setChecked( QgsSettingsRegistryGui::settingsNativeColorDialogs->value() );
 
@@ -1489,6 +1501,20 @@ void QgsOptions::uiThemeChanged( const QString &theme )
     return;
 
   QgisApp::instance()->setTheme( theme );
+  QgsHakeIcons::applyToOptions( this, theme );
+}
+
+void QgsOptions::appearanceModeChanged()
+{
+  const QgsHakeTheme::AppearanceMode mode = QgsHakeTheme::appearanceModeFromString( cmbAppearance->currentData().toString() );
+  if ( mode != QgsHakeTheme::AppearanceMode::Custom )
+  {
+    const QString theme = QgsHakeTheme::resolveTheme( mode, cmbUITheme->currentText() );
+    const int index = cmbUITheme->findText( theme, Qt::MatchFixedString );
+    if ( index >= 0 )
+      whileBlocking( cmbUITheme )->setCurrentIndex( index );
+  }
+  cmbUITheme->setEnabled( mode == QgsHakeTheme::AppearanceMode::Custom );
 }
 
 void QgsOptions::mProjectOnLaunchCmbBx_currentIndexChanged( int indx )
@@ -1514,7 +1540,13 @@ void QgsOptions::saveOptions()
 {
   QgsSettings settings;
 
-  mSettings->setValue( u"UI/UITheme"_s, cmbUITheme->currentText() );
+  // UI/UITheme always receives a real theme name; System stores the theme resolved from the OS.
+  const QString uiTheme = cmbUITheme->currentText();
+  const QgsHakeTheme::AppearanceMode appearanceMode = QgsHakeTheme::appearanceModeFromString( cmbAppearance->currentData().toString() );
+  if ( QgisApp *app = QgisApp::instance() )
+    app->selectTheme( uiTheme, appearanceMode );
+  else
+    mSettings->setValue( u"UI/UITheme"_s, uiTheme );
 
   // custom environment variables
   mSettings->setValue( u"qgis/customEnvVarsUse"_s, QVariant( mCustomVariablesChkBx->isChecked() ) );

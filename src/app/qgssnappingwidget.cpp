@@ -346,10 +346,13 @@ QgsSnappingWidget::QgsSnappingWidget( QgsProject *project, QgsMapCanvas *canvas,
     QMenu *scaleModeMenu = new QMenu( tr( "Set snapping scale mode" ), this );
     mDefaultSnappingScaleAct = new QAction( QIcon( QgsApplication::getThemeIcon( "/mIconSnappingOnScale.svg" ) ), tr( "Disabled" ), scaleModeMenu );
     mDefaultSnappingScaleAct->setToolTip( tr( "Scale dependency disabled" ) );
+    mDefaultSnappingScaleAct->setObjectName( u"mDefaultSnappingScaleAct"_s );
     mGlobalSnappingScaleAct = new QAction( QIcon( QgsApplication::getThemeIcon( "/mIconSnappingOnScale.svg" ) ), tr( "Global" ), scaleModeMenu );
     mGlobalSnappingScaleAct->setToolTip( tr( "Scale dependency global" ) );
+    mGlobalSnappingScaleAct->setObjectName( u"mGlobalSnappingScaleAct"_s );
     mPerLayerSnappingScaleAct = new QAction( QIcon( QgsApplication::getThemeIcon( "/mIconSnappingOnScale.svg" ) ), tr( "Per layer" ), scaleModeMenu );
     mPerLayerSnappingScaleAct->setToolTip( tr( "Scale dependency per layer" ) );
+    mPerLayerSnappingScaleAct->setObjectName( u"mPerLayerSnappingScaleAct"_s );
     scaleModeMenu->addAction( mDefaultSnappingScaleAct );
     scaleModeMenu->addAction( mGlobalSnappingScaleAct );
     scaleModeMenu->addAction( mPerLayerSnappingScaleAct );

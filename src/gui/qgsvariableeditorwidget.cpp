@@ -493,7 +493,7 @@ void QgsVariableEditorTree::drawRow( QPainter *painter, const QStyleOptionViewIt
     QColor baseColor = item->data( 0, RowBaseColor ).value<QColor>();
     if ( index.row() % 2 == 1 )
     {
-      baseColor.setAlpha( 59 );
+      baseColor.setAlpha( std::max( 8, baseColor.alpha() * 2 / 3 ) );
     }
     painter->fillRect( option.rect, baseColor );
   }
@@ -506,23 +506,23 @@ void QgsVariableEditorTree::drawRow( QPainter *painter, const QStyleOptionViewIt
 
 QColor QgsVariableEditorTree::rowColor( int index ) const
 {
-  //return some nice (inspired by Qt Designer) background row colors
+  // Modern subtle background row colors for variable scopes
   const int colorIdx = index % 6;
   switch ( colorIdx )
   {
     case 0:
-      return QColor( 255, 163, 0, 89 );
+      return QColor( 100, 116, 139, 25 ); // Global: soft slate
     case 1:
-      return QColor( 255, 255, 77, 89 );
+      return QColor( 14, 165, 233, 30 );  // Project: Hake ocean cyan / sky blue
     case 2:
-      return QColor( 0, 255, 77, 89 );
+      return QColor( 99, 102, 241, 28 );  // Layer: soft indigo
     case 3:
-      return QColor( 0, 255, 255, 89 );
+      return QColor( 16, 185, 129, 28 );  // Layout/Composition: soft emerald
     case 4:
-      return QColor( 196, 125, 255, 89 );
+      return QColor( 168, 85, 247, 28 );  // Atlas/Feature: soft violet
     case 5:
     default:
-      return QColor( 255, 125, 225, 89 );
+      return QColor( 245, 158, 11, 28 );  // Other: soft amber
   }
 }
 

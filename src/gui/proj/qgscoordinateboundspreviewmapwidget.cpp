@@ -26,17 +26,20 @@ QgsCoordinateBoundsPreviewMapWidget::QgsCoordinateBoundsPreviewMapWidget( QWidge
   : QgsMapCanvas( parent )
 {
   mPreviewBand = new QgsRubberBand( this, Qgis::GeometryType::Polygon );
-  mPreviewBand->setWidth( 4 );
+  mPreviewBand->setWidth( 2 );
+  mPreviewBand->setColor( QColor( 14, 165, 233, 55 ) );
+  mPreviewBand->setStrokeColor( QColor( 2, 132, 199, 230 ) );
 
   mCanvasPreviewBand = new QgsRubberBand( this, Qgis::GeometryType::Polygon );
-  mCanvasPreviewBand->setWidth( 4 );
-  const QColor rectColor = QColor( 185, 84, 210, 60 );
+  mCanvasPreviewBand->setWidth( 2 );
+  const QColor rectColor = QColor( 99, 102, 241, 55 );
   mCanvasPreviewBand->setColor( rectColor );
+  mCanvasPreviewBand->setStrokeColor( QColor( 79, 70, 229, 220 ) );
 
   mCanvasCenterMarker = new QgsVertexMarker( this );
   mCanvasCenterMarker->setIconType( QgsVertexMarker::ICON_CROSS );
-  mCanvasCenterMarker->setColor( QColor( 185, 84, 210 ) );
-  mCanvasCenterMarker->setPenWidth( 3 );
+  mCanvasCenterMarker->setColor( QColor( 79, 70, 229 ) );
+  mCanvasCenterMarker->setPenWidth( 2 );
 
   const QgsCoordinateReferenceSystem srs( u"EPSG:4326"_s );
   setDestinationCrs( srs );
@@ -76,7 +79,8 @@ void QgsCoordinateBoundsPreviewMapWidget::setPreviewRect( const QgsRectangle &re
       geom = QgsGeometry::fromRect( rect );
     }
     mPreviewBand->setToGeometry( geom, nullptr );
-    mPreviewBand->setColor( QColor( 255, 0, 0, 65 ) );
+    mPreviewBand->setColor( QColor( 14, 165, 233, 55 ) );
+    mPreviewBand->setStrokeColor( QColor( 2, 132, 199, 230 ) );
     QgsRectangle extent = geom.boundingBox();
     extent.scale( 1.1 );
     setExtent( extent );

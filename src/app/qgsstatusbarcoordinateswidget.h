@@ -53,6 +53,9 @@ class APP_EXPORT QgsStatusBarCoordinatesWidget : public QWidget
 
     void setMouseCoordinatesPrecision( unsigned int precision );
 
+    //! Re-picks the toggle button icon for the current UI theme.
+    void refreshIcons();
+
   signals:
     void coordinatesChanged();
     void weAreBored();

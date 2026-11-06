@@ -93,7 +93,7 @@ QgsQlrDataItem::QgsQlrDataItem( QgsDataItem *parent, const QString &name, const 
   : QgsLayerItem( parent, name, path, path, Qgis::BrowserLayerType::NoType, u"qlr"_s )
 {
   setState( Qgis::BrowserItemState::Populated ); // no children
-  setIconName( u":/images/icons/hake-gis-icon-16x16.png"_s );
+  setIconName( u"/mIconRasterVector.svg"_s );
   setToolTip( QDir::toNativeSeparators( path ) );
   mCapabilities |= Qgis::BrowserItemCapability::ItemRepresentsFile;
 }

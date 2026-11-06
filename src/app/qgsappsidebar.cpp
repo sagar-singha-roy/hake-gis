@@ -40,7 +40,7 @@ QgsAppSidebar::QgsAppSidebar( QWidget *parent )
   setMinimumWidth( QgsGuiUtils::scaleIconSize( 64 ) );
   setMaximumWidth( QgsGuiUtils::scaleIconSize( 72 ) );
 
-  addNavAction( u"browser"_s, tr( "Browser" ), QgsApplication::getThemeIcon( u"/mIconFolder.svg"_s ), true );
+  addNavAction( u"browser"_s, tr( "Geo Explorer" ), QgsApplication::getThemeIcon( u"/mIconFolder.svg"_s ), true );
   addNavAction( u"layers"_s, tr( "Layers" ), QgsApplication::getThemeIcon( u"/mActionLayers.svg"_s ), true );
   addNavAction( u"styles"_s, tr( "Styles" ), QgsApplication::getThemeIcon( u"/mActionStyleManager.svg"_s ), true );
   addNavAction( u"processing"_s, tr( "Processing" ), QgsApplication::getThemeIcon( u"/processingAlgorithm.svg"_s ), true );

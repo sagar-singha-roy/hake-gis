@@ -20,6 +20,8 @@
 #include "qgsfileutils.h"
 #include "qgsmapcanvas.h"
 #include "qgsmaplayer.h"
+#include "qgsvectorlayer.h"
+#include <cpl_error.h>
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsmaplayerloadstyledialog.h"
 #include "qgsmeshlayer.h"
@@ -452,6 +454,7 @@ QList<QgsMapLayer *> QgsAppLayerHandling::addOgrVectorLayers( const QStringList 
       qApp->processEvents();
     }
 
+    CPLSetConfigOption( "SHAPE_RESTORE_SHX", "YES" );
     QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->providerMetadata( u"ogr"_s )->querySublayers( uri, Qgis::SublayerQueryFlag::IncludeSystemTables );
     // filter out non-vector sublayers
     sublayers.erase( std::remove_if( sublayers.begin(), sublayers.end(), []( const QgsProviderSublayerDetails &sublayer ) { return sublayer.type() != Qgis::LayerType::Vector; } ), sublayers.end() );
@@ -513,7 +516,54 @@ QList<QgsMapLayer *> QgsAppLayerHandling::addOgrVectorLayers( const QStringList 
     }
     else
     {
-      QString msg = QObject::tr( "%1 is not a valid or recognized data source." ).arg( uri );
+      // Fallback: Attempt to open directly as a vector layer
+      std::unique_ptr<QgsVectorLayer> directLayer = std::make_unique<QgsVectorLayer>( uri, baseName, u"ogr"_s );
+      if ( directLayer && directLayer->isValid() )
+      {
+        layersToAdd << directLayer.release();
+        userAskedToAddLayers = true;
+        continue;
+      }
+
+      QString detailedReason;
+      const QFileInfo fi( path.isEmpty() ? uri : path );
+      if ( !fi.exists() && !isVsiCurl && !isRemoteUrl )
+      {
+        detailedReason = QObject::tr( "File does not exist: \"%1\"." ).arg( fi.filePath() );
+      }
+      else if ( !fi.isReadable() && !isVsiCurl && !isRemoteUrl )
+      {
+        detailedReason = QObject::tr( "Permission denied: Cannot read \"%1\". On macOS, please grant Downloads folder access in System Settings > Privacy & Security > Files and Folders, or move the file to your Documents folder." ).arg( fi.filePath() );
+      }
+      else if ( uri.contains( "OneDrive"_L1, Qt::CaseInsensitive ) || uri.contains( "iCloud"_L1, Qt::CaseInsensitive ) )
+      {
+        if ( fi.size() == 0 )
+        {
+          detailedReason = QObject::tr( "Cloud placeholder: \"%1\" appears to be an online-only cloud file. Right-click it in Finder and choose \"Always Keep on This Device\" to download it before opening." ).arg( fi.fileName() );
+        }
+      }
+
+      if ( detailedReason.isEmpty() && directLayer && !directLayer->error().message().isEmpty() )
+      {
+        detailedReason = directLayer->error().message( QgsErrorMessage::Format::Text );
+      }
+
+      const char *gdalErr = CPLGetLastErrorMsg();
+      if ( gdalErr && strlen( gdalErr ) > 0 )
+      {
+        const QString gdalMsg = QString::fromUtf8( gdalErr );
+        if ( !detailedReason.contains( gdalMsg ) )
+        {
+          if ( !detailedReason.isEmpty() )
+            detailedReason += u" (GDAL: %1)"_s.arg( gdalMsg );
+          else
+            detailedReason = gdalMsg;
+        }
+      }
+
+      QString msg = detailedReason.isEmpty()
+                      ? QObject::tr( "%1 is not a valid or recognized data source." ).arg( uri )
+                      : QObject::tr( "%1: %2" ).arg( uri, detailedReason );
       // If the failed layer was a vsicurl type, give the user a chance to try the normal download.
       if ( isVsiCurl
            && QMessageBox::question( QgisApp::instance(), QObject::tr( "Invalid Data Source" ), QObject::tr( "Download with \"Protocol\" source type has failed, do you want to try the \"File\" source type?" ) )
@@ -624,10 +674,21 @@ template QgsTiledSceneLayer *QgsAppLayerHandling::addLayer<QgsTiledSceneLayer>( 
 template QgsPluginLayer *QgsAppLayerHandling::addLayer<QgsPluginLayer>( const QString &uri, const QString &baseName, const QString &provider, bool addToLegend, bool showWarningOnInvalid );
 
 
-bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QList<Qgis::LayerType> &acceptableTypes )
+bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QList<Qgis::LayerType> &acceptableTypes, QList<QgsMapLayer *> *openedLayers )
 {
+  const QString vsiPrefix = QgsGdalUtils::vsiPrefixForPath( path );
+  QString queryPath = path;
+  if ( !vsiPrefix.isEmpty() && !queryPath.startsWith( "/vsi"_L1, Qt::CaseInsensitive ) )
+  {
+    queryPath = vsiPrefix + queryPath;
+  }
+
   // query sublayers
-  QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->querySublayers( path, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->querySublayers( queryPath, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  if ( sublayers.empty() && queryPath != path )
+  {
+    sublayers = QgsProviderRegistry::instance()->querySublayers( path, Qgis::SublayerQueryFlag::IncludeSystemTables );
+  }
 
   // filter out non-matching sublayers
   sublayers.erase(
@@ -695,7 +756,11 @@ bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QL
       base = QgsMapLayer::formatLayerName( base );
     }
 
-    addSublayers( sublayers, base, groupName );
+    const QList<QgsMapLayer *> added = addSublayers( sublayers, base, groupName );
+    if ( openedLayers )
+    {
+      openedLayers->append( added );
+    }
     QgisApp::instance()->activateDeactivateLayerRelatedActions( QgisApp::instance()->activeLayer() );
   }
 
@@ -959,10 +1024,11 @@ QList<QgsMapLayer *> QgsAppLayerHandling::openLayer( const QString &fileName, bo
   const QString vsiPrefix = QgsGdalUtils::vsiPrefixForPath( fileName );
   if ( QgsGdalUtils::isVsiArchivePrefix( vsiPrefix ) )
   {
-    if ( askUserForZipItemLayers( fileName, {} ) )
+    if ( askUserForZipItemLayers( fileName, {}, &openedLayers ) )
     {
       CPLPopErrorHandler();
       ok = true;
+      postProcessAddedLayers();
       return openedLayers;
     }
   }
@@ -983,6 +1049,7 @@ QList<QgsMapLayer *> QgsAppLayerHandling::openLayer( const QString &fileName, bo
   }
 
   // query sublayers
+  CPLSetConfigOption( "SHAPE_RESTORE_SHX", "YES" );
   QList<QgsProviderSublayerDetails> sublayers = QgsProviderRegistry::instance()->querySublayers( fileName, Qgis::SublayerQueryFlag::IncludeSystemTables );
 
   if ( !sublayers.empty() || !nonLayerItems.empty() )
@@ -1090,10 +1157,86 @@ QList<QgsMapLayer *> QgsAppLayerHandling::openLayer( const QString &fileName, bo
 
   if ( !ok )
   {
+    // Fallback: Try vector then raster directly
+    std::unique_ptr<QgsVectorLayer> vLayer = std::make_unique<QgsVectorLayer>( fileName, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"ogr"_s );
+    if ( vLayer && vLayer->isValid() )
+    {
+      openedLayers.append( { vLayer.release() } );
+      ok = true;
+      postProcessAddedLayers();
+      return openedLayers;
+    }
+    std::unique_ptr<QgsRasterLayer> rLayer = std::make_unique<QgsRasterLayer>( fileName, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"gdal"_s );
+    if ( rLayer && rLayer->isValid() )
+    {
+      openedLayers.append( { rLayer.release() } );
+      ok = true;
+      postProcessAddedLayers();
+      return openedLayers;
+    }
+
+    const QString vsiFallbackPrefix = QgsGdalUtils::vsiPrefixForPath( fileName );
+    if ( !vsiFallbackPrefix.isEmpty() && !fileName.startsWith( "/vsi"_L1, Qt::CaseInsensitive ) )
+    {
+      const QString vsiPath = vsiFallbackPrefix + fileName;
+      std::unique_ptr<QgsVectorLayer> vLayerVsi = std::make_unique<QgsVectorLayer>( vsiPath, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"ogr"_s );
+      if ( vLayerVsi && vLayerVsi->isValid() )
+      {
+        openedLayers.append( { vLayerVsi.release() } );
+        ok = true;
+        postProcessAddedLayers();
+        return openedLayers;
+      }
+      std::unique_ptr<QgsRasterLayer> rLayerVsi = std::make_unique<QgsRasterLayer>( vsiPath, QgsProviderUtils::suggestLayerNameFromFilePath( fileName ), u"gdal"_s );
+      if ( rLayerVsi && rLayerVsi->isValid() )
+      {
+        openedLayers.append( { rLayerVsi.release() } );
+        ok = true;
+        postProcessAddedLayers();
+        return openedLayers;
+      }
+    }
+
     // we have no idea what this file is...
     QgsMessageLog::logMessage( QObject::tr( "Unable to load %1" ).arg( fileName ) );
 
-    const QString msg = QObject::tr( "%1 is not a valid or recognized data source." ).arg( fileName );
+    QString detailedReason;
+    const QFileInfo fi( fileName );
+    if ( !fi.exists() )
+    {
+      detailedReason = QObject::tr( "File does not exist: \"%1\"." ).arg( fi.filePath() );
+    }
+    else if ( !fi.isReadable() )
+    {
+      detailedReason = QObject::tr( "Permission denied: Cannot read \"%1\". On macOS, please grant Downloads folder access in System Settings > Privacy & Security > Files and Folders, or move the file to your Documents folder." ).arg( fi.filePath() );
+    }
+    else if ( fileName.contains( "OneDrive"_L1, Qt::CaseInsensitive ) || fileName.contains( "iCloud"_L1, Qt::CaseInsensitive ) )
+    {
+      if ( fi.size() == 0 )
+      {
+        detailedReason = QObject::tr( "Cloud placeholder: \"%1\" appears to be an online-only cloud file. Right-click it in Finder and choose \"Always Keep on This Device\" to download it before opening." ).arg( fi.fileName() );
+      }
+    }
+    if ( detailedReason.isEmpty() && vLayer && !vLayer->error().message().isEmpty() )
+    {
+      detailedReason = vLayer->error().message( QgsErrorMessage::Format::Text );
+    }
+    const char *gdalErr = CPLGetLastErrorMsg();
+    if ( gdalErr && strlen( gdalErr ) > 0 )
+    {
+      const QString gdalMsg = QString::fromUtf8( gdalErr );
+      if ( !detailedReason.contains( gdalMsg ) )
+      {
+        if ( !detailedReason.isEmpty() )
+          detailedReason += u" (GDAL: %1)"_s.arg( gdalMsg );
+        else
+          detailedReason = gdalMsg;
+      }
+    }
+
+    const QString msg = detailedReason.isEmpty()
+                          ? QObject::tr( "%1 is not a valid or recognized data source." ).arg( fileName )
+                          : QObject::tr( "%1: %2" ).arg( fileName, detailedReason );
     QgisApp::instance()->visibleMessageBar()->pushMessage( QObject::tr( "Invalid Data Source" ), msg, Qgis::MessageLevel::Critical );
   }
   else

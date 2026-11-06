@@ -126,10 +126,12 @@
 #include <QStyle>
 #include <QTextStream>
 #include <QThreadPool>
+#include <QToolTip>
 
 #include "moc_qgsapplication.cpp"
 
 #include <algorithm>
+#include <optional>
 
 using namespace Qt::StringLiterals;
 
@@ -267,6 +269,8 @@ Q_GLOBAL_STATIC( QString, sLibraryPath )
 Q_GLOBAL_STATIC( QString, sLibexecPath )
 Q_GLOBAL_STATIC( QString, sQmlImportPath )
 Q_GLOBAL_STATIC( QString, sThemeName )
+// Palette in effect before any theme palette.txt was applied; every theme palette is built on top of it.
+Q_GLOBAL_STATIC( std::optional<QPalette>, sThemeBasePalette )
 Q_GLOBAL_STATIC( QString, sProfilePath )
 
 Q_GLOBAL_STATIC( QStringList, sDefaultSvgPaths )
@@ -377,6 +381,9 @@ void registerMetaTypes()
 
 void QgsApplication::init( QString profileFolder )
 {
+  // Automatically restore/reconstruct missing or corrupted .shx shapefile index files on the fly
+  CPLSetConfigOption( "SHAPE_RESTORE_SHX", "YES" );
+
   // Initialize application members in desktop app (at this point, profile folder is known)
   if ( platform() == "desktop"_L1 )
   {
@@ -926,13 +933,54 @@ QString QgsApplication::iconPath( const QString &iconFile )
 namespace
 {
   /**
-   * Force SVG paint colors to Hake Light navy (#1B2F4B) for theme.png-style monochrome toolbars.
+   * Monochrome glyph color for the Hake themes, or an empty string for themes
+   * that keep the stock multi-color icons.
+   */
+  QString hakeMonochromeColor( const QString &theme )
+  {
+    // Hake icon palette stroke colors (see src/app/qgshakeicons.cpp).
+    if ( theme == QLatin1String( "Hake Night" ) )
+      return QStringLiteral( "#CFE0F0" );
+    return QString();
+  }
+
+  /**
+   * TRUE for icons that identify a data provider, processing provider or external
+   * service; they keep their stock colors under the Hake themes so they stay recognizable.
+   */
+  bool isProviderIdentityIcon( const QString &name )
+  {
+    static const QStringList identityIcons {
+      u"mIconPostgis.svg"_s,
+      u"mIconSpatialite.svg"_s,
+      u"mIconOracle.svg"_s,
+      u"mIconMssql.svg"_s,
+      u"mIconHana.svg"_s,
+      u"mIconWms.svg"_s,
+      u"mIconWfs.svg"_s,
+      u"mIconWcs.svg"_s,
+      u"mIconSensorThings.svg"_s,
+      u"mIconImageServer.svg"_s,
+      u"mIconAms.svg"_s,
+      u"mIconAfs.svg"_s,
+      u"mIconGpx.svg"_s,
+      u"mIconDelimitedText.svg"_s,
+      u"mIconMemory.svg"_s,
+      u"mIconCesium3dTiles.svg"_s,
+      u"mIconStac.svg"_s,
+      u"mGeoPackage.svg"_s,
+    };
+    const QString fileName = name.section( '/', -1 );
+    return identityIcons.contains( fileName ) || fileName.startsWith( QLatin1String( "provider" ) ) || fileName.startsWith( QLatin1String( "grass_" ) );
+  }
+
+  /**
+   * Force SVG paint colors to a single Hake glyph color for theme.png-style monochrome toolbars.
    * Leaves none/transparent/currentColor alone; near-white fills become none (hollow glyphs).
    */
-  QByteArray hakeLightMonochromeSvg( const QByteArray &svgBytes )
+  QByteArray hakeMonochromeSvg( const QByteArray &svgBytes, const QString &navy )
   {
     QString svg = QString::fromUtf8( svgBytes );
-    const QString navy = QStringLiteral( "#1B2F4B" );
 
     const auto replaceColor = [&navy]( const QString &color ) -> QString {
       const QString trimmed = color.trimmed();
@@ -1026,7 +1074,8 @@ QIcon QgsApplication::getThemeIcon( const QString &name, const QColor &fillColor
 
   QIcon icon;
   const bool colorBased = fillColor.isValid() || strokeColor.isValid();
-  const bool monochrome = !colorBased && theme == QLatin1String( "Hake Light" );
+  const QString monochromeColor = colorBased || isProviderIdentityIcon( name ) ? QString() : hakeMonochromeColor( theme );
+  const bool monochrome = !monochromeColor.isEmpty();
 
   auto iconFromColoredSvg = [fillColor, strokeColor, cacheKey]( const QString &path ) -> QIcon {
     // sizes are unused here!
@@ -1034,11 +1083,11 @@ QIcon QgsApplication::getThemeIcon( const QString &name, const QColor &fillColor
     return iconFromCachedSvgBytes( cacheKey, svgContent );
   };
 
-  auto iconFromMonochromeSvg = [cacheKey]( const QString &path ) -> QIcon {
+  auto iconFromMonochromeSvg = [cacheKey, monochromeColor]( const QString &path ) -> QIcon {
     QFile in( path );
     if ( !in.open( QIODevice::ReadOnly ) )
       return QIcon();
-    return iconFromCachedSvgBytes( cacheKey, hakeLightMonochromeSvg( in.readAll() ) );
+    return iconFromCachedSvgBytes( cacheKey, hakeMonochromeSvg( in.readAll(), monochromeColor ) );
   };
 
   const auto resolveIcon = [&]( const QString &path ) {
@@ -1188,7 +1237,9 @@ QString QgsApplication::resolvePkgPath()
     static const QStringList paths { QStringList() << QString() << u"/.."_s << u"/bin"_s << u"/../../.."_s };
     for ( const QString &path : paths )
     {
-      f.setFileName( prefix + path + "/qgisbuildpath.txt" );
+      f.setFileName( prefix + path + "/hake-gisbuildpath.txt" );
+      if ( !f.exists() )
+        f.setFileName( prefix + path + "/qgisbuildpath.txt" );
       if ( f.exists() )
         break;
     }
@@ -1220,7 +1271,12 @@ QString QgsApplication::resolvePkgPath()
 #else
 
 #if defined( Q_OS_MACOS )
+#if defined( QGIS_MAC_BUNDLE )
+    QDir dir( appPath + "/../.."_L1 );
+    prefixPath = dir.absolutePath();
+#else
     prefixPath = appPath;
+#endif
 #elif defined( Q_OS_WIN )
     prefixPath = appPath;
     if ( prefixPath.endsWith( "/bin" ) )
@@ -1251,51 +1307,78 @@ QString QgsApplication::themeName()
 
 void QgsApplication::setUITheme( const QString &themeName )
 {
-  if ( QgsApplication *app = instance() )
-  {
-    app->mIconCache.clear();
-  }
-
   // Loop all style sheets, find matching name, load it.
   const QString path = applicationThemeRegistry()->themeFolder( themeName );
   if ( themeName == "default"_L1 || path.isEmpty() )
   {
+    if ( QgsApplication *app = instance() )
+    {
+      app->mIconCache.clear();
+    }
     setThemeName( u"default"_s );
     qApp->setStyleSheet( QString() );
     instance()->themeChanged();
     return;
   }
 
+  // Everything is read and built before anything is applied, so a missing or unreadable
+  // file leaves the current theme fully in place instead of a half-applied mix.
   QFile file( path + "/style.qss" );
   QFile variablesfile( path + "/variables.qss" );
   QFileInfo variableInfo( variablesfile );
 
   if ( !file.open( QIODevice::ReadOnly ) || ( variableInfo.exists() && !variablesfile.open( QIODevice::ReadOnly ) ) )
   {
-    qApp->setStyleSheet( QString() );
-    instance()->themeChanged();
+    QgsMessageLog::logMessage( tr( "Could not read the style files of UI theme \"%1\" in %2; keeping the current theme." ).arg( themeName, path ), tr( "Theme" ), Qgis::MessageLevel::Warning );
     return;
   }
 
+  if ( !sThemeBasePalette()->has_value() )
+    *sThemeBasePalette() = qApp->palette();
+
+  bool hasPalette = false;
+  QPalette pal = sThemeBasePalette()->value();
   QFile palettefile( path + "/palette.txt" );
   QFileInfo paletteInfo( palettefile );
-  if ( paletteInfo.exists() && palettefile.open( QIODevice::ReadOnly ) )
+  if ( paletteInfo.exists() )
   {
-    QPalette pal = qApp->palette();
+    if ( !palettefile.open( QIODevice::ReadOnly ) )
+    {
+      QgsMessageLog::logMessage( tr( "Could not read palette.txt of UI theme \"%1\"; keeping the current theme." ).arg( themeName ), tr( "Theme" ), Qgis::MessageLevel::Warning );
+      return;
+    }
+
+    // Lines are "role:color", or "disabled:role:color" for the disabled color group.
+    // Disabled entries are applied after the others so they are not overwritten.
+    QList<QPair<int, QColor>> disabledColors;
     QTextStream in( &palettefile );
     while ( !in.atEnd() )
     {
-      QString line = in.readLine();
+      const QString line = in.readLine();
       QStringList parts = line.split( ':' );
-      if ( parts.count() == 2 )
+      bool disabled = false;
+      if ( parts.count() == 3 && parts.at( 0 ).trimmed() == "disabled"_L1 )
       {
-        int role = parts.at( 0 ).trimmed().toInt();
-        QColor color = QgsSymbolLayerUtils::decodeColor( parts.at( 1 ).trimmed() );
-        pal.setColor( static_cast< QPalette::ColorRole >( role ), color );
+        disabled = true;
+        parts.removeFirst();
       }
+      if ( parts.count() != 2 )
+        continue;
+
+      bool ok = false;
+      const int role = parts.at( 0 ).trimmed().toInt( &ok );
+      if ( !ok || role < 0 || role >= static_cast<int>( QPalette::NColorRoles ) )
+        continue;
+      const QColor color = QgsSymbolLayerUtils::decodeColor( parts.at( 1 ).trimmed() );
+      if ( disabled )
+        disabledColors.append( qMakePair( role, color ) );
+      else
+        pal.setColor( static_cast<QPalette::ColorRole>( role ), color );
     }
+    for ( const QPair<int, QColor> &disabledColor : std::as_const( disabledColors ) )
+      pal.setColor( QPalette::Disabled, static_cast<QPalette::ColorRole>( disabledColor.first ), disabledColor.second );
     palettefile.close();
-    qApp->setPalette( pal );
+    hasPalette = true;
   }
 
   QString styledata = file.readAll();
@@ -1344,6 +1427,16 @@ void QgsApplication::setUITheme( const QString &themeName )
     }
   }
 
+  if ( QgsApplication *app = instance() )
+  {
+    app->mIconCache.clear();
+  }
+  if ( hasPalette )
+  {
+    qApp->setPalette( pal );
+    // Tooltips keep their own palette, seeded from the OS color scheme at startup.
+    QToolTip::setPalette( pal );
+  }
   qApp->setStyleSheet( styledata );
 
   setThemeName( themeName );
@@ -1357,34 +1450,56 @@ QHash<QString, QString> QgsApplication::uiThemes()
   return mapping;
 }
 
+static QString findDocFilePath( const QString &fileName )
+{
+  if ( QgsApplication::isRunningFromBuildDir() )
+  {
+    const QString buildDoc = *sBuildOutputPath() + u"/data/doc/"_s + fileName;
+    if ( QFile::exists( buildDoc ) )
+      return buildDoc;
+    const QString srcDoc = *sBuildSourcePath() + u"/doc/"_s + fileName;
+    if ( QFile::exists( srcDoc ) )
+      return srcDoc;
+  }
+  const QString pkgDoc = QgsApplication::pkgDataPath() + u"/doc/"_s + fileName;
+  if ( QFile::exists( pkgDoc ) )
+    return pkgDoc;
+
+  const QString bundleDoc = QCoreApplication::applicationDirPath() + u"/../Resources/hake-gis/doc/"_s + fileName;
+  if ( QFile::exists( bundleDoc ) )
+    return bundleDoc;
+
+  return pkgDoc;
+}
+
 QString QgsApplication::authorsFilePath()
 {
-  return pkgDataPath() + u"/doc/AUTHORS"_s;
+  return findDocFilePath( u"AUTHORS"_s );
 }
 
 QString QgsApplication::contributorsFilePath()
 {
-  return pkgDataPath() + u"/doc/CONTRIBUTORS"_s;
+  return findDocFilePath( u"CONTRIBUTORS"_s );
 }
 
 QString QgsApplication::sponsorsFilePath()
 {
-  return pkgDataPath() + u"/doc/SPONSORS"_s;
+  return findDocFilePath( u"SPONSORS"_s );
 }
 
 QString QgsApplication::donorsFilePath()
 {
-  return pkgDataPath() + u"/doc/DONORS"_s;
+  return findDocFilePath( u"DONORS"_s );
 }
 
 QString QgsApplication::translatorsFilePath()
 {
-  return pkgDataPath() + u"/doc/TRANSLATORS"_s;
+  return findDocFilePath( u"TRANSLATORS"_s );
 }
 
 QString QgsApplication::licenceFilePath()
 {
-  return pkgDataPath() + u"/doc/LICENSE"_s;
+  return findDocFilePath( u"LICENSE"_s );
 }
 
 QString QgsApplication::i18nPath()
@@ -1903,98 +2018,211 @@ QString QgsApplication::showSettings()
 
 QString QgsApplication::reportStyleSheet( QgsApplication::StyleSheetType styleSheetType )
 {
-  //
-  // Make the style sheet desktop preferences aware by using qapplication
-  // palette as a basis for colors where appropriate
-  //
-  //  QColor myColor1 = palette().highlight().color();
-  QColor myColor1( Qt::lightGray );
-  QColor myColor2 = myColor1;
-  myColor2 = myColor2.lighter( 110 ); //10% lighter
-  QString myStyle;
-  myStyle = QStringLiteral(
-    ".overview{"
-    "  font: 1.82em;"
-    "  font-weight: bold;"
-    "}"
-    "body{"
-    "  background: white;"
-    "  color: black;"
-    "  font-family: 'Lato', 'Open Sans', 'Lucida Grande', 'Segoe UI', 'Arial', sans-serif;"
-    "  width: 100%;"
-    "}"
-    "h1{  background-color: #F6F6F6;"
-    "  color: #589632; " // from https://qgis.org/styleguide/
-    "  font-size: x-large;  "
-    "  font-weight: normal;"
-    "  background: none;"
-    "  padding: 0.75em 0 0;"
-    "  margin: 0;"
-    "  line-height: 3em;"
-    "}"
-    "h2{  background-color: #F6F6F6;"
-    "  color: #589632; " // from https://qgis.org/styleguide/
-    "  font-size: medium;  "
-    "  font-weight: normal;"
-    "  background: none;"
-    "  padding: 0.75em 0 0;"
-    "  margin: 0;"
-    "  line-height: 1.1em;"
-    "}"
-    "h3{  background-color: #F6F6F6;"
-    "  color: #93b023;" // from https://qgis.org/styleguide/
-    "  font-weight: bold;"
-    "  font-size: large;"
-    "  text-align: left;"
-    "  border-bottom: 5px solid #DCEB5C;"
-    "}"
-    "h4{  background-color: #F6F6F6;"
-    "  color: #93b023;" // from https://qgis.org/styleguide/
-    "  font-weight: bold;"
-    "  font-size: medium;"
-    "  text-align: left;"
-    "}"
-    "h5{    background-color: #F6F6F6;"
-    "   color: #93b023;" // from https://qgis.org/styleguide/
-    "   font-weight: bold;"
-    "   font-size: small;"
-    "   text-align: left;"
-    "}"
-    "a{  color: #729FCF;"
-    "  font-family: arial,sans-serif;"
-    "}"
-    "label{  background-color: #FFFFCC;"
-    "  border: 1px solid black;"
-    "  margin: 1px;"
-    "  padding: 0px 3px; "
-    "  font-size: small;"
-    "}"
-    "th .strong {"
-    "  font-weight: bold;"
-    "}"
-    "hr {"
-    "  border: 0;"
-    "  height: 0;"
-    "  border-top: 1px solid black;"
-    "}"
-    ".list-view .highlight {"
-    "  text-align: left;"
-    "  border: 0px;"
-    "  width: 20%;"
-    "  padding-right: 15px;"
-    "  padding-left: 20px;"
-    "  font-weight: bold;"
-    "}"
-    ".tabular-view .odd-row {"
-    "  background-color: #f9f9f9;"
-    "}"
-    ".section {"
-    "  font-weight: bold;"
-    "  padding-top:25px;"
-    "}"
-  );
+  const QString currentTheme = themeName();
+  const bool isDark = currentTheme.contains( QLatin1String( "Night" ), Qt::CaseInsensitive ) ||
+                      currentTheme.contains( QLatin1String( "Dark" ), Qt::CaseInsensitive );
 
-  // We have some subtle differences between Qt based style and QWebKit style
+  QString myStyle;
+  if ( isDark )
+  {
+    myStyle = QStringLiteral(
+      ".overview{"
+      "  font-size: 1.5em;"
+      "  font-weight: bold;"
+      "  color: #E6EDF5;"
+      "}"
+      "body{"
+      "  background: #121A24;"
+      "  color: #D7E1EC;"
+      "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;"
+      "  font-size: 10pt;"
+      "  width: 100%;"
+      "  margin: 0;"
+      "  padding: 4px;"
+      "}"
+      "h1{"
+      "  color: #5B9BD8;"
+      "  font-size: 1.3em;"
+      "  font-weight: 600;"
+      "  background: none;"
+      "  padding: 0.4em 0 0.2em;"
+      "  margin: 0;"
+      "  line-height: 1.3em;"
+      "  border-bottom: 2px solid #5B9BD8;"
+      "}"
+      "h2{"
+      "  color: #1B8C77;"
+      "  font-size: 1.15em;"
+      "  font-weight: 600;"
+      "  background: none;"
+      "  padding: 0.4em 0 0.1em;"
+      "  margin: 0;"
+      "  line-height: 1.2em;"
+      "}"
+      "h3{"
+      "  color: #D98A2B;"
+      "  font-weight: 600;"
+      "  font-size: 1.05em;"
+      "  text-align: left;"
+      "  border-bottom: 1px solid #2A3B50;"
+      "  padding-bottom: 2px;"
+      "  margin-top: 0.6em;"
+      "}"
+      "h4{"
+      "  color: #80A0AF;"
+      "  font-weight: 600;"
+      "  font-size: 0.95em;"
+      "  text-align: left;"
+      "}"
+      "h5{"
+      "  color: #80A0AF;"
+      "  font-weight: 600;"
+      "  font-size: 0.9em;"
+      "  text-align: left;"
+      "}"
+      "a{"
+      "  color: #5B9BD8;"
+      "  text-decoration: none;"
+      "}"
+      "label{"
+      "  background-color: #1F2D3F;"
+      "  border: 1px solid #2A3B50;"
+      "  color: #D7E1EC;"
+      "  border-radius: 3px;"
+      "  margin: 1px;"
+      "  padding: 0px 4px;"
+      "  font-size: small;"
+      "}"
+      "th .strong {"
+      "  font-weight: bold;"
+      "  color: #E6EDF5;"
+      "}"
+      "hr {"
+      "  border: 0;"
+      "  height: 1px;"
+      "  background-color: #2A3B50;"
+      "}"
+      ".list-view .highlight {"
+      "  text-align: left;"
+      "  border: 0px;"
+      "  width: 20%;"
+      "  padding-right: 15px;"
+      "  padding-left: 10px;"
+      "  font-weight: 600;"
+      "  color: #80A0AF;"
+      "}"
+      ".tabular-view .odd-row {"
+      "  background-color: #172230;"
+      "}"
+      ".section {"
+      "  font-weight: bold;"
+      "  padding-top: 15px;"
+      "  color: #E6EDF5;"
+      "}"
+    );
+  }
+  else
+  {
+    myStyle = QStringLiteral(
+      ".overview{"
+      "  font-size: 1.5em;"
+      "  font-weight: bold;"
+      "  color: #0E3A52;"
+      "}"
+      "body{"
+      "  background: #FFFFFF;"
+      "  color: #1E293B;"
+      "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;"
+      "  font-size: 10pt;"
+      "  width: 100%;"
+      "  margin: 0;"
+      "  padding: 4px;"
+      "}"
+      "h1{"
+      "  color: #0E3A52;"
+      "  font-size: 1.3em;"
+      "  font-weight: 600;"
+      "  background: none;"
+      "  padding: 0.4em 0 0.2em;"
+      "  margin: 0;"
+      "  line-height: 1.3em;"
+      "  border-bottom: 2px solid #0E3A52;"
+      "}"
+      "h2{"
+      "  color: #1B8C77;"
+      "  font-size: 1.15em;"
+      "  font-weight: 600;"
+      "  background: none;"
+      "  padding: 0.4em 0 0.1em;"
+      "  margin: 0;"
+      "  line-height: 1.2em;"
+      "}"
+      "h3{"
+      "  color: #D98A2B;"
+      "  font-weight: 600;"
+      "  font-size: 1.05em;"
+      "  text-align: left;"
+      "  border-bottom: 1px solid #E2E8F0;"
+      "  padding-bottom: 2px;"
+      "  margin-top: 0.6em;"
+      "}"
+      "h4{"
+      "  color: #0E3A52;"
+      "  font-weight: 600;"
+      "  font-size: 0.95em;"
+      "  text-align: left;"
+      "}"
+      "h5{"
+      "  color: #475569;"
+      "  font-weight: 600;"
+      "  font-size: 0.9em;"
+      "  text-align: left;"
+      "}"
+      "a{"
+      "  color: #1B8C77;"
+      "  text-decoration: none;"
+      "}"
+      "label{"
+      "  background-color: #F1F5F9;"
+      "  border: 1px solid #CBD5E1;"
+      "  color: #1E293B;"
+      "  border-radius: 3px;"
+      "  margin: 1px;"
+      "  padding: 0px 4px;"
+      "  font-size: small;"
+      "}"
+      "th .strong {"
+      "  font-weight: bold;"
+      "  color: #0E3A52;"
+      "}"
+      "hr {"
+      "  border: 0;"
+      "  height: 1px;"
+      "  background-color: #E2E8F0;"
+      "}"
+      ".list-view .highlight {"
+      "  text-align: left;"
+      "  border: 0px;"
+      "  width: 20%;"
+      "  padding-right: 15px;"
+      "  padding-left: 10px;"
+      "  font-weight: 600;"
+      "  color: #475569;"
+      "}"
+      ".tabular-view .odd-row {"
+      "  background-color: #F8FAFC;"
+      "}"
+      ".section {"
+      "  font-weight: bold;"
+      "  padding-top: 15px;"
+      "  color: #0E3A52;"
+      "}"
+    );
+  }
+
+  const QString borderColor = isDark ? QStringLiteral( "#2A3B50" ) : QStringLiteral( "#E2E8F0" );
+  const QString headerBg = isDark ? QStringLiteral( "#1F2D3F" ) : QStringLiteral( "#F1F5F9" );
+
   switch ( styleSheetType )
   {
     case StyleSheetType::Qt:
@@ -2004,9 +2232,13 @@ QString QgsApplication::reportStyleSheet( QgsApplication::StyleSheetType styleSh
         "  width: 95%;"
         "}"
         ".tabular-view th, .tabular-view td { "
-        "  border:1px solid black;"
+        "  border: 1px solid %1;"
+        "  padding: 4px 6px;"
         "}"
-      );
+        ".tabular-view th { "
+        "  background-color: %2;"
+        "}"
+      ).arg( borderColor, headerBg );
       break;
 
     case StyleSheetType::WebBrowser:
@@ -2017,38 +2249,34 @@ QString QgsApplication::reportStyleSheet( QgsApplication::StyleSheetType styleSh
         "}"
         "table.tabular-view, table.list-view { "
         "   border-collapse: collapse;"
-        "   table-layout:fixed;"
+        "   table-layout: fixed;"
         "   width: 100% !important;"
         "   font-size: 90%;"
         "}"
-        // Override
         "h1 { "
         "   line-height: inherit;"
         "}"
         "td, th {"
         "   word-wrap: break-word; "
         "   vertical-align: top;"
+        "   padding: 4px 6px;"
         "}"
-        // Set first column width
         ".list-view th:first-child, .list-view td:first-child {"
         "   width: 20%;"
         "}"
         ".list-view.highlight { "
         "   padding-left: inherit; "
         "}"
-        // Set first column width for inner tables
         ".tabular-view th:first-child, .tabular-view td:first-child { "
         "   width: 20%; "
         "}"
-        // Makes titles bg stand up
         ".tabular-view th.strong { "
-        "   background-color: #eee; "
+        "   background-color: %1; "
         "}"
-        // Give some visual appearance to those ugly nested tables
         ".tabular-view th, .tabular-view td { "
-        "   border: 1px solid #eee;"
+        "   border: 1px solid %2;"
         "}"
-      );
+      ).arg( headerBg, borderColor );
       break;
   }
 

@@ -19,6 +19,7 @@
 
 #include "qgis.h"
 #include "qgsapplication.h"
+#include "qgshakeicons.h"
 #include "qgslogger.h"
 #include "qgsnetworkaccessmanager.h"
 
@@ -30,6 +31,7 @@
 #include <QFileInfo>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QString>
 #include <QUrl>
@@ -57,6 +59,14 @@ QgsAbout::QgsAbout( QWidget *parent )
   : QgsOptionsDialogBase( u"about"_s, parent, kAboutWindowFlags )
 {
   setupUi( this );
+  if ( QgsHakeIcons::isHakeTheme( QgsApplication::themeName() ) )
+  {
+    // Sidebar rows follow the page order in qgsabout.ui.
+    const QStringList pageIcons { u"about:about"_s, u"about:whats-new"_s, u"about:license"_s };
+    for ( int row = 0; row < std::min( static_cast<int>( pageIcons.size() ), mOptionsListWidget->count() ); ++row )
+      mOptionsListWidget->item( row )->setIcon( QgsHakeIcons::iconFor( pageIcons.at( row ), QString() ) );
+  }
+  updateLogo();
   setWindowTitle( tr( "About %1" ).arg( Qgis::productDisplayName() ) );
   connect( btnQgisUser, &QPushButton::clicked, this, &QgsAbout::btnQgisUser_clicked );
   connect( btnQgisHome, &QPushButton::clicked, this, &QgsAbout::btnQgisHome_clicked );
@@ -79,6 +89,24 @@ void QgsAbout::init()
   setLicence();
 }
 
+void QgsAbout::updateLogo()
+{
+  const qreal dpr = qgisIcon->devicePixelRatioF();
+  QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+  logo = logo.scaled( qgisIcon->maximumSize() * dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation );
+  logo.setDevicePixelRatio( dpr );
+  qgisIcon->setPixmap( logo );
+}
+
+bool QgsAbout::event( QEvent *e )
+{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
+  if ( e->type() == QEvent::DevicePixelRatioChange )
+    updateLogo();
+#endif
+  return QgsOptionsDialogBase::event( e );
+}
+
 void QgsAbout::updateWindowTitle()
 {
   // QgsOptionsDialogBase appends the current sidebar page (e.g. " — About").
@@ -99,11 +127,33 @@ void QgsAbout::updateWindowTitle()
 
 void QgsAbout::setLicence()
 {
-  QFile licenceFile( QgsApplication::licenceFilePath() );
+  QString licencePath = QgsApplication::licenceFilePath();
+  QFile licenceFile( licencePath );
+  if ( !licenceFile.exists() )
+  {
+    const QStringList fallbacks = {
+      QgsApplication::buildSourcePath() + u"/doc/LICENSE"_s,
+      QgsApplication::buildOutputPath() + u"/data/doc/LICENSE"_s,
+      QDir( QgsApplication::pkgDataPath() ).filePath( u"doc/LICENSE"_s ),
+      QCoreApplication::applicationDirPath() + u"/../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../../data/doc/LICENSE"_s,
+      QDir::current().filePath( u"doc/LICENSE"_s )
+    };
+    for ( const QString &fb : fallbacks )
+    {
+      if ( QFile::exists( fb ) )
+      {
+        licenceFile.setFileName( fb );
+        break;
+      }
+    }
+  }
+
   QgsDebugMsgLevel( u"Reading licence file %1"_s.arg( licenceFile.fileName() ), 2 );
   if ( licenceFile.open( QIODevice::ReadOnly ) )
   {
-    txtLicense->setText( licenceFile.readAll() );
+    txtLicense->setText( QString::fromUtf8( licenceFile.readAll() ) );
   }
 }
 
@@ -113,6 +163,25 @@ void QgsAbout::setVersion( const QString &v )
   txtVersion->setAutoFillBackground( true );
   txtVersion->setHtml( v );
   mVersionString = v;
+}
+
+QString QgsAbout::defaultWhatsNewHtml()
+{
+  const QString ver = Qgis::productVersionLabel();
+  return u"<h3>HAKE GEOSPATIAL</h3>"
+         "<h4>Hake GeoDesk – Desktop GIS</h4>"
+         "<p>Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
+         "<p><b>Latest Hake GeoDesk Release</b></p>"
+         "<h3 style=\"color: #2ea44f;\">Version %1</h3>"
+         "<p>Hake GeoDesk – Desktop GIS. Professional GIS for Mapping, Analysis & Spatial Intelligence.</p>"
+         "<p>Product Hake GeoDesk – Desktop GIS<br>"
+         "Version %1<br>"
+         "Company Hake Technologies</p>"
+         "<h4>Product & branding</h4>"
+         "<ul>"
+         "<li>Desktop product identity: Hake GeoDesk – Desktop GIS with product version label %1.</li>"
+         "<li>Modern Qt6 desktop foundation for mapping, analysis, and spatial intelligence workflows.</li>"
+         "</ul>"_s.arg( ver );
 }
 
 QString QgsAbout::whatsNewCachePath()
@@ -142,23 +211,53 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
     QgsDebugError( u"Could not write What's New cache %1"_s.arg( path ) );
     return;
   }
-  file.write( data );
+  QString content = QString::fromUtf8( data );
+  content.replace( u"2026.0.0"_s, Qgis::productVersionLabel() );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  content.replace( verRe, Qgis::productVersionLabel() );
+  file.write( content.toUtf8() );
+
+  const QString logoPath = info.absolutePath() + u"/logo.png"_s;
+  if ( !QFile::exists( logoPath ) )
+  {
+    const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+    logo.save( logoPath, "PNG" );
+  }
 }
 
 void QgsAbout::showWhatsNewHtml( const QString &html )
 {
   txtWhatsNew->clear();
   txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setHtml( html );
+
+  const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"http://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"https://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"qrc:/images/icons/hake-gis-full.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u":/images/icons/hake-gis-full.png"_s ), logo );
+
+  QString processedHtml = html;
+  static const QRegularExpression logoRe( u"src=[\"'](?:https?://[^/\"'>]+)?/?(?:[^/\"'>]+/)*logo\\.png[\"']"_s, QRegularExpression::CaseInsensitiveOption );
+  processedHtml.replace( logoRe, u"src=\"qrc:/images/icons/hake-gis-full.png\""_s );
+
+  const QString curVersion = Qgis::productVersionLabel();
+  processedHtml.replace( u"2026.0.0"_s, curVersion );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  processedHtml.replace( verRe, curVersion );
+
+  txtWhatsNew->setHtml( processedHtml );
 }
 
 void QgsAbout::showWhatsNewFile( const QString &path )
 {
   if ( !QFile::exists( path ) )
     return;
-  txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setSource( QUrl::fromLocalFile( path ) );
+  QFile file( path );
+  if ( !file.open( QIODevice::ReadOnly ) )
+    return;
+  showWhatsNewHtml( QString::fromUtf8( file.readAll() ) );
 }
 
 void QgsAbout::setWhatsNew()
@@ -184,10 +283,7 @@ void QgsAbout::setWhatsNew()
   if ( QFile::exists( cachePath ) )
     showWhatsNewFile( cachePath );
   else
-  {
-    txtWhatsNew->clear();
-    txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  }
+    showWhatsNewHtml( defaultWhatsNewHtml() );
 
   QNetworkRequest request{ QUrl{ Qgis::whatsNewUrl() } };
   request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
@@ -212,16 +308,26 @@ void QgsAbout::whatsNewReplyFinished()
   if ( reply->error() != QNetworkReply::NoError )
   {
     QgsDebugMsgLevel( u"What's New fetch failed: %1"_s.arg( reply->errorString() ), 2 );
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 
   const QByteArray data = reply->readAll();
   if ( data.isEmpty() )
   {
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 
