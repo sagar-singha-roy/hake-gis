@@ -14,6 +14,7 @@
 *.pro.user
 *.py.temp
 *.pyc
+*.app
 *.sortinc
 *.stash
 *.tex
