@@ -1746,6 +1746,13 @@ QVariant QgsLayerTreeModel::legendNodeData( QgsLayerTreeModelLegendNode *node, i
 {
   if ( role == Qt::CheckStateRole && !testFlag( AllowLegendChangeState ) )
     return QVariant();
+  if ( role == Qt::ForegroundRole && testFlag( UseTextFormatting ) )
+  {
+    const QVariant customBrush = node->data( role );
+    if ( customBrush.isValid() )
+      return customBrush;
+    return QBrush( qApp->palette().color( QPalette::Text ), Qt::SolidPattern );
+  }
   return node->data( role );
 }
 

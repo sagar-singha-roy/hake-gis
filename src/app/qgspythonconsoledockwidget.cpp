@@ -149,21 +149,12 @@ void QgsPythonConsoleDockWidget::setupUi()
   inputLayout->setContentsMargins( 4, 1, 4, 1 );
   inputLayout->setSpacing( 2 );
 
-  mPromptLabel = new QLabel( u">>> "_s, mInputContainer );
-  mPromptLabel->setAlignment( Qt::AlignLeft | Qt::AlignVCenter );
-
   mInputEditor = new QgsCodeEditorPython( mInputContainer, QList<QString>(), QgsCodeEditor::Mode::CommandInput );
   mInputEditor->setMaximumHeight( 32 );
   mInputEditor->setLineNumbersVisible( false );
   mInputEditor->setEdgeMode( QsciScintilla::EdgeNone );
   mInputEditor->setInterpreter( new QgsPythonConsoleInterpreter( this ) );
 
-  QFont promptFont = QFontDatabase::systemFont( QFontDatabase::FixedFont );
-  promptFont.setPointSize( mInputEditor->font().pointSize() > 0 ? mInputEditor->font().pointSize() : 11 );
-  promptFont.setBold( true );
-  mPromptLabel->setFont( promptFont );
-
-  inputLayout->addWidget( mPromptLabel, 0, Qt::AlignVCenter );
   inputLayout->addWidget( mInputEditor, 1 );
 
   consoleLayout->addWidget( mOutputEditor, 1 );
@@ -514,10 +505,6 @@ void QgsPythonConsoleDockWidget::applyTheme()
       mInputEditor->setLineNumbersVisible( false );
       mInputEditor->setCaretLineVisible( false );
     }
-    if ( mPromptLabel )
-    {
-      mPromptLabel->setStyleSheet( u"QLabel { color: #38bdf8; background-color: #0f172a; padding-left: 6px; padding-right: 2px; border: none; }"_s );
-    }
     if ( mInputContainer )
     {
       mInputContainer->setStyleSheet( u"QWidget#ConsoleInputContainer { background-color: #0f172a; border-top: 1px solid #1e293b; }"_s );
@@ -551,10 +538,6 @@ void QgsPythonConsoleDockWidget::applyTheme()
       mInputEditor->setEdgeMode( QsciScintilla::EdgeNone );
       mInputEditor->setLineNumbersVisible( false );
       mInputEditor->setCaretLineVisible( false );
-    }
-    if ( mPromptLabel )
-    {
-      mPromptLabel->setStyleSheet( u"QLabel { color: #0284c7; background-color: #ffffff; padding-left: 6px; padding-right: 2px; border: none; }"_s );
     }
     if ( mInputContainer )
     {

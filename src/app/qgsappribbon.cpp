@@ -771,6 +771,17 @@ void QgsAppRibbonGroup::addEntry( const Entry &entry )
     return;
   if ( !entry.action && entry.dockObjectName.isEmpty() && entry.menuObjectName.isEmpty() && entry.actionObjectName.isEmpty() )
     return;
+  for ( const Entry &existing : mEntries )
+  {
+    if ( entry.action && existing.action == entry.action )
+      return;
+    if ( !entry.actionObjectName.isEmpty() && existing.actionObjectName == entry.actionObjectName )
+      return;
+    if ( !entry.dockObjectName.isEmpty() && existing.dockObjectName == entry.dockObjectName )
+      return;
+    if ( !entry.menuObjectName.isEmpty() && existing.menuObjectName == entry.menuObjectName )
+      return;
+  }
   mEntries.append( entry );
   if ( entry.action )
     watchAction( entry.action );
@@ -1650,7 +1661,6 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addMenu( manage, mApp->pluginMenu(), tr( "Extensions" ) );
 
     QgsAppRibbonGroup *installed = addGroup( page, tr( "Installed" ) );
-    addNamedAction( installed, u"mActionShowPythonDialog"_s );
     mirrorToolbar( installed, mApp->pluginToolBar() );
 
     mExtensionMenus = addGroup( page, tr( "Installed Menus" ) );

@@ -90,7 +90,6 @@ class QgsPythonConsoleDockWidget : public QgsDockWidget
     QWidget *mConsoleContainer = nullptr;
     QgsCodeEditorPython *mOutputEditor = nullptr;
     QWidget *mInputContainer = nullptr;
-    QLabel *mPromptLabel = nullptr;
     QgsCodeEditorPython *mInputEditor = nullptr;
 
     // Editor side

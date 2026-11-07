@@ -522,6 +522,14 @@ void QgsBrowserWidget::setPropertiesWidget()
       }
     }
   }
+  if ( mActionPropertiesWidget->isChecked() && mPropertiesLayout->count() == 0 )
+  {
+    QLabel *placeholder = new QLabel( tr( "Select an item in Geo Explorer to view its properties." ), mPropertiesWidget );
+    placeholder->setAlignment( Qt::AlignCenter );
+    placeholder->setWordWrap( true );
+    placeholder->setStyleSheet( u"QLabel { color: #7D90A5; padding: 16px; font-size: 11px; font-style: italic; }"_s );
+    mPropertiesLayout->addWidget( placeholder );
+  }
   mPropertiesWidget->setVisible( mPropertiesLayout->count() > 0 );
   if ( mPropertiesWidget->isVisible() )
   {
@@ -542,7 +550,7 @@ void QgsBrowserWidget::enablePropertiesWidget( bool enable )
 
 void QgsBrowserWidget::propertiesWidgetToggled( bool enabled )
 {
-  if ( enabled && selectedItemsCount() == 1 )
+  if ( enabled )
   {
     setPropertiesWidget();
   }

@@ -1243,13 +1243,21 @@ QTreeView::item:selected:disabled, QTreeView::branch:selected:disabled {
 }
 
 QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
+QTreeView::branch:closed:has-children:has-siblings,
+QTreeView::branch:closed:has-children,
+QTreeView::branch:has-children:closed,
+QgsLayerTreeView::branch:closed:has-children,
+QgsLayerTreeView::branch:has-children:closed {
     border-image: none;
     image: url(@theme_path/icons/caret-right.svg);
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings {
+QTreeView::branch:open:has-children:has-siblings,
+QTreeView::branch:open:has-children,
+QTreeView::branch:has-children:open,
+QgsLayerTreeView::branch:open:has-children,
+QgsLayerTreeView::branch:has-children:open {
      border-image: none;
      image: url(@theme_path/icons/caret-down.svg);
 }
@@ -1299,6 +1307,7 @@ QTreeView::indicator:selected:disabled {
 
 QgsLayerTreeView {
     font-size: 12px;
+    color: @text;
 }
 
 QgsLayerTreeView::item,
@@ -1307,6 +1316,7 @@ QTreeView#viewCategories::item,
 QTreeView#viewRules::item,
 QTreeView#mSubDiagramsView::item
 {
+    color: @text;
     border-top: 0.5px solid rgba(108,108,108,35);
     border-bottom: 0.5px solid rgba(108,108,108,35);
     padding: 4px 6px;
