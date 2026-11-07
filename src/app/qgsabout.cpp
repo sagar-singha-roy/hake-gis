@@ -153,6 +153,12 @@ void QgsAbout::setLicence()
   QgsDebugMsgLevel( u"Reading licence file %1"_s.arg( licenceFile.fileName() ), 2 );
   if ( licenceFile.open( QIODevice::ReadOnly ) )
   {
+    const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+    const QString textColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+    txtLicense->document()->setDefaultStyleSheet( QStringLiteral(
+      "body { font-family: monospace, Menlo, Monaco, Consolas; font-size: 10.5pt; color: %1; line-height: 1.45; }"
+    ).arg( textColor ) );
     txtLicense->setText( QString::fromUtf8( licenceFile.readAll() ) );
   }
 }
@@ -161,6 +167,35 @@ void QgsAbout::setVersion( const QString &v )
 {
   txtVersion->setBackgroundRole( QPalette::NoRole );
   txtVersion->setAutoFillBackground( true );
+
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+  const QString textColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+  const QString headingColor = isDark ? QStringLiteral( "#5B9BD8" ) : QStringLiteral( "#0E3A52" );
+  const QString linkColor = isDark ? QStringLiteral( "#5B9BD8" ) : QStringLiteral( "#1B8C77" );
+
+  const QString style = QStringLiteral(
+    "body, table, td, tr, p {"
+    "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+    "  font-size: 11pt;"
+    "  color: %1;"
+    "  line-height: 1.5;"
+    "}"
+    "td {"
+    "  padding: 4px 10px;"
+    "}"
+    "b {"
+    "  font-size: 12pt;"
+    "  font-weight: 700;"
+    "  color: %2;"
+    "}"
+    "a {"
+    "  color: %3;"
+    "  text-decoration: none;"
+    "}"
+  ).arg( textColor, headingColor, linkColor );
+
+  txtVersion->document()->setDefaultStyleSheet( style );
   txtVersion->setHtml( v );
   mVersionString = v;
 }
@@ -228,7 +263,15 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
 void QgsAbout::showWhatsNewHtml( const QString &html )
 {
   txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
+  QString style = QgsApplication::reportStyleSheet();
+  style += QStringLiteral(
+    " body { font-size: 11pt; line-height: 1.5; }"
+    " h3 { font-size: 13.5pt; }"
+    " h4 { font-size: 12pt; }"
+    " li { font-size: 11pt; margin-bottom: 4px; }"
+    " p { font-size: 11pt; line-height: 1.5; }"
+  );
+  txtWhatsNew->document()->setDefaultStyleSheet( style );
 
   const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
   txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"/logo.png"_s ), logo );
