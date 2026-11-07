@@ -47,6 +47,8 @@ class QgsLayerTreeViewProxyStyle : public QgsProxyStyle
     explicit QgsLayerTreeViewProxyStyle( QgsLayerTreeView *treeView );
 
     QRect subElementRect( SubElement element, const QStyleOption *option, const QWidget *widget ) const override;
+    void drawControl( ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = nullptr ) const override;
+    void drawItemText( QPainter *painter, const QRect &rect, int flags, const QPalette &pal, bool enabled, const QString &text, QPalette::ColorRole textRole = QPalette::NoRole ) const override;
 
     static const auto SE_LayerTreeItemIndicator = SE_CustomBase + 1;
 
@@ -64,6 +66,7 @@ class QgsLayerTreeViewItemDelegate : public QStyledItemDelegate
   public:
     explicit QgsLayerTreeViewItemDelegate( QgsLayerTreeView *parent );
 
+    void initStyleOption( QStyleOptionViewItem *option, const QModelIndex &index ) const override;
     void paint( QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const override;
 
     bool helpEvent( QHelpEvent *event, QAbstractItemView *view, const QStyleOptionViewItem &option, const QModelIndex &index ) override;

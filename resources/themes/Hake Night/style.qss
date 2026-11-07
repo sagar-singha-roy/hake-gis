@@ -1300,7 +1300,9 @@ QTreeView::indicator:selected:disabled {
     background-color: @background;
 }
 
-QgsLayerTreeView {
+QgsLayerTreeView,
+QgsLayerTreeView QWidget,
+QgsLayerTreeView QLabel {
     font-size: 12px;
     color: @textlight;
 }

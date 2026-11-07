@@ -60,6 +60,49 @@ QRect QgsLayerTreeViewProxyStyle::subElementRect( QStyle::SubElement element, co
   return QProxyStyle::subElementRect( element, option, widget );
 }
 
+void QgsLayerTreeViewProxyStyle::drawControl( ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget ) const
+{
+  if ( element == CE_ItemViewItem )
+  {
+    if ( const QStyleOptionViewItem *vopt = qstyleoption_cast<const QStyleOptionViewItem *>( option ) )
+    {
+      using namespace Qt::StringLiterals;
+      const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                          QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                          ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+      if ( isDark )
+      {
+        QStyleOptionViewItem opt = *vopt;
+        if ( opt.palette.color( QPalette::Text ).lightness() < 128 )
+          opt.palette.setColor( QPalette::Text, QColor( 0xD7, 0xE1, 0xEC ) );
+        if ( opt.palette.color( QPalette::WindowText ).lightness() < 128 )
+          opt.palette.setColor( QPalette::WindowText, QColor( 0xD7, 0xE1, 0xEC ) );
+        QProxyStyle::drawControl( element, &opt, painter, widget );
+        return;
+      }
+    }
+  }
+  QProxyStyle::drawControl( element, option, painter, widget );
+}
+
+void QgsLayerTreeViewProxyStyle::drawItemText( QPainter *painter, const QRect &rect, int flags, const QPalette &pal, bool enabled, const QString &text, QPalette::ColorRole textRole ) const
+{
+  using namespace Qt::StringLiterals;
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+  if ( isDark )
+  {
+    QPalette p = pal;
+    const QPalette::ColorRole role = textRole != QPalette::NoRole ? textRole : QPalette::Text;
+    if ( p.color( role ).lightness() < 128 )
+      p.setColor( role, QColor( 0xD7, 0xE1, 0xEC ) );
+    QProxyStyle::drawItemText( painter, rect, flags, p, enabled, text, textRole );
+    return;
+  }
+  QProxyStyle::drawItemText( painter, rect, flags, pal, enabled, text, textRole );
+}
+
 
 // -----
 
@@ -69,6 +112,24 @@ QgsLayerTreeViewItemDelegate::QgsLayerTreeViewItemDelegate( QgsLayerTreeView *pa
   , mLayerTreeView( parent )
 {
   connect( mLayerTreeView, &QgsLayerTreeView::clicked, this, &QgsLayerTreeViewItemDelegate::onClicked );
+}
+
+
+void QgsLayerTreeViewItemDelegate::initStyleOption( QStyleOptionViewItem *option, const QModelIndex &index ) const
+{
+  QStyledItemDelegate::initStyleOption( option, index );
+
+  using namespace Qt::StringLiterals;
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+  if ( isDark && option )
+  {
+    if ( option->palette.color( QPalette::Text ).lightness() < 128 )
+      option->palette.setColor( QPalette::Text, QColor( 0xD7, 0xE1, 0xEC ) );
+    if ( option->palette.color( QPalette::WindowText ).lightness() < 128 )
+      option->palette.setColor( QPalette::WindowText, QColor( 0xD7, 0xE1, 0xEC ) );
+  }
 }
 
 
