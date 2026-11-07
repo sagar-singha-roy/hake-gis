@@ -5570,11 +5570,23 @@ void QgisApp::initLayerTreeView()
   QAction *actionExpandAll = new QAction( tr( "Expand All" ), this );
   actionExpandAll->setIcon( QgsApplication::getThemeIcon( u"/mActionExpandTree.svg"_s ) );
   actionExpandAll->setToolTip( tr( "Expand All" ) );
-  connect( actionExpandAll, &QAction::triggered, mLayerTreeView, &QgsLayerTreeView::expandAllNodes );
+  connect( actionExpandAll, &QAction::triggered, this, [this] {
+    if ( mLayerTreeView )
+    {
+      mLayerTreeView->expandAllNodes();
+      mLayerTreeView->expandAll();
+    }
+  } );
   QAction *actionCollapseAll = new QAction( tr( "Collapse All" ), this );
   actionCollapseAll->setIcon( QgsApplication::getThemeIcon( u"/mActionCollapseTree.svg"_s ) );
   actionCollapseAll->setToolTip( tr( "Collapse All" ) );
-  connect( actionCollapseAll, &QAction::triggered, mLayerTreeView, &QgsLayerTreeView::collapseAllNodes );
+  connect( actionCollapseAll, &QAction::triggered, this, [this] {
+    if ( mLayerTreeView )
+    {
+      mLayerTreeView->collapseAllNodes();
+      mLayerTreeView->collapseAll();
+    }
+  } );
 
   QToolBar *toolbar = new QToolBar();
   toolbar->setIconSize( iconSize( true ) );

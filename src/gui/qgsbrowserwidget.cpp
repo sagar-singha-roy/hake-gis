@@ -107,7 +107,8 @@ QgsBrowserWidget::QgsBrowserWidget( QgsBrowserGuiModel *browserModel, QWidget *p
 
   connect( mActionRefresh, &QAction::triggered, this, &QgsBrowserWidget::refresh );
   connect( mActionAddLayers, &QAction::triggered, this, &QgsBrowserWidget::addSelectedLayers );
-  connect( mActionCollapse, &QAction::triggered, mBrowserView, &QgsDockBrowserTreeView::collapseAll );
+  connect( mActionExpandAll, &QAction::triggered, this, &QgsBrowserWidget::expandAll );
+  connect( mActionCollapse, &QAction::triggered, this, &QgsBrowserWidget::collapseAll );
   connect( mActionShowFilter, &QAction::triggered, this, &QgsBrowserWidget::showFilterWidget );
   connect( mActionPropertiesWidget, &QAction::triggered, this, &QgsBrowserWidget::propertiesWidgetToggled );
   connect( mLeFilter, &QgsFilterLineEdit::returnPressed, this, &QgsBrowserWidget::setFilter );
@@ -302,6 +303,38 @@ void QgsBrowserWidget::setDisabledDataItemsKeys( const QStringList &filter )
 void QgsBrowserWidget::refresh()
 {
   refreshModel( QModelIndex() );
+}
+
+void QgsBrowserWidget::expandAll()
+{
+  if ( !mBrowserView )
+    return;
+
+  const QModelIndex current = mBrowserView->currentIndex();
+  if ( current.isValid() )
+  {
+    mBrowserView->expandRecursively( current );
+  }
+  else
+  {
+    mBrowserView->expandAll();
+  }
+}
+
+void QgsBrowserWidget::collapseAll()
+{
+  if ( !mBrowserView )
+    return;
+
+  const QModelIndex current = mBrowserView->currentIndex();
+  if ( current.isValid() && mBrowserView->isExpanded( current ) )
+  {
+    mBrowserView->collapse( current );
+  }
+  else
+  {
+    mBrowserView->collapseAll();
+  }
 }
 
 void QgsBrowserWidget::refreshModel( const QModelIndex &index )

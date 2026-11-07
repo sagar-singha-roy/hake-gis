@@ -134,7 +134,7 @@ Item {
         }
         Label {
           Layout.fillWidth: true
-          text: qsTr("Hake GeoDesk(Desktop GIS)")
+          text: qsTr("Hake GeoDesk (Desktop GIS)")
           color: welcomeScreen.textColor
           font.family: welcomeScreen.uiFont
           font.pointSize: welcomeScreen.basePointSize * 1.6

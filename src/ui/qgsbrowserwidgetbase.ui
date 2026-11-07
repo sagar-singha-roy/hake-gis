@@ -43,6 +43,7 @@
       <addaction name="mActionAddLayers"/>
       <addaction name="mActionRefresh"/>
       <addaction name="mActionShowFilter"/>
+      <addaction name="mActionExpandAll"/>
       <addaction name="mActionCollapse"/>
       <addaction name="mActionPropertiesWidget"/>
      </widget>
@@ -225,6 +226,18 @@
    </property>
    <property name="toolTip">
     <string>Filter Browser</string>
+   </property>
+  </action>
+  <action name="mActionExpandAll">
+   <property name="icon">
+    <iconset resource="../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionExpandTree.svg</normaloff>:/images/themes/default/mActionExpandTree.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Expand All</string>
+   </property>
+   <property name="toolTip">
+    <string>Expand All</string>
    </property>
   </action>
   <action name="mActionCollapse">

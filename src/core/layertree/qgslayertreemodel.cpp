@@ -270,18 +270,23 @@ QVariant QgsLayerTreeModel::data( const QModelIndex &index, int role ) const
   }
   else if ( role == Qt::ForegroundRole && testFlag( UseTextFormatting ) )
   {
-    QBrush brush( qApp->palette().color( QPalette::Text ), Qt::SolidPattern );
+    const bool isDark = qApp && ( qApp->palette().color( QPalette::Window ).lightness() < 128 );
+    QColor textColor = isDark ? QColor( 0xD7, 0xE1, 0xEC ) : qApp->palette().color( QPalette::Text );
+    if ( isDark && textColor.lightness() < 128 )
+      textColor = QColor( 0xD7, 0xE1, 0xEC );
+
     if ( QgsLayerTree::isLayer( node ) )
     {
       const QgsMapLayer *layer = QgsLayerTree::toLayer( node )->layer();
       if ( ( !node->isVisible() && ( !layer || layer->isSpatial() ) ) || ( layer && !layer->isInScaleRange( mLegendMapViewScale ) ) )
       {
-        QColor fadedTextColor = brush.color();
-        fadedTextColor.setAlpha( 128 );
-        brush.setColor( fadedTextColor );
+        if ( isDark )
+          textColor = QColor( 0x94, 0xA3, 0xB8 ); // Slate 400: crisp and readable muted text on dark background
+        else
+          textColor.setAlpha( 128 );
       }
     }
-    return brush;
+    return QBrush( textColor, Qt::SolidPattern );
   }
   else if ( role == Qt::ToolTipRole )
   {
@@ -1751,7 +1756,12 @@ QVariant QgsLayerTreeModel::legendNodeData( QgsLayerTreeModelLegendNode *node, i
     const QVariant customBrush = node->data( role );
     if ( customBrush.isValid() )
       return customBrush;
-    return QBrush( qApp->palette().color( QPalette::Text ), Qt::SolidPattern );
+
+    const bool isDark = qApp && ( qApp->palette().color( QPalette::Window ).lightness() < 128 );
+    if ( isDark )
+      return QBrush( QColor( 0xD7, 0xE1, 0xEC ), Qt::SolidPattern );
+    else
+      return QBrush( qApp->palette().color( QPalette::Text ), Qt::SolidPattern );
   }
   return node->data( role );
 }

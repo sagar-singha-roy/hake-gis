@@ -22,6 +22,8 @@
 #include "qgsmaplayer.h"
 #include "qgsvectorlayer.h"
 #include <cpl_error.h>
+#include <cpl_vsi.h>
+#include <cpl_string.h>
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsmaplayerloadstyledialog.h"
 #include "qgsmeshlayer.h"
@@ -697,6 +699,69 @@ bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QL
     sublayers.end()
   );
 
+  bool sublayersFromArchiveRecursion = false;
+  if ( sublayers.empty() && QgsGdalUtils::isVsiArchivePrefix( vsiPrefix ) )
+  {
+    const QString vsiBasePath = queryPath;
+    char **papszSiblingFiles = VSIReadDirRecursive( vsiBasePath.toUtf8().constData() );
+    if ( papszSiblingFiles )
+    {
+      const QStringList geospatialExtensions = {
+        QStringLiteral( "shp" ), QStringLiteral( "gpkg" ), QStringLiteral( "geojson" ),
+        QStringLiteral( "json" ), QStringLiteral( "kml" ), QStringLiteral( "kmz" ),
+        QStringLiteral( "tab" ), QStringLiteral( "mbtiles" ), QStringLiteral( "sqlite" ),
+        QStringLiteral( "spatialite" ), QStringLiteral( "gml" ), QStringLiteral( "tif" ),
+        QStringLiteral( "tiff" ), QStringLiteral( "img" ), QStringLiteral( "vrt" ),
+        QStringLiteral( "asc" ), QStringLiteral( "dem" ), QStringLiteral( "nc" ),
+        QStringLiteral( "las" ), QStringLiteral( "laz" )
+      };
+
+      for ( int i = 0; papszSiblingFiles[i]; ++i )
+      {
+        const QString innerFile = QString::fromUtf8( papszSiblingFiles[i] );
+        if ( innerFile.endsWith( '/' ) )
+          continue;
+
+        const QFileInfo fi( innerFile );
+        const QString ext = fi.suffix().toLower();
+        if ( geospatialExtensions.contains( ext ) )
+        {
+          const QString innerUri = vsiBasePath + '/' + innerFile;
+          QList<QgsProviderSublayerDetails> innerSublayers = QgsProviderRegistry::instance()->querySublayers( innerUri, Qgis::SublayerQueryFlag::IncludeSystemTables );
+          if ( !innerSublayers.isEmpty() )
+          {
+            sublayers.append( innerSublayers );
+          }
+          else
+          {
+            QgsProviderSublayerDetails detail;
+            detail.setUri( innerUri );
+            detail.setProviderKey( QStringLiteral( "ogr" ) );
+            detail.setName( fi.completeBaseName() );
+            detail.setType( Qgis::LayerType::Vector );
+            sublayers.append( detail );
+          }
+        }
+      }
+      CSLDestroy( papszSiblingFiles );
+
+      if ( !acceptableTypes.empty() )
+      {
+        sublayers.erase(
+          std::remove_if( sublayers.begin(), sublayers.end(), [acceptableTypes]( const QgsProviderSublayerDetails &sublayer ) {
+            return !acceptableTypes.contains( sublayer.type() );
+          } ),
+          sublayers.end()
+        );
+      }
+
+      if ( !sublayers.isEmpty() )
+      {
+        sublayersFromArchiveRecursion = true;
+      }
+    }
+  }
+
   if ( sublayers.empty() )
     return false;
 
@@ -724,7 +789,7 @@ bool QgsAppLayerHandling::askUserForZipItemLayers( const QString &path, const QL
 
       case SublayerHandling::LoadAll:
       {
-        if ( detailsAreIncomplete )
+        if ( detailsAreIncomplete && !sublayersFromArchiveRecursion )
         {
           // requery sublayers, resolving geometry types
           sublayers = QgsProviderRegistry::instance()->querySublayers( path, Qgis::SublayerQueryFlag::ResolveGeometryType );
