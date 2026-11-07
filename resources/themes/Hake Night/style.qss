@@ -1935,12 +1935,42 @@ QTabWidget#HakeAppRibbon QWidget#HakeAppRibbonSeparator {
 /* IDENTIFY RESULTS DIALOG                                                              */
 /* ==================================================================================== */
 
+QDialog#QgsIdentifyResultsBase,
+QDockWidget#IdentifyResultsDock
+{
+    background-color: @background;
+}
+
 QDialog#QgsIdentifyResultsBase QTreeWidget#lstResults,
 QDialog#QgsIdentifyResultsBase QTableWidget#tblResults
 {
-    border: 1px solid @itemdarkbackground;
+    border: 1.5px solid @itemdarkbackground;
     border-radius: 4px;
     background-color: @itembackground;
+    color: @textlight;
+    font-size: 12px;
+}
+
+QDialog#QgsIdentifyResultsBase QTreeWidget#lstResults::item,
+QDialog#QgsIdentifyResultsBase QTableWidget#tblResults::item
+{
+    border-bottom: 1px solid rgba(108,108,108,35);
+    padding: 3px 6px;
+    min-height: 22px;
+}
+
+QDialog#QgsIdentifyResultsBase QTreeWidget#lstResults::item:hover,
+QDialog#QgsIdentifyResultsBase QTableWidget#tblResults::item:hover
+{
+    background-color: @hover;
+    color: @text;
+}
+
+QDialog#QgsIdentifyResultsBase QTreeWidget#lstResults::item:selected,
+QDialog#QgsIdentifyResultsBase QTableWidget#tblResults::item:selected
+{
+    background-color: @selection;
+    color: @textlight;
 }
 
 QDialog#QgsIdentifyResultsBase QHeaderView::section
@@ -1949,22 +1979,40 @@ QDialog#QgsIdentifyResultsBase QHeaderView::section
     color: @text;
     border: none;
     border-right: 1px solid @itemdarkbackground;
-    border-bottom: 1px solid @itemdarkbackground;
-    padding: 3px 6px;
-    font-weight: 600;
+    border-bottom: 2px solid @itemdarkbackground;
+    padding: 4px 8px;
+    font-weight: 700;
 }
 
 QDialog#QgsIdentifyResultsBase QComboBox
 {
-    border: 1px solid @itemdarkbackground;
+    border: 1.5px solid @itemdarkbackground;
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 3px 18px 3px 8px;
     background-color: @itembackground;
+    color: @text;
+    min-height: 22px;
+    font-weight: 500;
 }
 
 QDialog#QgsIdentifyResultsBase QComboBox:hover
 {
     border-color: @focus;
+}
+
+QDialog#QgsIdentifyResultsBase QComboBox::drop-down
+{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid @itemdarkbackground;
+}
+
+QDialog#QgsIdentifyResultsBase QLabel#lblIdentifyMode,
+QDialog#QgsIdentifyResultsBase QLabel#lblViewMode
+{
+    color: @text;
+    font-weight: 600;
 }
 
 
