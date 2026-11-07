@@ -209,7 +209,7 @@ void QgsAbout::setVersion( const QString &v )
 QString QgsAbout::defaultWhatsNewHtml()
 {
   const QString ver = Qgis::productVersionLabel();
-  return u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"
+  return u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"
          "<h2>Hake GeoDesk – Desktop GIS</h2>"
          "<p style=\"font-size: 13pt; color: #94A3B8; margin-top: 2px;\">Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
          "<p style=\"margin: 16px 0 20px 0;\"><span style=\"background-color: #1E3A5F; color: #38BDF8; border: 1px solid #38BDF8; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;Version %1&nbsp;</span></p>"
@@ -306,27 +306,27 @@ void QgsAbout::showWhatsNewHtml( const QString &html )
 
   QString processedHtml = html;
 
-  // Professional, tightly-spaced Hake Geo logo without huge blank margins
+  // Professional, standard-sized Hake Geo logo
   static const QRegularExpression pImgLogoRe( u"<p[^>]*>\\s*<img[^>]*logo\\.png[^>]*>\\s*</p>"_s, QRegularExpression::CaseInsensitiveOption );
   static const QRegularExpression imgLogoRe( u"<img[^>]*logo\\.png[^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
   if ( processedHtml.contains( pImgLogoRe ) )
   {
-    processedHtml.replace( pImgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"_s );
+    processedHtml.replace( pImgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
   }
   else if ( processedHtml.contains( imgLogoRe ) )
   {
-    processedHtml.replace( imgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"_s );
+    processedHtml.replace( imgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
   }
   else
   {
     static const QRegularExpression genericPImgRe( u"<p[^>]*>\\s*<img[^>]*src=[\"'][^\"']*[\"'][^>]*>\\s*</p>"_s, QRegularExpression::CaseInsensitiveOption );
     static const QRegularExpression genericImgRe( u"<img[^>]*src=[\"'][^\"']*[\"'][^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
     if ( processedHtml.contains( genericPImgRe ) )
-      processedHtml.replace( genericPImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"_s );
+      processedHtml.replace( genericPImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
     else if ( processedHtml.contains( genericImgRe ) )
-      processedHtml.replace( genericImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"_s );
+      processedHtml.replace( genericImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
     else if ( !processedHtml.contains( u"hake-gis-full.png"_s ) )
-      processedHtml.prepend( u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"180\"></p>"_s );
+      processedHtml.prepend( u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
   }
 
   // Strip extraneous empty paragraphs or breaks right below the logo
