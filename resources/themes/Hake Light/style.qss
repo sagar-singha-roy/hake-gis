@@ -285,13 +285,62 @@ QTextEdit, QPlainTextEdit
 
 QPushButton 
 {
-    padding: 0.21em;
-    border-width: 1px;
-    border-color: @itembackground;
-    border-style: solid;
-    border-radius: 0px;
-    background-color:@darkgradient;
-    color:@text;
+    padding: 5px 14px;
+    border: 1px solid @itemdarkbackground;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    color: @text;
+    min-height: 20px;
+}
+
+QPushButton:hover 
+{
+    background-color: @hover;
+    border-color: @focus;
+    color: @textlight;
+}
+
+QPushButton:pressed, QPushButton:open 
+{
+    background-color: @chromeActive;
+    border-color: @focus;
+    color: @textlight;
+}
+
+QPushButton:disabled 
+{
+    background-color: @itembackground;
+    border-color: @itemdarkbackground;
+    color: @chromeTextMuted;
+}
+
+QPushButton:default, QPushButton#btnCreateConnection
+{
+    background-color: @chrome;
+    border: 1px solid @chrome;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+QPushButton:default:hover, QPushButton#btnCreateConnection:hover
+{
+    background-color: #1F5A8C;
+    border-color: #1F5A8C;
+    color: #FFFFFF;
+}
+
+QPushButton:default:pressed, QPushButton#btnCreateConnection:pressed
+{
+    background-color: #0E3A5E;
+    border-color: #0E3A5E;
+    color: #FFFFFF;
+}
+
+QPushButton:default:disabled, QPushButton#btnCreateConnection:disabled
+{
+    background-color: @itemdarkbackground;
+    border-color: @itemdarkbackground;
+    color: @chromeTextMuted;
 }
 
 QToolButton
@@ -411,26 +460,30 @@ QPushButton:pressed, QPushButton:open, QToolButton:pressed {
 QComboBox {
     selection-background-color: @selection;
     selection-color: @text;
-    background-color: @darkgradient;
-    color:@text;
+    background-color: #FFFFFF;
+    color: @text;
     border-style: solid;
-    border: 1px solid @itembackground;
-    border-radius: 0px;
-    padding: 0.12em 1.2em 0.12em 0.2em;
+    border: 1px solid @itemdarkbackground;
+    border-radius: 4px;
+    padding: 3px 18px 3px 6px;
+    min-height: 20px;
 }
 
 QComboBox:disabled {
     border-color: @itemdarkbackground;
+    background-color: @itembackground;
+    color: @chromeTextMuted;
 }
 
 QComboBox:hover {
-    background-color: @darkalternativegradient;
+    border-color: @focus;
+    background-color: #FFFFFF;
 }
 
 QComboBox:on {
-    padding: 0.12em;
-    padding-left: 0.2em;
-    background-color: @darkalternativegradient;
+    padding: 3px 18px 3px 6px;
+    border-color: @focus;
+    background-color: #FFFFFF;
     selection-background-color: @selection;
     selection-color: @text;
 }
@@ -614,8 +667,31 @@ QDockWidget QToolBar
     background: @chromeToolbar;
     border: none;
     border-bottom: 1px solid @itemdarkbackground;
-    padding: 4px 6px;
+    padding: 4px 8px 4px 6px;
     spacing: 4px;
+}
+
+/* Toolbar overflow / extension button (arrow for hidden options) */
+QToolBarExtension,
+QToolButton#qt_toolbar_ext_button
+{
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    margin-right: 6px;
+    padding: 2px;
+    min-width: 16px;
+    max-width: 18px;
+    min-height: 18px;
+    qproperty-arrowType: none;
+    image: url(@theme_path/icons/caret-right.svg);
+}
+
+QToolBarExtension:hover,
+QToolButton#qt_toolbar_ext_button:hover
+{
+    background-color: @hover;
+    border: 1px solid @focus;
 }
 
 QDockWidget QToolBar QToolButton,
@@ -647,21 +723,25 @@ QDockWidget QToolBar QToolButton:checked
 
 QMainWindow::separator
 {
-    /*background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #161616, stop: 0.5 #151515, stop: 0.6 #212121, stop:1 #343434);*/
-    color: white;
-    padding-left: 0.2em;
-    border: 0px solid @itemdarkbackground;
-    spacing: 0.1m; /* spacing between items in the tool bar */
+    background-color: @chromeBorder;
+    width: 2px;
+    height: 2px;
+    border: none;
 }
 
 QMainWindow::separator:hover
 {
+    background-color: @focus;
+}
 
-    /*background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #d7801a, stop:0.5 #b56c17 stop:1 #ffa02f);*/
-    color: white;
-    padding-left: 0.2em;
-    border: 1px solid #B8CDE4;
-    spacing: 0.1em; /* spacing between items in the tool bar */
+QSplitter::handle
+{
+    background-color: @chromeBorder;
+}
+
+QSplitter::handle:hover
+{
+    background-color: @focus;
 }
 
 QToolBar {
@@ -753,12 +833,11 @@ QTabBar::tab {
     color: @text;
     border: 1px solid @itemdarkbackground;
     border-bottom: none;
-    background-color: transparent;
-    padding-left: 0.8em;
-    padding-right: 0.8em;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
-    margin-right: -0.05em;
+    background-color: @itembackground;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding: 5px 14px;
+    margin-right: 2px;
 }
 
 QTabBar::tab:disabled {
@@ -782,13 +861,21 @@ QTabBar::tab:bottom {
 
 QTabBar::tab:!selected
 {
-    margin-top: 0.3em;
+    margin-top: 2px;
 }
 
 QTabBar::tab:selected
 {
     margin-bottom: 0px;
-    background-color: @background;
+    background-color: #FFFFFF;
+    color: @chrome;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover:!selected
+{
+    background-color: @hover;
+    color: @textlight;
 }
 
 QTabBar::tab:bottom:!selected
@@ -1131,7 +1218,9 @@ QAbstractItemView::indicator:selected:disabled, QListView::indicator:selected:di
 
 QTreeView {
     border: 1px solid @itemdarkbackground;
-    alternate-background-color: @background;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    alternate-background-color: @itembackground;
     font-size: 12px;
 }
 
@@ -1368,12 +1457,13 @@ QHeaderView:disabled {
 }
 
 QHeaderView::section, QHeaderView::section:vertical {
-    padding: 0.1m 0.2em 0.1em 0.2em;
+    padding: 3px 6px;
     background: transparent;
-    background-color: @background;
+    background-color: @itembackground;
     border: 1px solid @itemdarkbackground;
     border-left: 0;
     border-top: 0;
+    font-weight: 600;
 }
 
 QHeaderView::section:vertical {

@@ -969,6 +969,14 @@ namespace
       u"mIconCesium3dTiles.svg"_s,
       u"mIconStac.svg"_s,
       u"mGeoPackage.svg"_s,
+      u"mIconWarning.svg"_s,
+      u"mIconCritical.svg"_s,
+      u"mIconSuccess.svg"_s,
+      u"mIconInfo.svg"_s,
+      u"mMessageWarning.svg"_s,
+      u"mMessageCritical.svg"_s,
+      u"mMessageSuccess.svg"_s,
+      u"mMessageInfo.svg"_s,
     };
     const QString fileName = name.section( '/', -1 );
     return identityIcons.contains( fileName ) || fileName.startsWith( QLatin1String( "provider" ) ) || fileName.startsWith( QLatin1String( "grass_" ) );

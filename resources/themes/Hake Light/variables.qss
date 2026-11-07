@@ -1,7 +1,7 @@
 @background: #FFFFFF
 @itembackground: #F5F7FA
 @itemalternativebackground: #FFFFFF
-@itemdarkbackground: #E5E9F0
+@itemdarkbackground: #CBD5E1
 @panelheader: #FFFFFF
 @statusbar: #FFFFFF
 @darkgradient: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #FFFFFF, stop: 0.1 #FFFFFF, stop: 0.5 #FFFFFF, stop: 0.9 #FFFFFF, stop: 1 #FFFFFF)
