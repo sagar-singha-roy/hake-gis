@@ -2074,5 +2074,46 @@ QDialog#QgsIdentifyResultsBase QLabel#lblViewMode
     font-weight: 600;
 }
 
+/* About / What's New / License Dialog */
+QDialog#QgsAbout {
+    background-color: #F8FAFC;
+}
+
+QDialog#QgsAbout QTextBrowser {
+    background-color: #FFFFFF;
+    color: #1E293B;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget {
+    background-color: #F1F5F9;
+    border: none;
+    border-right: 1px solid #CBD5E1;
+    padding: 8px 4px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item {
+    color: #1E293B;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 2px 4px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item:hover {
+    background-color: #E2E8F0;
+    color: #0F172A;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item:selected {
+    background-color: #164A73;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+
 
 

@@ -268,14 +268,17 @@ QVariant QgsLayerTreeModel::data( const QModelIndex &index, int role ) const
     }
     return f;
   }
-  else if ( role == Qt::ForegroundRole && testFlag( UseTextFormatting ) )
+  else if ( role == Qt::ForegroundRole )
   {
-    const bool isDark = qApp && ( qApp->palette().color( QPalette::Window ).lightness() < 128 );
-    QColor textColor = isDark ? QColor( 0xD7, 0xE1, 0xEC ) : qApp->palette().color( QPalette::Text );
-    if ( isDark && textColor.lightness() < 128 )
-      textColor = QColor( 0xD7, 0xE1, 0xEC );
+    const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                        ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
 
-    if ( QgsLayerTree::isLayer( node ) )
+    QColor textColor = isDark ? QColor( 0xD7, 0xE1, 0xEC ) : QColor( 0x1E, 0x29, 0x3B );
+    if ( !isDark && qApp && qApp->palette().color( QPalette::Text ).isValid() )
+      textColor = qApp->palette().color( QPalette::Text );
+
+    if ( testFlag( UseTextFormatting ) && QgsLayerTree::isLayer( node ) )
     {
       const QgsMapLayer *layer = QgsLayerTree::toLayer( node )->layer();
       if ( ( !node->isVisible() && ( !layer || layer->isSpatial() ) ) || ( layer && !layer->isInScaleRange( mLegendMapViewScale ) ) )
@@ -1751,17 +1754,19 @@ QVariant QgsLayerTreeModel::legendNodeData( QgsLayerTreeModelLegendNode *node, i
 {
   if ( role == Qt::CheckStateRole && !testFlag( AllowLegendChangeState ) )
     return QVariant();
-  if ( role == Qt::ForegroundRole && testFlag( UseTextFormatting ) )
+  if ( role == Qt::ForegroundRole )
   {
     const QVariant customBrush = node->data( role );
     if ( customBrush.isValid() )
       return customBrush;
 
-    const bool isDark = qApp && ( qApp->palette().color( QPalette::Window ).lightness() < 128 );
+    const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                        ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
     if ( isDark )
       return QBrush( QColor( 0xD7, 0xE1, 0xEC ), Qt::SolidPattern );
     else
-      return QBrush( qApp->palette().color( QPalette::Text ), Qt::SolidPattern );
+      return QBrush( qApp ? qApp->palette().color( QPalette::Text ) : QColor( 0x1E, 0x29, 0x3B ), Qt::SolidPattern );
   }
   return node->data( role );
 }

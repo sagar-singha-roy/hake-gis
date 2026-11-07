@@ -2015,5 +2015,46 @@ QDialog#QgsIdentifyResultsBase QLabel#lblViewMode
     font-weight: 600;
 }
 
+/* About / What's New / License Dialog */
+QDialog#QgsAbout {
+    background-color: @background;
+}
+
+QDialog#QgsAbout QTextBrowser {
+    background-color: @itembackground;
+    color: @text;
+    border: 1px solid @itemdarkbackground;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget {
+    background-color: @background;
+    border: none;
+    border-right: 1px solid @itemdarkbackground;
+    padding: 8px 4px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item {
+    color: @text;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 2px 4px;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item:hover {
+    background-color: @hover;
+    color: @textlight;
+}
+
+QDialog#QgsAbout QListWidget#mOptionsListWidget::item:selected {
+    background-color: @selection;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+
 
 

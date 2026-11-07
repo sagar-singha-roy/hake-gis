@@ -15,6 +15,7 @@
 
 #include "qgslayertreeviewitemdelegate.h"
 
+#include "qgsapplication.h"
 #include "qgslayertreemodel.h"
 #include "qgslayertreeview.h"
 #include "qgslayertreeviewindicator.h"
@@ -73,14 +74,23 @@ QgsLayerTreeViewItemDelegate::QgsLayerTreeViewItemDelegate( QgsLayerTreeView *pa
 
 void QgsLayerTreeViewItemDelegate::paint( QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
-  QStyledItemDelegate::paint( painter, option, index );
+  QStyleOptionViewItem opt = option;
+  initStyleOption( &opt, index );
+
+  using namespace Qt::StringLiterals;
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+  if ( isDark && opt.palette.color( QPalette::Text ).lightness() < 128 )
+  {
+    opt.palette.setColor( QPalette::Text, QColor( 0xD7, 0xE1, 0xEC ) );
+  }
+
+  QStyledItemDelegate::paint( painter, opt, index );
 
   QgsLayerTreeNode *node = mLayerTreeView->index2node( index );
   if ( !node )
     return;
-
-  QStyleOptionViewItem opt = option;
-  initStyleOption( &opt, index );
 
   const QColor baseColor = opt.palette.base().color();
   const QRect tRect = mLayerTreeView->style()->subElementRect( QStyle::SE_ItemViewItemText, &opt, mLayerTreeView );

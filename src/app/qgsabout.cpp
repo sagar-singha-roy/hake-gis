@@ -154,10 +154,12 @@ void QgsAbout::setLicence()
   if ( licenceFile.open( QIODevice::ReadOnly ) )
   {
     const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
-                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
-    const QString textColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                        ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+    const QString textColor = isDark ? QStringLiteral( "#E6EDF5" ) : QStringLiteral( "#0F172A" );
     txtLicense->document()->setDefaultStyleSheet( QStringLiteral(
-      "body { font-family: monospace, Menlo, Monaco, Consolas; font-size: 10.5pt; color: %1; line-height: 1.45; }"
+      "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13pt; color: %1; line-height: 1.6; padding: 12px; }"
+      "pre { font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace; font-size: 12pt; line-height: 1.55; color: %1; white-space: pre-wrap; word-wrap: break-word; }"
     ).arg( textColor ) );
     txtLicense->setText( QString::fromUtf8( licenceFile.readAll() ) );
   }
@@ -169,31 +171,35 @@ void QgsAbout::setVersion( const QString &v )
   txtVersion->setAutoFillBackground( true );
 
   const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
-                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
   const QString textColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
-  const QString headingColor = isDark ? QStringLiteral( "#5B9BD8" ) : QStringLiteral( "#0E3A52" );
-  const QString linkColor = isDark ? QStringLiteral( "#5B9BD8" ) : QStringLiteral( "#1B8C77" );
+  const QString headingColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString linkColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString tableBorder = isDark ? QStringLiteral( "rgba(255,255,255,0.08)" ) : QStringLiteral( "#E2E8F0" );
 
   const QString style = QStringLiteral(
     "body, table, td, tr, p {"
     "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
-    "  font-size: 11pt;"
+    "  font-size: 12.5pt;"
     "  color: %1;"
-    "  line-height: 1.5;"
+    "  line-height: 1.6;"
     "}"
     "td {"
-    "  padding: 4px 10px;"
+    "  padding: 6px 14px;"
+    "  border-bottom: 1px solid %4;"
     "}"
     "b {"
-    "  font-size: 12pt;"
+    "  font-size: 13.5pt;"
     "  font-weight: 700;"
     "  color: %2;"
     "}"
     "a {"
     "  color: %3;"
     "  text-decoration: none;"
+    "  font-weight: 600;"
     "}"
-  ).arg( textColor, headingColor, linkColor );
+  ).arg( textColor, headingColor, linkColor, tableBorder );
 
   txtVersion->document()->setDefaultStyleSheet( style );
   txtVersion->setHtml( v );
@@ -203,19 +209,21 @@ void QgsAbout::setVersion( const QString &v )
 QString QgsAbout::defaultWhatsNewHtml()
 {
   const QString ver = Qgis::productVersionLabel();
-  return u"<h3>HAKE GEOSPATIAL</h3>"
-         "<h4>Hake GeoDesk – Desktop GIS</h4>"
-         "<p>Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
-         "<p><b>Latest Hake GeoDesk Release</b></p>"
-         "<h3 style=\"color: #2ea44f;\">Version %1</h3>"
-         "<p>Hake GeoDesk – Desktop GIS. Professional GIS for Mapping, Analysis & Spatial Intelligence.</p>"
-         "<p>Product Hake GeoDesk – Desktop GIS<br>"
-         "Version %1<br>"
-         "Company Hake Technologies</p>"
+  return u"<p style=\"margin-bottom: 16px;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"160\" height=\"160\"></p>"
+         "<h2>Hake GeoDesk – Desktop GIS</h2>"
+         "<p style=\"font-size: 13pt; color: #94A3B8; margin-top: 2px;\">Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
+         "<p style=\"margin: 16px 0 20px 0;\"><span style=\"background-color: #1E3A5F; color: #38BDF8; border: 1px solid #38BDF8; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;Version %1&nbsp;</span></p>"
          "<h4>Product & branding</h4>"
          "<ul>"
          "<li>Desktop product identity: Hake GeoDesk – Desktop GIS with product version label %1.</li>"
          "<li>Modern Qt6 desktop foundation for mapping, analysis, and spatial intelligence workflows.</li>"
+         "</ul>"
+         "<h4>User interface & map tools</h4>"
+         "<ul>"
+         "<li>Redesigned welcome page for a clearer first-run experience.</li>"
+         "<li>Create user-defined toolbars and menus; unlock shipping themes through plugins.</li>"
+         "<li>Map tool to edit blank segments; copy features in an array along a line.</li>"
+         "<li>Attribute table: double-click to zoom to a feature.</li>"
          "</ul>"_s.arg( ver );
 }
 
@@ -263,14 +271,29 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
 void QgsAbout::showWhatsNewHtml( const QString &html )
 {
   txtWhatsNew->clear();
-  QString style = QgsApplication::reportStyleSheet();
-  style += QStringLiteral(
-    " body { font-size: 11pt; line-height: 1.5; }"
-    " h3 { font-size: 13.5pt; }"
-    " h4 { font-size: 12pt; }"
-    " li { font-size: 11pt; margin-bottom: 4px; }"
-    " p { font-size: 11pt; line-height: 1.5; }"
-  );
+
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+
+  const QString bodyColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+  const QString h2Color = isDark ? QStringLiteral( "#FFFFFF" ) : QStringLiteral( "#0F172A" );
+  const QString h3Color = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString h4Color = isDark ? QStringLiteral( "#2DD4BF" ) : QStringLiteral( "#0D9488" );
+  const QString listColor = isDark ? QStringLiteral( "#CBD5E1" ) : QStringLiteral( "#334155" );
+  const QString borderSep = isDark ? QStringLiteral( "rgba(255,255,255,0.12)" ) : QStringLiteral( "#CBD5E1" );
+  const QString linkColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+
+  QString style = QStringLiteral(
+    " body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12.5pt; line-height: 1.6; color: %1; padding: 10px; }"
+    " h2 { font-size: 16pt; font-weight: 700; color: %2; margin-top: 14px; margin-bottom: 6px; }"
+    " h3 { font-size: 14.5pt; font-weight: 700; color: %3; margin-top: 14px; margin-bottom: 6px; }"
+    " h4 { font-size: 13.5pt; font-weight: 600; color: %4; margin-top: 18px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid %6; }"
+    " li { font-size: 12.5pt; line-height: 1.6; margin-bottom: 6px; color: %5; }"
+    " p { font-size: 12.5pt; line-height: 1.6; margin-bottom: 8px; color: %1; }"
+    " a { color: %7; text-decoration: none; font-weight: 600; }"
+  ).arg( bodyColor, h2Color, h3Color, h4Color, listColor, borderSep, linkColor );
+
   txtWhatsNew->document()->setDefaultStyleSheet( style );
 
   const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
@@ -282,8 +305,28 @@ void QgsAbout::showWhatsNewHtml( const QString &html )
   txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u":/images/icons/hake-gis-full.png"_s ), logo );
 
   QString processedHtml = html;
-  static const QRegularExpression logoRe( u"src=[\"'](?:https?://[^/\"'>]+)?/?(?:[^/\"'>]+/)*logo\\.png[\"']"_s, QRegularExpression::CaseInsensitiveOption );
-  processedHtml.replace( logoRe, u"src=\"qrc:/images/icons/hake-gis-full.png\""_s );
+
+  // Enlarge Hake Geo logo to a prominent 160x160
+  static const QRegularExpression imgLogoRe( u"<img[^>]*logo\\.png[^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
+  if ( processedHtml.contains( imgLogoRe ) )
+  {
+    processedHtml.replace( imgLogoRe, u"<p style=\"margin-bottom: 16px;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"160\" height=\"160\"></p>"_s );
+  }
+  else
+  {
+    static const QRegularExpression genericImgRe( u"<img[^>]*src=[\"'][^\"']*[\"'][^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
+    if ( processedHtml.contains( genericImgRe ) )
+      processedHtml.replace( genericImgRe, u"<p style=\"margin-bottom: 16px;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"160\" height=\"160\"></p>"_s );
+    else if ( !processedHtml.contains( u"hake-gis-full.png"_s ) )
+      processedHtml.prepend( u"<p style=\"margin-bottom: 16px;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"160\" height=\"160\"></p>"_s );
+  }
+
+  // Modern version badge styling
+  static const QRegularExpression verHeadingRe( u"<h3[^>]*>\\s*(Version\\s+[^<]+)\\s*</h3>"_s, QRegularExpression::CaseInsensitiveOption );
+  const QString verBadge = isDark
+    ? QStringLiteral( "<p style=\"margin: 14px 0 18px 0;\"><span style=\"background-color: #1E3A5F; color: #38BDF8; border: 1px solid #38BDF8; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;\\1&nbsp;</span></p>" )
+    : QStringLiteral( "<p style=\"margin: 14px 0 18px 0;\"><span style=\"background-color: #E0F2FE; color: #0369A1; border: 1px solid #0284C7; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;\\1&nbsp;</span></p>" );
+  processedHtml.replace( verHeadingRe, verBadge );
 
   const QString curVersion = Qgis::productVersionLabel();
   processedHtml.replace( u"2026.0.0"_s, curVersion );
