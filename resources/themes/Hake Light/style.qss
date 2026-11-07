@@ -667,8 +667,8 @@ QDockWidget QToolBar
     background: @chromeToolbar;
     border: none;
     border-bottom: 1px solid @itemdarkbackground;
-    padding: 4px 8px 4px 6px;
-    spacing: 4px;
+    padding: 3px 14px 3px 4px;
+    spacing: 2px;
 }
 
 /* Toolbar overflow / extension button (arrow for hidden options) */
@@ -678,13 +678,10 @@ QToolButton#qt_toolbar_ext_button
     background-color: transparent;
     border: 1px solid transparent;
     border-radius: 3px;
-    margin-right: 6px;
     padding: 2px;
-    min-width: 16px;
-    max-width: 18px;
-    min-height: 18px;
-    qproperty-arrowType: none;
-    image: url(@theme_path/icons/caret-right.svg);
+    min-width: 18px;
+    max-width: 22px;
+    min-height: 20px;
 }
 
 QToolBarExtension:hover,
@@ -701,9 +698,9 @@ QDockWidget QToolBar QToolButton::menu-button
     border-radius: 4px;
     background-color: transparent;
     color: @text;
-    padding: 4px;
-    min-width: 26px;
-    min-height: 26px;
+    padding: 2px;
+    min-width: 22px;
+    min-height: 22px;
 }
 
 QDockWidget QToolBar QToolButton:hover
@@ -1928,5 +1925,42 @@ QTabWidget#HakeAppRibbon QWidget#HakeAppRibbonSeparator {
     color: @ribbonBorder;
     background: transparent;
 }
+
+/* ==================================================================================== */
+/* IDENTIFY RESULTS DIALOG                                                              */
+/* ==================================================================================== */
+
+QDialog#QgsIdentifyResultsBase QTreeWidget#lstResults,
+QDialog#QgsIdentifyResultsBase QTableWidget#tblResults
+{
+    border: 1px solid @itemdarkbackground;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+}
+
+QDialog#QgsIdentifyResultsBase QHeaderView::section
+{
+    background-color: @itembackground;
+    color: @text;
+    border: none;
+    border-right: 1px solid @itemdarkbackground;
+    border-bottom: 1px solid @itemdarkbackground;
+    padding: 3px 6px;
+    font-weight: 600;
+}
+
+QDialog#QgsIdentifyResultsBase QComboBox
+{
+    border: 1px solid @itemdarkbackground;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background-color: #FFFFFF;
+}
+
+QDialog#QgsIdentifyResultsBase QComboBox:hover
+{
+    border-color: @focus;
+}
+
 
 

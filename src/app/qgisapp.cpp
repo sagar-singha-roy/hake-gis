@@ -5578,6 +5578,7 @@ void QgisApp::initLayerTreeView()
 
   QToolBar *toolbar = new QToolBar();
   toolbar->setIconSize( iconSize( true ) );
+  toolbar->setContentsMargins( 2, 0, 14, 0 );
   toolbar->addAction( mActionStyleDock );
   toolbar->addAction( actionAddGroup );
   toolbar->addWidget( btnVisibilityPresets );

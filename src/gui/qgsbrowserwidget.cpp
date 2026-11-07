@@ -65,6 +65,7 @@ QgsBrowserWidget::QgsBrowserWidget( QgsBrowserGuiModel *browserModel, QWidget *p
   qgis::down_cast<QVBoxLayout *>( layout() )->setSpacing( 0 );
 
   mBrowserToolbar->setIconSize( QSize( 22, 22 ) );
+  mBrowserToolbar->setContentsMargins( 2, 0, 14, 0 );
 
   mBrowserView = new QgsDockBrowserTreeView( this );
   mBrowserView->setIconSize( QSize( 22, 22 ) );
@@ -522,6 +523,15 @@ void QgsBrowserWidget::setPropertiesWidget()
     }
   }
   mPropertiesWidget->setVisible( mPropertiesLayout->count() > 0 );
+  if ( mPropertiesWidget->isVisible() )
+  {
+    const QList<int> sizes = mSplitter->sizes();
+    if ( sizes.size() == 2 && sizes[1] < 50 )
+    {
+      const int total = sizes[0] + sizes[1];
+      mSplitter->setSizes( { std::max( 100, total * 2 / 3 ), std::max( 80, total / 3 ) } );
+    }
+  }
 }
 
 void QgsBrowserWidget::enablePropertiesWidget( bool enable )

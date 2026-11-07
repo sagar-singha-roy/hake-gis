@@ -34,6 +34,7 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 #include <QPointer>
 #include <QSet>
@@ -42,6 +43,7 @@
 #include <QString>
 #include <QSvgRenderer>
 #include <QTimer>
+#include <QToolBar>
 #include <QToolButton>
 #include <QTreeView>
 #include <QVariant>
@@ -51,6 +53,76 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
+  class QgsToolBarExtensionFilter : public QObject
+  {
+  public:
+    explicit QgsToolBarExtensionFilter( QToolButton *button )
+      : QObject( button )
+      , mButton( button )
+    {
+      mButton->setCursor( Qt::PointingHandCursor );
+      mButton->setToolTip( tr( "More options" ) );
+    }
+
+  protected:
+    bool eventFilter( QObject *watched, QEvent *event ) override
+    {
+      if ( watched == mButton )
+      {
+        if ( event->type() == QEvent::Paint )
+        {
+          QPainter p( mButton );
+          p.setRenderHint( QPainter::Antialiasing );
+
+          const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive )
+                           || QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+          const bool isHovered = mButton->underMouse() || mButton->isDown();
+
+          const QRect r = mButton->rect();
+
+          if ( isHovered )
+          {
+            const QColor hoverBg = isDark ? QColor( 0x22, 0x34, 0x4A ) : QColor( 0xEB, 0xF3, 0xFB );
+            p.setBrush( hoverBg );
+            p.setPen( isDark ? QColor( 0x5B, 0x9B, 0xD8 ) : QColor( 0x4A, 0x7E, 0xC7 ) );
+            p.drawRoundedRect( r.adjusted( 1, 2, -1, -2 ), 3, 3 );
+          }
+
+          // Draw double chevron pointing right
+          const QColor arrowColor = isDark ? QColor( 0xD7, 0xE1, 0xEC ) : QColor( 0x16, 0x4A, 0x73 );
+          QPen pen( arrowColor, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin );
+          p.setPen( pen );
+          p.setBrush( Qt::NoBrush );
+
+          const int cx = r.center().x();
+          const int cy = r.center().y();
+
+          QPainterPath c1;
+          c1.moveTo( cx - 3.5, cy - 4.5 );
+          c1.lineTo( cx - 0.5, cy );
+          c1.lineTo( cx - 3.5, cy + 4.5 );
+          p.drawPath( c1 );
+
+          QPainterPath c2;
+          c2.moveTo( cx + 1.0, cy - 4.5 );
+          c2.lineTo( cx + 4.0, cy );
+          c2.lineTo( cx + 1.0, cy + 4.5 );
+          p.drawPath( c2 );
+
+          return true;
+        }
+        else if ( event->type() == QEvent::Enter || event->type() == QEvent::Leave )
+        {
+          mButton->update();
+        }
+      }
+      return QObject::eventFilter( watched, event );
+    }
+
+  private:
+    QToolButton *mButton = nullptr;
+  };
+
   enum class HakeIconKind
   {
     Action,       //!< Core QAction, keyed by objectName
@@ -1521,6 +1593,23 @@ void QgsHakeIcons::applyToPanel( QWidget *panel, const QString &themeName )
 {
   if ( !panel )
     return;
+
+  // Inset panel toolbars so the extension/overflow button does not touch the border,
+  // and install the high-contrast chevron painter filter on the extension button.
+  const QList<QToolBar *> toolbars = panel->findChildren<QToolBar *>();
+  for ( QToolBar *tb : toolbars )
+  {
+    tb->setContentsMargins( 2, 0, 14, 0 );
+    if ( QToolButton *ext = tb->findChild<QToolButton *>( u"qt_toolbar_ext_button"_s ) )
+    {
+      if ( !ext->property( "hake_ext_filtered" ).toBool() )
+      {
+        ext->setProperty( "hake_ext_filtered", true );
+        ext->installEventFilter( new QgsToolBarExtensionFilter( ext ) );
+      }
+      ext->update();
+    }
+  }
 
   // Toolbar actions are often owned by the main window, so also look at the actions added to the panel's widgets.
   QSet<QObject *> targets;
