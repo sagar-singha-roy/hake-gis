@@ -293,6 +293,48 @@ QPushButton
     min-height: 20px;
 }
 
+/* Dialog button box and explicit connection action buttons */
+QDialogButtonBox QPushButton,
+QDialog QPushButton,
+QPushButton#btnConnect
+{
+    min-width: 72px;
+    min-height: 22px;
+    padding: 5px 16px;
+    border: 1px solid @itemdarkbackground;
+    border-radius: 4px;
+    background-color: @darkgradient;
+    color: @text;
+    font-weight: 500;
+}
+
+QDialogButtonBox QPushButton:hover,
+QDialog QPushButton:hover,
+QPushButton#btnConnect:hover
+{
+    background-color: @hover;
+    border-color: @focus;
+    color: @textlight;
+}
+
+QDialogButtonBox QPushButton:pressed,
+QDialog QPushButton:pressed,
+QPushButton#btnConnect:pressed
+{
+    background-color: @selection;
+    border-color: @focus;
+    color: @textlight;
+}
+
+QDialogButtonBox QPushButton:disabled,
+QDialog QPushButton:disabled,
+QPushButton#btnConnect:disabled
+{
+    background-color: #151D28;
+    border-color: #1B2635;
+    color: @ribbonDisabled;
+}
+
 QPushButton:hover 
 {
     background-color: @hover;

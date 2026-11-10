@@ -457,23 +457,13 @@ QFont QgsCodeEditor::lexerFont() const
   if ( !mFontFamily.isEmpty() )
     QgsFontUtils::setFontFamily( font, mFontFamily );
 
-#ifdef Q_OS_MAC
-  if ( mFontSize > 0 )
-    font.setPointSize( mFontSize );
-  else
-  {
-    // The font size gotten from getMonospaceFont() is too small on Mac
-    font.setPointSize( QLabel().font().pointSize() );
-  }
-#else
   if ( mFontSize > 0 )
     font.setPointSize( mFontSize );
   else
   {
     const int fontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
-    font.setPointSize( fontSize );
+    font.setPointSize( fontSize > 0 ? fontSize : 10 );
   }
-#endif
   font.setBold( false );
 
   return font;
@@ -1254,24 +1244,14 @@ QFont QgsCodeEditor::getMonospaceFont()
 
   const int fontSize = settingFontSize->value();
 
-#ifdef Q_OS_MAC
-  if ( fontSize > 0 )
-    font.setPointSize( fontSize );
-  else
-  {
-    // The font size gotten from getMonospaceFont() is too small on Mac
-    font.setPointSize( QLabel().font().pointSize() );
-  }
-#else
   if ( fontSize > 0 )
     font.setPointSize( fontSize );
   else
   {
     const QgsSettings settings;
-    const int fontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
-    font.setPointSize( fontSize );
+    const int defaultFontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
+    font.setPointSize( defaultFontSize > 0 ? defaultFontSize : 10 );
   }
-#endif
   font.setBold( false );
 
   return font;

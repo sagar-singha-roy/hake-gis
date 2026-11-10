@@ -1003,8 +1003,6 @@ static QMessageBox::StandardButton askSaveQuestion_( QWidget *parent, const QStr
   QMessageBox box( QMessageBox::Question, title, text, buttons, parent );
   if ( defaultButton != QMessageBox::NoButton )
     box.setDefaultButton( defaultButton );
-#ifndef Q_OS_MACOS
-  // Keep the macOS native alert untouched; elsewhere only the icons change, not the layout.
   if ( QgsHakeIcons::isHakeTheme( QgsApplication::themeName() ) )
   {
     const int boxIconSize = box.style()->pixelMetric( QStyle::PM_MessageBoxIconSize, nullptr, &box );
@@ -1023,7 +1021,6 @@ static QMessageBox::StandardButton askSaveQuestion_( QWidget *parent, const QStr
       }
     }
   }
-#endif
   return box.exec() == -1 ? QMessageBox::Cancel : box.standardButton( box.clickedButton() );
 }
 
@@ -3328,12 +3325,6 @@ void QgisApp::createActions()
 
   // Help Menu Items
 
-#ifdef Q_OS_MAC
-  mActionHelpContents->setShortcut( QString( "Ctrl+?" ) );
-  mActionQgisHomePage->setShortcut( QString() );
-  mActionReportaBug->setShortcut( QString() );
-#endif
-
   mActionHelpContents->setEnabled( QFileInfo::exists( QgsApplication::pkgDataPath() + "/doc/index.html" ) );
 
   connect( mActionHelpContents, &QAction::triggered, this, &QgisApp::helpContents );
@@ -4387,14 +4378,10 @@ void QgisApp::createStatusBar()
   //remove borders from children under Windows
   statusBar()->setStyleSheet( u"QStatusBar::item {border: none;}"_s );
 
-  // Drop the font size in the status bar by a couple of points
+  // Standardize font size in the status bar consistently across all platforms
   QFont statusBarFont = font();
   int fontSize = statusBarFont.pointSize();
-#ifdef Q_OS_WIN
-  fontSize = std::max( fontSize - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
-#else
-  fontSize = std::max( fontSize - 2, 6 );
-#endif
+  fontSize = std::max( fontSize - 1, 8 );
   statusBarFont.setPointSize( fontSize );
   statusBar()->setFont( statusBarFont );
 
@@ -14887,10 +14874,6 @@ QMenu *QgisApp::getPluginMenu( const QString &menuName )
    */
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
   QAction *before = mActionPluginSeparator2; // python separator or end of list
   if ( !mActionPluginSeparator1 )
   {
@@ -14963,10 +14946,6 @@ QMenu *QgisApp::getDatabaseMenu( const QString &menuName )
     return mDatabaseMenu;
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
   QString dst = cleanedMenuName;
   dst.remove( QChar( '&' ) );
 
@@ -15007,10 +14986,6 @@ QMenu *QgisApp::getRasterMenu( const QString &menuName )
     return mRasterMenu;
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
 
   QAction *before = nullptr;
   if ( !mActionRasterSeparator )
@@ -15061,10 +15036,6 @@ QMenu *QgisApp::getVectorMenu( const QString &menuName )
     return mVectorMenu;
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
   QString dst = cleanedMenuName;
   dst.remove( QChar( '&' ) );
 
@@ -15105,10 +15076,6 @@ QMenu *QgisApp::getWebMenu( const QString &menuName )
     return mWebMenu;
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
   QString dst = cleanedMenuName;
   dst.remove( QChar( '&' ) );
 
@@ -15149,10 +15116,6 @@ QMenu *QgisApp::getMeshMenu( const QString &menuName )
     return mMeshMenu;
 
   QString cleanedMenuName = menuName;
-#ifdef Q_OS_MAC
-  // Mac doesn't have '&' keyboard shortcuts.
-  cleanedMenuName.remove( QChar( '&' ) );
-#endif
   QString dst = cleanedMenuName;
   dst.remove( QChar( '&' ) );
 

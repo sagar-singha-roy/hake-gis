@@ -516,11 +516,7 @@ bool QgsCustomizationDialog::QgsCustomizationModel::dropMimeDataProcessingAlgori
 ////////////////
 
 QgsCustomizationDialog::QgsCustomizationDialog( QgisApp *qgisApp )
-#ifdef Q_OS_MACOS
-  : QMainWindow( qgisApp, Qt::WindowSystemMenuHint ) // Modeless dialog with close button only
-#else
   : QMainWindow( qgisApp )
-#endif
   , mQgisApp( qgisApp )
 {
   setupUi( this );

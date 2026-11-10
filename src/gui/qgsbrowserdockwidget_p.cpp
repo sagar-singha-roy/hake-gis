@@ -379,11 +379,7 @@ void QgsBrowserLayerProperties::loadAttributeTable()
   tableModel->loadLayer();
   QFont font = mAttributeTable->font();
   int fontSize = font.pointSize();
-#ifdef Q_OS_WIN
-  fontSize = std::max( fontSize - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
-#else
-  fontSize = std::max( fontSize - 2, 6 );
-#endif
+  fontSize = std::max( fontSize - 1, 8 );
   font.setPointSize( fontSize );
   mAttributeTable->setFont( font );
 

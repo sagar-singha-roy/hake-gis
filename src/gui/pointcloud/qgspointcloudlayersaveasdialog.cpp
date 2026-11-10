@@ -61,13 +61,10 @@ void QgsPointCloudLayerSaveAsDialog::setup()
   connect( mMinimumZSpinBox, static_cast<void ( QgsDoubleSpinBox::* )( double )>( &QgsDoubleSpinBox::valueChanged ), this, &QgsPointCloudLayerSaveAsDialog::mMinimumZSpinBoxValueChanged );
   connect( mMaximumZSpinBox, static_cast<void ( QgsDoubleSpinBox::* )( double )>( &QgsDoubleSpinBox::valueChanged ), this, &QgsPointCloudLayerSaveAsDialog::mMaximumZSpinBoxValueChanged );
 
-#ifdef Q_OS_WIN
+  // Unify dialog button box layout consistently across all platforms
   mHelpButtonBox->setVisible( false );
   mButtonBox->addButton( QDialogButtonBox::Help );
   connect( mButtonBox, &QDialogButtonBox::helpRequested, this, &QgsPointCloudLayerSaveAsDialog::showHelp );
-#else
-  connect( mHelpButtonBox, &QDialogButtonBox::helpRequested, this, &QgsPointCloudLayerSaveAsDialog::showHelp );
-#endif
   connect( mButtonBox, &QDialogButtonBox::accepted, this, &QgsPointCloudLayerSaveAsDialog::accept );
   connect( mButtonBox, &QDialogButtonBox::rejected, this, &QgsPointCloudLayerSaveAsDialog::reject );
 

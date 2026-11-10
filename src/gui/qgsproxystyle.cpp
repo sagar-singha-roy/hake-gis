@@ -19,6 +19,7 @@
 #include "qgsimageoperation.h"
 
 #include <QApplication>
+#include <QDialogButtonBox>
 #include <QString>
 #include <QStyle>
 #include <QStyleFactory>
@@ -48,6 +49,16 @@ QgsProxyStyle::QgsProxyStyle( QWidget *parent )
   setParent( parent );
 }
 
+int QgsProxyStyle::styleHint( StyleHint hint, const QStyleOption *option, const QWidget *widget, QStyleHintReturn *returnData ) const
+{
+  if ( hint == SH_DialogButtonLayout )
+  {
+    // Guarantee 100% consistent dialog button order (OK / Cancel / Apply) across Windows, macOS, and Linux
+    return QDialogButtonBox::WinLayout;
+  }
+  return QProxyStyle::styleHint( hint, option, widget, returnData );
+}
+
 ///@cond PRIVATE
 
 //
@@ -65,6 +76,16 @@ QgsAppStyle::QgsAppStyle( const QString &base )
   }
 
   setObjectName( u"QgsAppStyle"_s );
+}
+
+int QgsAppStyle::styleHint( StyleHint hint, const QStyleOption *option, const QWidget *widget, QStyleHintReturn *returnData ) const
+{
+  if ( hint == SH_DialogButtonLayout )
+  {
+    // Guarantee 100% consistent dialog button order (OK / Cancel / Apply) across Windows, macOS, and Linux
+    return QDialogButtonBox::WinLayout;
+  }
+  return QProxyStyle::styleHint( hint, option, widget, returnData );
 }
 
 QPixmap QgsAppStyle::generatedIconPixmap( QIcon::Mode iconMode, const QPixmap &pixmap, const QStyleOption *opt ) const

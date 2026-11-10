@@ -47,13 +47,8 @@ namespace
   constexpr int WHATSNEW_TRANSFER_TIMEOUT_MS = 8000;
 }
 
-#ifdef Q_OS_MACOS
-// Modeless dialog with close button only
-constexpr Qt::WindowFlags kAboutWindowFlags = Qt::WindowSystemMenuHint;
-#else
-// Normal dialog in non Mac-OS
+// Standard unified dialog flags across all platforms
 constexpr Qt::WindowFlags kAboutWindowFlags = Qt::WindowFlags();
-#endif
 
 QgsAbout::QgsAbout( QWidget *parent )
   : QgsOptionsDialogBase( u"about"_s, parent, kAboutWindowFlags )
