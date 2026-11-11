@@ -48,7 +48,34 @@ ALPHA, BETA, RC, PREVIEW and TRUNK which make the version number lower.
 
 import re
 
-from packaging.version import InvalidVersion, Version
+try:
+    from packaging.version import InvalidVersion, Version
+except ImportError:
+    class InvalidVersion(Exception):
+        pass
+
+    class Version:
+        def __init__(self, v):
+            self.v = str(v)
+
+        def __lt__(self, other):
+            return self._tuple() < other._tuple()
+
+        def __gt__(self, other):
+            return self._tuple() > other._tuple()
+
+        def __eq__(self, other):
+            return self._tuple() == other._tuple()
+
+        def _tuple(self):
+            parts = []
+            for segment in re.split(r'(\d+)', self.v):
+                if segment.isdigit():
+                    parts.append(int(segment))
+                elif segment:
+                    parts.append(segment)
+            return tuple(parts)
+
 from qgis.core import Qgis
 
 # ------------------------------------------------------------------------ #
