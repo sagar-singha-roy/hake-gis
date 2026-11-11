@@ -1158,6 +1158,11 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_LIB_SUBDIR})
 file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/hake-gisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
 file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/qgisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
 
+if(APPLE)
+  file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app")
+  file(CREATE_LINK "${QGIS_OUTPUT_DIRECTORY}/Contents" "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app/Contents" SYMBOLIC)
+endif()
+
 # Write the qgis.env file to the bin folder to allow running qgis.exe correctly from build folder
 # and find the SDK installed folders. Only runs when VCPKG_APPLOCAL_DEPS=OFF because ON means it is packaged together
 if(WITH_VCPKG AND NOT VCPKG_APPLOCAL_DEPS AND WIN32)
