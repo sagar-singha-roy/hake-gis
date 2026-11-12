@@ -96,6 +96,15 @@ class QgsPluginManager : public QgsOptionsDialogBase, private Ui::QgsPluginManag
     //! Gets metadata of C++ plugins
     void getCppPluginsMetadata();
 
+    //! Gets metadata of repository plugins
+    void getRepositoryPluginsMetadata();
+
+    //! Parse plugins XML document into metadata registry
+    void parsePluginsXmlData( const QByteArray &xmlData );
+
+    //! Download and install plugin directly from repository URL
+    void downloadAndInstallPlugin( const QString &pluginId, const QString &downloadUrl );
+
     //! Create new spacer item for sorting by status in the plugin list view
     QStandardItem *createSpacerItem( const QString &text, const QString &value );
 

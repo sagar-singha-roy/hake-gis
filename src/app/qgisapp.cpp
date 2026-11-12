@@ -13161,7 +13161,7 @@ void QgisApp::showPluginManager( int tabIndex, const QString &searchTerm )
 #endif
   {
     // Call the pluginManagerInterface directly
-    mQgisInterface->pluginManagerInterface()->showPluginManager();
+    mQgisInterface->pluginManagerInterface()->showPluginManager( tabIndex, searchTerm );
   }
 }
 
