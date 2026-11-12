@@ -1159,8 +1159,8 @@ file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/hake-gisbuildpath.txt "${
 file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/qgisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
 
 if(APPLE)
-  file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app")
-  file(CREATE_LINK "${QGIS_OUTPUT_DIRECTORY}/Contents" "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app/Contents" SYMBOLIC)
+  file(REMOVE_RECURSE "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app")
+  file(CREATE_LINK "${QGIS_OUTPUT_DIRECTORY}" "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app" SYMBOLIC)
 endif()
 
 # Write the qgis.env file to the bin folder to allow running qgis.exe correctly from build folder

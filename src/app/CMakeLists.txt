@@ -509,6 +509,15 @@ endif()
 
 set_target_properties(qgis PROPERTIES OUTPUT_NAME "${QGIS_APP_NAME}")
 
+if(APPLE)
+  add_custom_command(TARGET qgis POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      "${QGIS_OUTPUT_DIRECTORY}"
+      "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app"
+    COMMENT "Ensuring Hake GeoDesk.app bundle symlink is up-to-date"
+  )
+endif()
+
 if(NOT LIBRARY_TYPE EQUAL STATIC)
   win32_version_info("Hake Geospatial App Library" "hake-gis-app" QGIS_APP_SRCS)
 endif()
