@@ -119,15 +119,15 @@ translatableAttributes = ["name", "description", "about", "tags"]
 
 reposGroup = "app/plugin_repositories"
 
-# Production default (HTTP until TLS is configured on plugins.haketech.com).
+# Production default (HTTPS with HTTP fallback).
 # Override without source edits via PLUGIN_REPOSITORY_URL
 # (query string is stripped; urlParams() appends ?hake-geodesk=<year>).
 # Development example: PLUGIN_REPOSITORY_URL=http://localhost/plugins.xml
-_DEFAULT_OFFICIAL_REPO_URL = "http://plugins.haketech.com/plugins.xml"
+_DEFAULT_OFFICIAL_REPO_URL = "https://plugins.haketech.com/plugins.xml"
 _OFFICIAL_REPO_URL_ALIASES = frozenset(
     {
         _DEFAULT_OFFICIAL_REPO_URL,
-        "https://plugins.haketech.com/plugins.xml",
+        "http://plugins.haketech.com/plugins.xml",
     }
 )
 
@@ -472,7 +472,28 @@ class Repositories(QObject):
         """populate the plugins object with the fetched data"""
         reply = self.sender()
         reposName = reply.property("reposName")
+        http_status = reply.attribute(
+            QNetworkRequest.Attribute.HttpStatusCodeAttribute
+        )
         if reply.error() != QNetworkReply.NetworkError.NoError:  # fetching failed
+            current_url = reply.url().toString()
+            # If HTTPS failed, try HTTP fallback once
+            if current_url.startswith("https://") and not reply.property("httpFallbackDone"):
+                fallback_url = QUrl("http://" + current_url[8:])
+                self.requestFetching(reposName, fallback_url, redirectionCounter=0, force_reload=True)
+                if self.mRepositories[reposName].get("xmlData"):
+                    self.mRepositories[reposName]["xmlData"].setProperty("httpFallbackDone", True)
+                reply.deleteLater()
+                return
+            # If HTTP failed, try HTTPS fallback once
+            if current_url.startswith("http://") and not reply.property("httpsFallbackDone"):
+                fallback_url = QUrl("https://" + current_url[7:])
+                self.requestFetching(reposName, fallback_url, redirectionCounter=0, force_reload=True)
+                if self.mRepositories[reposName].get("xmlData"):
+                    self.mRepositories[reposName]["xmlData"].setProperty("httpsFallbackDone", True)
+                reply.deleteLater()
+                return
+
             self.mRepositories[reposName]["state"] = Repositories.STATE_UNAVAILABLE
             self.mRepositories[reposName]["error"] = reply.errorString()
             if reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
@@ -483,23 +504,24 @@ class Repositories(QObject):
                         "If you haven't canceled the download manually, it was most likely caused by a timeout. In this case consider increasing the connection timeout value in Hake Geospatial options window.",
                     )
                 )
-        elif reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) == 301:
+        elif http_status in (301, 302, 303, 307, 308):
             redirectionUrl = reply.attribute(
                 QNetworkRequest.Attribute.RedirectionTargetAttribute
             )
-            if redirectionUrl.isRelative():
-                redirectionUrl = reply.url().resolved(redirectionUrl)
-            redirectionCounter = reply.property("redirectionCounter") + 1
-            if redirectionCounter > 4:
-                self.mRepositories[reposName]["state"] = Repositories.STATE_UNAVAILABLE
-                self.mRepositories[reposName]["error"] = QCoreApplication.translate(
-                    "QgsPluginInstaller", "Too many redirections"
-                )
-            else:
-                # Fire a new request and exit immediately in order to quietly destroy the old one
-                self.requestFetching(reposName, redirectionUrl, redirectionCounter)
-                reply.deleteLater()
-                return
+            if redirectionUrl and redirectionUrl.isValid():
+                if redirectionUrl.isRelative():
+                    redirectionUrl = reply.url().resolved(redirectionUrl)
+                redirectionCounter = reply.property("redirectionCounter") + 1
+                if redirectionCounter > 4:
+                    self.mRepositories[reposName]["state"] = Repositories.STATE_UNAVAILABLE
+                    self.mRepositories[reposName]["error"] = QCoreApplication.translate(
+                        "QgsPluginInstaller", "Too many redirections"
+                    )
+                else:
+                    # Fire a new request and exit immediately in order to quietly destroy the old one
+                    self.requestFetching(reposName, redirectionUrl, redirectionCounter)
+                    reply.deleteLater()
+                    return
         else:
             reposXML = QDomDocument()
             content = reply.readAll()

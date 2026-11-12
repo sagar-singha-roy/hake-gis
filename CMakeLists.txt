@@ -83,7 +83,7 @@ set(HAKE_PRODUCT_DISPLAY_NAME "Hake GeoDesk(Desktop GIS)" CACHE STRING "User-fac
 # Display branding stays HAKE_PRODUCT_DISPLAY_NAME.
 set(HAKE_PRODUCT_INSTALL_DIRECTORY "Hake GeoDesk" CACHE STRING "Filesystem-safe Windows/NSIS install directory name")
 set(HAKE_PRODUCT_VERSION_LABEL "2026.0.1" CACHE STRING "User-facing product version label (e.g. year-based release)")
-set(HAKE_WHATSNEW_URL "http://plugins.haketech.com/news/latest.html" CACHE STRING "Remote What's New URL for About dialog")
+set(HAKE_WHATSNEW_URL "https://plugins.haketech.com/news/latest.html" CACHE STRING "Remote What's New URL for About dialog")
 # Code revision shown in About = Git commit this build comes from. CI passes
 # -DHAKE_GIT_REVISION=<full sha>; it is consumed once and not kept in the cache
 # (see cmake/CreateQgsVersion.cmake). The About link is <repository>/commit/<sha>.

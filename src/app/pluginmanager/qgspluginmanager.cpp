@@ -1841,6 +1841,19 @@ void QgsPluginManager::showEvent( QShowEvent *e )
   }
 
   QgsOptionsDialogBase::showEvent( e );
+
+#ifdef WITH_BINDINGS
+  const bool pythonActive = ( mPythonUtils && mPythonUtils->isEnabled() );
+#else
+  const bool pythonActive = false;
+#endif
+
+  if ( !pythonActive && msgBar )
+  {
+    msgBar->pushMessage( tr( "Python support not active" ),
+                         tr( "Only built-in C++ plugins are shown. Community plugins from https://plugins.haketech.com require Python support to be installed." ),
+                         Qgis::MessageLevel::Info, 10 );
+  }
 }
 
 

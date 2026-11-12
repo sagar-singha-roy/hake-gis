@@ -160,27 +160,36 @@ def isCompatible(curVer, minVer, maxVer):
     if not minVer or not curVer or not maxVer:
         return False
 
-    minVer = splitVersion(re.sub(r"[^0-9.]+", "", minVer))
-    maxVer = splitVersion(re.sub(r"[^0-9.]+", "", maxVer))
-    curVer = splitVersion(re.sub(r"[^0-9.]+", "", curVer))
+    minVer_parts = splitVersion(re.sub(r"[^0-9.]+", "", minVer))
+    maxVer_parts = splitVersion(re.sub(r"[^0-9.]+", "", maxVer))
+    curVer_parts = splitVersion(re.sub(r"[^0-9.]+", "", curVer))
 
-    if not minVer or not curVer or not maxVer:
+    if not minVer_parts or not curVer_parts or not maxVer_parts:
         return False
 
-    if len(minVer) < 3:
-        minVer += ["0"]
+    if len(minVer_parts) < 3:
+        minVer_parts += ["0"]
 
-    if len(curVer) < 3:
-        curVer += ["0"]
+    if len(curVer_parts) < 3:
+        curVer_parts += ["0"]
 
-    if len(maxVer) < 3:
-        maxVer += ["99"]
+    if len(maxVer_parts) < 3:
+        maxVer_parts += ["99"]
 
-    minVer = f"{int(minVer[0]):04n}{int(minVer[1]):04n}{int(minVer[2]):04n}"
-    maxVer = f"{int(maxVer[0]):04n}{int(maxVer[1]):04n}{int(maxVer[2]):04n}"
-    curVer = f"{int(curVer[0]):04n}{int(curVer[1]):04n}{int(curVer[2]):04n}"
+    cur_major = int(curVer_parts[0])
+    min_major = int(minVer_parts[0])
+    max_major = int(maxVer_parts[0])
 
-    return minVer <= curVer and maxVer >= curVer
+    minVer_str = f"{min_major:04n}{int(minVer_parts[1]):04n}{int(minVer_parts[2]):04n}"
+    maxVer_str = f"{max_major:04n}{int(maxVer_parts[1]):04n}{int(maxVer_parts[2]):04n}"
+    curVer_str = f"{cur_major:04n}{int(curVer_parts[1]):04n}{int(curVer_parts[2]):04n}"
+
+    # For Hake GeoDesk (runtime major >= 4), allow modern QGIS 3.x ecosystem plugins
+    # (minVer >= 3.0) where upstream repository metadata capped maxVersion at 3.99.
+    if cur_major >= 4 and min_major >= 3:
+        return minVer_str <= curVer_str
+
+    return minVer_str <= curVer_str and maxVer_str >= curVer_str
 
 
 def pyQgisVersion():
