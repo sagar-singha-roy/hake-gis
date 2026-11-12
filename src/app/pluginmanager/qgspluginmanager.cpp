@@ -282,6 +282,7 @@ void QgsPluginManager::loadPlugin( const QString &id )
     return;
   }
 
+  savePluginState( id, true );
   QApplication::setOverrideCursor( Qt::WaitCursor );
 
   QgsPluginRegistry *pRegistry = QgsPluginRegistry::instance();
@@ -291,11 +292,25 @@ void QgsPluginManager::loadPlugin( const QString &id )
     library = plugin->value( u"id"_s );
     QgsDebugMsgLevel( "Loading Python plugin: " + library, 2 );
     pRegistry->loadPythonPlugin( library );
+
+#ifdef WITH_BINDINGS
+    if ( !mPythonUtils || !mPythonUtils->isEnabled() )
+#else
+    if ( true )
+#endif
+    {
+      pushMessage( tr( "Plugin '%1' is selected and enabled. Note: Python runtime bindings are not active in this build, so Python scripts cannot execute." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Warning, 8 );
+    }
+    else
+    {
+      pushMessage( tr( "Plugin '%1' loaded successfully." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
+    }
   }
   else // C++ plugin
   {
     QgsDebugMsgLevel( "Loading C++ plugin: " + library, 2 );
     pRegistry->loadCppPlugin( library );
+    pushMessage( tr( "Plugin '%1' activated successfully." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
   }
 
   QgsDebugMsgLevel( "Plugin loaded: " + library, 2 );
@@ -312,6 +327,8 @@ void QgsPluginManager::unloadPlugin( const QString &id )
     return;
   }
 
+  savePluginState( id, false );
+
   QgsPluginRegistry *pRegistry = QgsPluginRegistry::instance();
   QString library = plugin->value( u"library"_s );
 
@@ -326,6 +343,8 @@ void QgsPluginManager::unloadPlugin( const QString &id )
     QgsDebugMsgLevel( "Unloading C++ plugin: " + library, 2 );
     pRegistry->unloadCppPlugin( library );
   }
+
+  pushMessage( tr( "Plugin '%1' disabled." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Info, 3 );
 }
 
 
@@ -686,13 +705,24 @@ void QgsPluginManager::parsePluginsXmlData( const QByteArray &xmlData )
     meta[u"deprecated"_s] = ( deprecated ? u"true"_s : u"false"_s );
     meta[u"trusted"_s] = ( trusted ? u"true"_s : u"false"_s );
     meta[u"filename"_s] = fileName;
-    meta[u"installed"_s] = u"false"_s;
+    const QString localPluginDir = QgsApplication::qgisSettingsDirPath() + "python/plugins/" + id;
+    const bool isInstalledOnDisk = QDir( localPluginDir ).exists();
+    if ( isInstalledOnDisk )
+    {
+      meta[u"installed"_s] = u"true"_s;
+      meta[u"status"_s] = u"installed"_s;
+      meta[u"version_installed"_s] = version;
+    }
+    else
+    {
+      meta[u"installed"_s] = u"false"_s;
+      meta[u"status"_s] = u"not installed"_s;
+      meta[u"version_installed"_s] = QString();
+    }
     meta[u"available"_s] = u"true"_s;
-    meta[u"status"_s] = u"not installed"_s;
-    meta[u"status_exp"_s] = u"not installed"_s;
+    meta[u"status_exp"_s] = ( isInstalledOnDisk ? u"installed"_s : u"not installed"_s );
     meta[u"error"_s] = QString();
     meta[u"error_details"_s] = QString();
-    meta[u"version_installed"_s] = QString();
     meta[u"zip_repository"_s] = tr( "Hake GeoDesk Plugin Repository" );
     meta[u"library"_s] = QString();
     meta[u"readonly"_s] = u"false"_s;
@@ -700,6 +730,27 @@ void QgsPluginManager::parsePluginsXmlData( const QByteArray &xmlData )
     meta[u"plugin_dependencies"_s] = el.firstChildElement( u"plugin_dependencies"_s ).text().trimmed();
 
     addPluginMetadata( id, meta );
+  }
+
+  // Also discover any locally installed plugins
+  const QString userPluginsPath = QgsApplication::qgisSettingsDirPath() + "python/plugins";
+  const QDir userPluginsDir( userPluginsPath );
+  if ( userPluginsDir.exists() )
+  {
+    const QFileInfoList subdirs = userPluginsDir.entryInfoList( QDir::Dirs | QDir::NoDotAndDotDot );
+    for ( const QFileInfo &subdir : subdirs )
+    {
+      const QString pId = subdir.fileName();
+      if ( mPlugins.contains( pId ) )
+      {
+        mPlugins[pId][u"installed"_s] = u"true"_s;
+        mPlugins[pId][u"status"_s] = u"installed"_s;
+        if ( mPlugins[pId].value( u"version_installed"_s ).isEmpty() )
+        {
+          mPlugins[pId][u"version_installed"_s] = mPlugins[pId].value( u"version_available"_s );
+        }
+      }
+    }
   }
 }
 
@@ -747,6 +798,28 @@ void QgsPluginManager::downloadAndInstallPlugin( const QString &pluginId, const 
 
     if ( success )
     {
+      // If the zip contained a nested root directory matching pluginId, flatten it
+      const QString nestedDir = targetDir + "/" + pluginId;
+      if ( QDir( nestedDir ).exists() )
+      {
+        QDir inner( nestedDir );
+        const QFileInfoList innerFiles = inner.entryInfoList( QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot );
+        for ( const QFileInfo &fi : innerFiles )
+        {
+          const QString dest = targetDir + "/" + fi.fileName();
+          if ( fi.isDir() )
+          {
+            QDir().rename( fi.absoluteFilePath(), dest );
+          }
+          else
+          {
+            QFile::remove( dest );
+            QFile::rename( fi.absoluteFilePath(), dest );
+          }
+        }
+        inner.removeRecursively();
+      }
+
       if ( mPlugins.contains( pluginId ) )
       {
         mPlugins[pluginId][u"status"_s] = u"installed"_s;
@@ -972,22 +1045,18 @@ void QgsPluginManager::pluginItemChanged( QStandardItem *item )
 {
   const QString id = item->data( PLUGIN_BASE_NAME_ROLE ).toString();
 
-  if ( item->checkState() )
+  if ( item->checkState() == Qt::Checked )
   {
-    if ( mPluginsAreEnabled && !isPluginEnabled( id ) )
+    savePluginState( id, true );
+    if ( mPluginsAreEnabled )
     {
       QgsDebugMsgLevel( " Loading plugin: " + id, 2 );
       loadPlugin( id );
     }
-    else
-    {
-      // only enable the plugin, as we're in --noplugins mode
-      QgsDebugMsgLevel( " Enabling plugin: " + id, 2 );
-      savePluginState( id, true );
-    }
   }
-  else if ( !item->checkState() )
+  else if ( item->checkState() == Qt::Unchecked )
   {
+    savePluginState( id, false );
     QgsDebugMsgLevel( " Unloading plugin: " + id, 2 );
     unloadPlugin( id );
   }
@@ -1857,7 +1926,32 @@ void QgsPluginManager::buttonInstallExperimental_clicked()
 
 void QgsPluginManager::buttonUninstall_clicked()
 {
-  QgsPythonRunner::run( u"pyplugin_installer.instance().uninstallPlugin('%1')"_s.arg( mCurrentlyDisplayedPlugin ) );
+#ifdef WITH_BINDINGS
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
+  {
+    QgsPythonRunner::run( u"pyplugin_installer.instance().uninstallPlugin('%1')"_s.arg( mCurrentlyDisplayedPlugin ) );
+    return;
+  }
+#endif
+
+  if ( mCurrentlyDisplayedPlugin.isEmpty() )
+    return;
+
+  const QString targetDir = QgsApplication::qgisSettingsDirPath() + "python/plugins/" + mCurrentlyDisplayedPlugin;
+  if ( QDir( targetDir ).exists() )
+  {
+    QDir( targetDir ).removeRecursively();
+  }
+
+  savePluginState( mCurrentlyDisplayedPlugin, false );
+  if ( mPlugins.contains( mCurrentlyDisplayedPlugin ) )
+  {
+    mPlugins[mCurrentlyDisplayedPlugin][u"status"_s] = u"not installed"_s;
+    mPlugins[mCurrentlyDisplayedPlugin][u"installed"_s] = u"false"_s;
+    mPlugins[mCurrentlyDisplayedPlugin][u"version_installed"_s] = QString();
+  }
+  reloadModelData();
+  pushMessage( tr( "Plugin '%1' uninstalled successfully." ).arg( mCurrentlyDisplayedPlugin ), Qgis::MessageLevel::Success, 5 );
 }
 
 

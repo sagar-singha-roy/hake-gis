@@ -286,6 +286,8 @@ void QgsPluginRegistry::loadPythonPlugin( const QString &packageName )
   if ( !mPythonUtils || !mPythonUtils->isEnabled() )
   {
     QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    QgsSettings settings;
+    settings.setValue( "/PythonPlugins/" + packageName, true );
     return;
   }
 
@@ -317,7 +319,9 @@ void QgsPluginRegistry::loadPythonPlugin( const QString &packageName )
     settings.remove( "/PythonPlugins/watchDogTimestamp/" + packageName );
   }
 #else
-  Q_UNUSED( packageName )
+  QgsSettings settings;
+  settings.setValue( "/PythonPlugins/" + packageName, true );
+  QgsMessageLog::logMessage( QObject::tr( "Saved enabled state for Python plugin: %1" ).arg( packageName ), QObject::tr( "Plugins" ), Qgis::MessageLevel::Info );
 #endif
 }
 
@@ -437,6 +441,8 @@ void QgsPluginRegistry::unloadPythonPlugin( const QString &packageName )
   if ( !mPythonUtils || !mPythonUtils->isEnabled() )
   {
     QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    QgsSettings settings;
+    settings.setValue( "/PythonPlugins/" + packageName, false );
     return;
   }
 
@@ -450,7 +456,8 @@ void QgsPluginRegistry::unloadPythonPlugin( const QString &packageName )
   QgsSettings settings;
   settings.setValue( "/PythonPlugins/" + packageName, false );
 #else
-  Q_UNUSED( packageName )
+  QgsSettings settings;
+  settings.setValue( "/PythonPlugins/" + packageName, false );
 #endif
 }
 
