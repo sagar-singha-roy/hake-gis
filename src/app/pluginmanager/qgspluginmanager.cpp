@@ -576,8 +576,11 @@ void QgsPluginManager::getRepositoryPluginsMetadata()
     QNetworkRequest req( repoUrl );
     req.setAttribute( QNetworkRequest::Attribute::RedirectPolicyAttribute, QNetworkRequest::RedirectPolicy::NoLessSafeRedirectPolicy );
     QNetworkReply *reply = mIconLoader->get( req );
-    connect( reply, &QNetworkReply::finished, this, [this, reply]() {
+    QPointer<QgsPluginManager> self = this;
+    connect( reply, &QNetworkReply::finished, this, [self, reply]() {
       reply->deleteLater();
+      if ( !self )
+        return;
       if ( reply->error() == QNetworkReply::NoError )
       {
         const QByteArray data = reply->readAll();
@@ -589,8 +592,11 @@ void QgsPluginManager::getRepositoryPluginsMetadata()
             cacheFile.write( data );
             cacheFile.close();
           }
-          parsePluginsXmlData( data );
-          reloadModelData();
+          self->parsePluginsXmlData( data );
+          if ( self->mModelPlugins && self->mModelPlugins->rowCount() == 0 )
+          {
+            self->reloadModelData();
+          }
         }
       }
     } );
@@ -775,8 +781,8 @@ QStandardItem *QgsPluginManager::createSpacerItem( const QString &text, const QS
 
 void QgsPluginManager::abortPluginIconFetches()
 {
-  const QList<QNetworkReply *> replies = mIconReplies.keys();
-  mIconReplies.clear();
+  const QList<QNetworkReply *> replies = mIconReplyPluginIds.keys();
+  mIconReplyPluginIds.clear();
   for ( QNetworkReply *reply : replies )
   {
     reply->disconnect( this );
@@ -786,21 +792,32 @@ void QgsPluginManager::abortPluginIconFetches()
 }
 
 
-void QgsPluginManager::fetchPluginListIcon( QStandardItem *item, const QString &iconUrl )
+void QgsPluginManager::fetchPluginDetailIcon( const QString &pluginId, const QString &iconUrl )
 {
-  if ( !mIconLoader || !item )
+  if ( !mIconLoader || pluginId.isEmpty() || iconUrl.isEmpty() || mPluginIconCache.contains( pluginId ) )
+    return;
+
+  // Don't duplicate in-flight requests for the same plugin
+  if ( mIconReplyPluginIds.values().contains( pluginId ) )
     return;
 
   QNetworkRequest request{ QUrl( iconUrl ) };
-  request.setTransferTimeout( 15000 );
+  request.setTransferTimeout( 10000 );
   request.setAttribute( QNetworkRequest::Attribute::RedirectPolicyAttribute, QNetworkRequest::RedirectPolicy::NoLessSafeRedirectPolicy );
   QNetworkReply *reply = mIconLoader->get( request );
-  mIconReplies.insert( reply, item );
-  connect( reply, &QNetworkReply::finished, this, [this, reply]()
+  mIconReplyPluginIds.insert( reply, pluginId );
+
+  QPointer<QgsPluginManager> self = this;
+  connect( reply, &QNetworkReply::finished, this, [self, reply]()
   {
-    QStandardItem *iconItem = mIconReplies.take( reply );
+    if ( !self )
+    {
+      reply->deleteLater();
+      return;
+    }
+    const QString pId = self->mIconReplyPluginIds.take( reply );
     reply->deleteLater();
-    if ( !iconItem )
+    if ( pId.isEmpty() )
       return;
 
     const int status = reply->attribute( QNetworkRequest::Attribute::HttpStatusCodeAttribute ).toInt();
@@ -808,15 +825,29 @@ void QgsPluginManager::fetchPluginListIcon( QStandardItem *item, const QString &
     if ( reply->error() != QNetworkReply::NetworkError::NoError || status != 200 || contentType.startsWith( u"text/html"_s, Qt::CaseInsensitive ) )
       return;
 
+    const QByteArray data = reply->readAll();
     QPixmap pixmap;
-    if ( !pixmap.loadFromData( reply->readAll() ) || pixmap.isNull() )
+    if ( !pixmap.loadFromData( data ) || pixmap.isNull() )
       return;
-    iconItem->setData( pixmap, Qt::DecorationRole );
-    // QTextBrowser cannot load remote http(s) images; refresh details once the
-    // real pixmap is available so the detail pane can embed a data URI.
-    if ( iconItem->data( PLUGIN_BASE_NAME_ROLE ).toString() == mCurrentlyDisplayedPlugin )
+
+    self->mPluginIconCache.insert( pId, pixmap );
+
+    // Safely update model item without holding raw pointers
+    if ( self->mModelPlugins )
     {
-      showPluginDetails( iconItem );
+      for ( int r = 0; r < self->mModelPlugins->rowCount(); ++r )
+      {
+        QStandardItem *it = self->mModelPlugins->item( r );
+        if ( it && it->data( PLUGIN_BASE_NAME_ROLE ).toString() == pId )
+        {
+          it->setData( pixmap, Qt::DecorationRole );
+          if ( self->mCurrentlyDisplayedPlugin == pId )
+          {
+            self->showPluginDetails( it );
+          }
+          break;
+        }
+      }
     }
   } );
 }
@@ -869,11 +900,13 @@ void QgsPluginManager::reloadModelData()
       {
         mypDetailItem->setData( QPixmap( iconPath ), Qt::DecorationRole );
       }
+      else if ( mPluginIconCache.contains( baseName ) )
+      {
+        mypDetailItem->setData( mPluginIconCache.value( baseName ), Qt::DecorationRole );
+      }
       else
       {
         mypDetailItem->setData( fallbackIcon, Qt::DecorationRole );
-        if ( iconPath.startsWith( u"http://"_s ) || iconPath.startsWith( u"https://"_s ) )
-          fetchPluginListIcon( mypDetailItem, iconPath );
       }
 
       mypDetailItem->setEditable( false );
@@ -1153,9 +1186,26 @@ void QgsPluginManager::showPluginDetails( QStandardItem *item )
   }
   else
   {
+    if ( iconPath.startsWith( u"http://"_s ) || iconPath.startsWith( u"https://"_s ) )
+    {
+      if ( !mPluginIconCache.contains( mCurrentlyDisplayedPlugin ) )
+      {
+        fetchPluginDetailIcon( mCurrentlyDisplayedPlugin, iconPath );
+      }
+    }
+
     // QgsWebView is a QTextBrowser stub and does not fetch remote http(s)
     // images. Embed the list item's DecorationRole pixmap as a data URI instead.
-    const QPixmap decoration = item->data( Qt::DecorationRole ).value<QPixmap>();
+    QPixmap decoration;
+    if ( mPluginIconCache.contains( mCurrentlyDisplayedPlugin ) )
+    {
+      decoration = mPluginIconCache.value( mCurrentlyDisplayedPlugin );
+    }
+    else if ( item )
+    {
+      decoration = item->data( Qt::DecorationRole ).value<QPixmap>();
+    }
+
     if ( !decoration.isNull() )
     {
       QByteArray bytes;

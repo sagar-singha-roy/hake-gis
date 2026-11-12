@@ -1555,12 +1555,18 @@ void QgsHakeIcons::applyToOptions( QWidget *dialog, const QString &themeName )
 
   const QgsHakeTheme::Variant variant = QgsHakeTheme::variantForTheme( themeName );
   std::function<void( QStandardItem * )> visit = [&]( QStandardItem *item ) {
+    if ( !item )
+      return;
     // Factory pages and groups carry their registered key; built-in and keyless pages are identified by their page objectName.
     QString id = item->data( Qt::UserRole + 1 ).toString();
     if ( id.isEmpty() && item->isSelectable() )
     {
-      if ( const QWidget *page = stack->widget( proxy->sourceIndexToPageNumber( item->index() ) ) )
-        id = page->objectName();
+      const int pageNum = proxy ? proxy->sourceIndexToPageNumber( item->index() ) : -1;
+      if ( pageNum >= 0 && pageNum < stack->count() )
+      {
+        if ( const QWidget *page = stack->widget( pageNum ) )
+          id = page->objectName();
+      }
     }
     const auto it = resources.constFind( id );
     if ( !id.isEmpty() && it != resources.constEnd() )
