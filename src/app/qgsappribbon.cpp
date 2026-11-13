@@ -1493,7 +1493,6 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
 
     QgsAppRibbonGroup *services = addGroup( page, tr( "Services" ) );
     addMenu( services, mApp->databaseMenu(), tr( "Database" ) );
-    addMenu( services, mApp->webMenu(), tr( "Web" ) );
 
     // Plugins (e.g. DB Manager, MetaSearch) populate these toolbars at runtime.
     QgsAppRibbonGroup *dbGroup = addGroup( page, tr( "Database" ) );
