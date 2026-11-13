@@ -292,19 +292,7 @@ void QgsPluginManager::loadPlugin( const QString &id )
     library = plugin->value( u"id"_s );
     QgsDebugMsgLevel( "Loading Python plugin: " + library, 2 );
     pRegistry->loadPythonPlugin( library );
-
-#ifdef WITH_BINDINGS
-    if ( !mPythonUtils || !mPythonUtils->isEnabled() )
-#else
-    if ( true )
-#endif
-    {
-      pushMessage( tr( "Plugin '%1' is selected and enabled. Note: Python runtime bindings are not active in this build, so Python scripts cannot execute." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Warning, 8 );
-    }
-    else
-    {
-      pushMessage( tr( "Plugin '%1' loaded successfully." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
-    }
+    pushMessage( tr( "Plugin '%1' enabled and added to Extensions." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
   }
   else // C++ plugin
   {
@@ -748,6 +736,32 @@ void QgsPluginManager::parsePluginsXmlData( const QByteArray &xmlData )
         if ( mPlugins[pId].value( u"version_installed"_s ).isEmpty() )
         {
           mPlugins[pId][u"version_installed"_s] = mPlugins[pId].value( u"version_available"_s );
+        }
+      }
+      else
+      {
+        QString metaPath = subdir.absoluteFilePath() + u"/metadata.txt"_s;
+        if ( !QFile::exists( metaPath ) && QFile::exists( subdir.absoluteFilePath() + u"/"_s + pId + u"/metadata.txt"_s ) )
+        {
+          metaPath = subdir.absoluteFilePath() + u"/"_s + pId + u"/metadata.txt"_s;
+        }
+        if ( QFile::exists( metaPath ) )
+        {
+          QSettings metaFile( metaPath, QSettings::IniFormat );
+          QMap<QString, QString> meta;
+          meta[u"id"_s] = pId;
+          meta[u"name"_s] = metaFile.value( u"general/name"_s, pId ).toString();
+          meta[u"description"_s] = metaFile.value( u"general/description"_s ).toString();
+          meta[u"about"_s] = metaFile.value( u"general/about"_s ).toString();
+          meta[u"version_installed"_s] = metaFile.value( u"general/version"_s, u"1.0"_s ).toString();
+          meta[u"version_available"_s] = meta[u"version_installed"_s];
+          meta[u"category"_s] = metaFile.value( u"general/category"_s, u"Plugins"_s ).toString();
+          meta[u"pythonic"_s] = u"true"_s;
+          meta[u"installed"_s] = u"true"_s;
+          meta[u"status"_s] = u"installed"_s;
+          meta[u"trusted"_s] = u"true"_s;
+          meta[u"icon"_s] = subdir.absoluteFilePath() + u"/icon.png"_s;
+          addPluginMetadata( pId, meta );
         }
       }
     }

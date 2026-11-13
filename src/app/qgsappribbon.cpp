@@ -2638,6 +2638,33 @@ void QgsAppRibbon::syncMenuBar()
       extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString(), QString() } );
   }
 
+  if ( mApp->pluginMenu() )
+  {
+    const QList<QAction *> pluginActions = mApp->pluginMenu()->actions();
+    for ( QAction *action : pluginActions )
+    {
+      if ( !action )
+        continue;
+      QMenu *menu = action->menu();
+      if ( menu && !isStandardMenu( menu ) )
+      {
+        bool alreadyIncluded = false;
+        for ( const auto &entry : std::as_const( extensionEntries ) )
+        {
+          if ( entry.action == action || ( entry.action && entry.action->text() == action->text() ) )
+          {
+            alreadyIncluded = true;
+            break;
+          }
+        }
+        if ( !alreadyIncluded )
+        {
+          extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString(), QString() } );
+        }
+      }
+    }
+  }
+
   if ( mExtensionMenus )
     mExtensionMenus->setEntries( extensionEntries );
 }
