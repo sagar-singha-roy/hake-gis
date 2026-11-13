@@ -26,6 +26,32 @@ import typing as _typing
 from qgis.PyQt.QtCore import NULL
 from qgis.PyQt.QtCore import Qt as _Qt
 from qgis.PyQt.QtCore import QMetaType as _QMetaType
+
+# Provide graceful fallback for optional PyQt6 modules imported by SIP bindings
+try:
+    import PyQt6.QtMultimedia as _QtMultimedia
+except ImportError:
+    import types as _types, sys as _sys
+    try:
+        import PyQt6 as _PyQt6
+        _fake_mm = _types.ModuleType('PyQt6.QtMultimedia')
+        _sys.modules['PyQt6.QtMultimedia'] = _fake_mm
+        setattr(_PyQt6, 'QtMultimedia', _fake_mm)
+    except Exception:
+        pass
+
+try:
+    import PyQt6.QtPositioning as _QtPositioning
+except ImportError:
+    import types as _types, sys as _sys
+    try:
+        import PyQt6 as _PyQt6
+        _fake_pos = _types.ModuleType('PyQt6.QtPositioning')
+        _sys.modules['PyQt6.QtPositioning'] = _fake_pos
+        setattr(_PyQt6, 'QtPositioning', _fake_pos)
+    except Exception:
+        pass
+
 from qgis._core import *
 
 @MONKEYPATCH_INJECTIONS@

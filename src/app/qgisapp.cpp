@@ -13280,24 +13280,27 @@ void QgisApp::loadPythonSupport()
 #endif
     mPythonUtils->initPython( mQgisInterface, true, QgsCrashHandler::sPythonCrashLogFile );
 
-    // do not permit calls to initQgis, exitQgis from Python when running within the QGIS application -- this will crash!
-    mPythonUtils->runString(
-      QStringLiteral(
-        "from qgis.core import QgsApplication as _QgsApplication\n"
-        "\n"
-        "def _qgis_app_init_qgis():\n"
-        "  raise RuntimeError('QgsApplication.initQgis() must never be called from within the Hake Geospatial application. This method is exclusively for standalone scripts.')\n"
-        "\n"
-        "_QgsApplication.initQgis = _qgis_app_init_qgis\n"
-        "\n"
-        "def _qgis_app_exit_qgis():\n"
-        "  raise RuntimeError('QgsApplication.exitQgis() must never be called from within the Hake Geospatial application. This method is exclusively for standalone scripts.')\n"
-        "\n"
-        "_QgsApplication.exitQgis = _qgis_app_exit_qgis\n"
-      ),
-      QString(),
-      false
-    );
+    if ( mPythonUtils->isEnabled() )
+    {
+      // do not permit calls to initQgis, exitQgis from Python when running within the QGIS application -- this will crash!
+      mPythonUtils->runString(
+        QStringLiteral(
+          "from qgis.core import QgsApplication as _QgsApplication\n"
+          "\n"
+          "def _qgis_app_init_qgis():\n"
+          "  raise RuntimeError('QgsApplication.initQgis() must never be called from within the Hake Geospatial application. This method is exclusively for standalone scripts.')\n"
+          "\n"
+          "_QgsApplication.initQgis = _qgis_app_init_qgis\n"
+          "\n"
+          "def _qgis_app_exit_qgis():\n"
+          "  raise RuntimeError('QgsApplication.exitQgis() must never be called from within the Hake Geospatial application. This method is exclusively for standalone scripts.')\n"
+          "\n"
+          "_QgsApplication.exitQgis = _qgis_app_exit_qgis\n"
+        ),
+        QString(),
+        false
+      );
+    }
   }
 
   if ( mPythonUtils && mPythonUtils->isEnabled() )
