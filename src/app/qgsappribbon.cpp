@@ -1491,9 +1491,6 @@ QgsAppRibbon::QgsAppRibbon( QWidget *parent, QgisApp *app )
     addNamedAction( navigation, u"mActionZoomOut"_s );
     addNamedAction( navigation, u"mActionZoomFullExtent"_s );
 
-    QgsAppRibbonGroup *services = addGroup( page, tr( "Services" ) );
-    addMenu( services, mApp->databaseMenu(), tr( "Database" ) );
-
     // Plugins (e.g. DB Manager, MetaSearch) populate these toolbars at runtime.
     QgsAppRibbonGroup *dbGroup = addGroup( page, tr( "Database" ) );
     addNamedAction( dbGroup, u"mActionShowDbManager"_s, true );
