@@ -32,6 +32,7 @@ QgsAppPluginManagerInterface::QgsAppPluginManagerInterface( QgsPluginManager *pl
 void QgsAppPluginManagerInterface::showPluginManager( int tabIndex, const QString &searchTerm )
 {
   mPluginManager->getCppPluginsMetadata();
+  mPluginManager->getRepositoryPluginsMetadata();
   mPluginManager->reloadModelData();
 
   //! switch to tab, if specified ( -1 means not specified )

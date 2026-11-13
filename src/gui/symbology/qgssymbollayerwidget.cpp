@@ -627,11 +627,8 @@ void QgsSimpleLineSymbolLayerWidget::updatePatternIcon()
 
   QSize currentIconSize;
   //icon size is button size with a small margin
-#ifdef Q_OS_WIN
-  currentIconSize = QSize( mChangePatternButton->width() - 10, mChangePatternButton->height() - 6 );
-#else
-  currentIconSize = QSize( mChangePatternButton->width() - 10, mChangePatternButton->height() - 12 );
-#endif
+  // consistent icon padding across all platforms
+  currentIconSize = QSize( mChangePatternButton->width() - 10, mChangePatternButton->height() - 8 );
 
   if ( !currentIconSize.isValid() || currentIconSize.width() <= 0 || currentIconSize.height() <= 0 )
   {

@@ -240,6 +240,35 @@ _ssr = StartupScriptRunner()
     return false;
   }
 
+  // Ensure optional PyQt6 modules imported by SIP (e.g. QtMultimedia, QtPositioning)
+  // have safe stubs if the system did not install python3-pyqt6.qtmultimedia
+  runString(
+    QStringLiteral(
+      "try:\n"
+      "    import PyQt6.QtMultimedia\n"
+      "except ImportError:\n"
+      "    import sys, types\n"
+      "    try:\n"
+      "        import PyQt6\n"
+      "        _fake_mm = types.ModuleType('PyQt6.QtMultimedia')\n"
+      "        sys.modules['PyQt6.QtMultimedia'] = _fake_mm\n"
+      "        setattr(PyQt6, 'QtMultimedia', _fake_mm)\n"
+      "    except Exception:\n"
+      "        pass\n"
+      "try:\n"
+      "    import PyQt6.QtPositioning\n"
+      "except ImportError:\n"
+      "    import sys, types\n"
+      "    try:\n"
+      "        import PyQt6\n"
+      "        _fake_pos = types.ModuleType('PyQt6.QtPositioning')\n"
+      "        sys.modules['PyQt6.QtPositioning'] = _fake_pos\n"
+      "        setattr(PyQt6, 'QtPositioning', _fake_pos)\n"
+      "    except Exception:\n"
+      "        pass\n"
+    )
+  );
+
   // import QGIS bindings
   QString error_msg = QObject::tr( "Couldn't load PyHake Geospatial." ) + '\n' + QObject::tr( "Python support will be disabled." );
   if (
@@ -487,6 +516,11 @@ void QgsPythonUtilsImpl::uninstallErrorHook()
 
 QString QgsPythonUtilsImpl::runStringUnsafe( const QString &command, bool single )
 {
+  if ( !mMainDict )
+  {
+    return QStringLiteral( "Python interpreter is not initialized (mMainDict is null)" );
+  }
+
   // acquire global interpreter lock to ensure we are in a consistent state
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
@@ -887,6 +921,12 @@ QString QgsPythonUtilsImpl::PyObjectToQString( PyObject *obj )
 
 bool QgsPythonUtilsImpl::evalString( const QString &command, QString &result )
 {
+  if ( !mMainDict )
+  {
+    result = QString();
+    return false;
+  }
+
   // acquire global interpreter lock to ensure we are in a consistent state
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();

@@ -66,6 +66,7 @@
         <file>flags/tl.svg</file>
         <file>flags/zh-Hans.svg</file>
         <file>flags/zh-Hant.svg</file>
+        <file>flags/zh_TW.svg</file>
         <file>flags/ky.svg</file>
         <file>icons/hake-gis-icon-16x16.png</file>
         <file>icons/hake-gis-icon-60x60.png</file>
@@ -655,6 +656,7 @@
         <file>themes/default/propertyicons/sensor.svg</file>
         <file>themes/default/propertyicons/spacer.svg</file>
         <file>themes/default/propertyicons/relations.svg</file>
+        <file>themes/default/propertyicons/variables.svg</file>
         <file>themes/default/rendererCategorizedSymbol.svg</file>
         <file>themes/default/rendererGraduatedSymbol.svg</file>
         <file>themes/default/rendererNullSymbol.svg</file>

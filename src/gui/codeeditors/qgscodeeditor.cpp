@@ -135,6 +135,20 @@ QgsCodeEditor::QgsCodeEditor( QWidget *parent, const QString &title, bool foldin
     initializeLexer();
   } );
 
+  // Editors that follow the UI theme's qscintilla.ini pick up live theme switches;
+  // an explicit color scheme, custom colors or a custom appearance are left alone.
+  if ( QgsApplication *app = QgsApplication::instance() )
+  {
+    connect( app, &QgsApplication::themeChanged, this, [this] {
+      if ( !mUseDefaultSettings )
+        return;
+      const QgsSettings settings;
+      if ( settings.value( u"codeEditor/overrideColors"_s, false, QgsSettings::Gui ).toBool() || !settings.value( u"codeEditor/colorScheme"_s, QString(), QgsSettings::Gui ).toString().isEmpty() )
+        return;
+      initializeLexer();
+    } );
+  }
+
   switch ( mMode )
   {
     case QgsCodeEditor::Mode::ScriptEditor:
@@ -443,23 +457,13 @@ QFont QgsCodeEditor::lexerFont() const
   if ( !mFontFamily.isEmpty() )
     QgsFontUtils::setFontFamily( font, mFontFamily );
 
-#ifdef Q_OS_MAC
-  if ( mFontSize > 0 )
-    font.setPointSize( mFontSize );
-  else
-  {
-    // The font size gotten from getMonospaceFont() is too small on Mac
-    font.setPointSize( QLabel().font().pointSize() );
-  }
-#else
   if ( mFontSize > 0 )
     font.setPointSize( mFontSize );
   else
   {
     const int fontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
-    font.setPointSize( fontSize );
+    font.setPointSize( fontSize > 0 ? fontSize : 10 );
   }
-#endif
   font.setBold( false );
 
   return font;
@@ -1240,24 +1244,14 @@ QFont QgsCodeEditor::getMonospaceFont()
 
   const int fontSize = settingFontSize->value();
 
-#ifdef Q_OS_MAC
-  if ( fontSize > 0 )
-    font.setPointSize( fontSize );
-  else
-  {
-    // The font size gotten from getMonospaceFont() is too small on Mac
-    font.setPointSize( QLabel().font().pointSize() );
-  }
-#else
   if ( fontSize > 0 )
     font.setPointSize( fontSize );
   else
   {
     const QgsSettings settings;
-    const int fontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
-    font.setPointSize( fontSize );
+    const int defaultFontSize = settings.value( u"qgis/stylesheet/fontPointSize"_s, 10 ).toInt();
+    font.setPointSize( defaultFontSize > 0 ? defaultFontSize : 10 );
   }
-#endif
   font.setBold( false );
 
   return font;

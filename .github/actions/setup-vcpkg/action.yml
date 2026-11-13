@@ -11,12 +11,16 @@ description: Initialize vcpkg tool, does not checkout the registry
 runs:
   using: composite
   steps:
+    # The vcpkg tool version is part of every package ABI hash; bumping it
+    # invalidates the whole NuGet binary cache. Keep both steps on the same version.
     - name: Setup vcpkg
       if: runner.os != 'Windows'
       shell: bash
+      env:
+        VCPKG_TOOL_VERSION: '2026-07-27'
       run: |
         export VCPKG_ROOT=$HOME/.vcpkg
-        wget https://aka.ms/vcpkg-init.sh -O /tmp/vcpkg-init.sh
+        wget https://github.com/microsoft/vcpkg-tool/releases/download/${VCPKG_TOOL_VERSION}/vcpkg-init -O /tmp/vcpkg-init.sh
         . /tmp/vcpkg-init.sh
         echo "VCPKG_ROOT=$VCPKG_ROOT" >> $GITHUB_ENV
         echo "$VCPKG_ROOT" >> $GITHUB_PATH
@@ -24,8 +28,10 @@ runs:
     - name: Setup vcpkg
       if: runner.os == 'Windows'
       shell: powershell
+      env:
+        VCPKG_TOOL_VERSION: '2026-07-27'
       run: |
         $env:VCPKG_ROOT = "C:/.vcpkg"
-        iex (iwr -useb https://aka.ms/vcpkg-init.ps1)
+        iex (iwr -useb "https://github.com/microsoft/vcpkg-tool/releases/download/$env:VCPKG_TOOL_VERSION/vcpkg-init.ps1")
         echo "VCPKG_ROOT=$env:VCPKG_ROOT" >> $env:GITHUB_ENV
         echo "$env:VCPKG_ROOT" >> $env:GITHUB_PATH

@@ -96,6 +96,15 @@ class QgsPluginManager : public QgsOptionsDialogBase, private Ui::QgsPluginManag
     //! Gets metadata of C++ plugins
     void getCppPluginsMetadata();
 
+    //! Gets metadata of repository plugins
+    void getRepositoryPluginsMetadata();
+
+    //! Parse plugins XML document into metadata registry
+    void parsePluginsXmlData( const QByteArray &xmlData );
+
+    //! Download and install plugin directly from repository URL
+    void downloadAndInstallPlugin( const QString &pluginId, const QString &downloadUrl );
+
     //! Create new spacer item for sorting by status in the plugin list view
     QStandardItem *createSpacerItem( const QString &text, const QString &value );
 
@@ -223,11 +232,11 @@ class QgsPluginManager : public QgsOptionsDialogBase, private Ui::QgsPluginManag
     //! Load translated descriptions. Source strings implemented in external qgspluginmanager_texts.cpp
     void initTabDescriptions();
 
-    //! Drop in-flight plugin-list icon requests before the model is rebuilt
+    //! Drop in-flight plugin icon requests before the dialog is closed or reset
     void abortPluginIconFetches();
 
-    //! Replace the generic list pixmap when an http(s) icon returns image bytes
-    void fetchPluginListIcon( QStandardItem *item, const QString &iconUrl );
+    //! Fetch remote http(s) icon safely for selected plugin details
+    void fetchPluginDetailIcon( const QString &pluginId, const QString &iconUrl );
 
     //! Returns true if given plugin is enabled in QgsSettings
     bool isPluginEnabled( const QString &key );
@@ -274,7 +283,8 @@ class QgsPluginManager : public QgsOptionsDialogBase, private Ui::QgsPluginManag
 
     QNetworkAccessManager *mIconLoader = nullptr;
 
-    QHash<QNetworkReply *, QStandardItem *> mIconReplies;
+    QHash<QString, QPixmap> mPluginIconCache;
+    QHash<QNetworkReply *, QString> mIconReplyPluginIds;
 };
 
 #endif

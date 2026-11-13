@@ -65,13 +65,7 @@ QgsColorRampButton::~QgsColorRampButton() = default;
 
 QSize QgsColorRampButton::sizeHint() const
 {
-  //make sure height of button looks good under different platforms
-#ifdef Q_OS_WIN
-  return QSize( 120, static_cast<int>( std::max( Qgis::UI_SCALE_FACTOR * fontMetrics().height(), 22.0 ) ) );
-#else
-  // Adjust height for HiDPI screens
-  return QSize( 120, static_cast<int>( std::max( Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.4, 28.0 ) ) );
-#endif
+  return QSize( 120, static_cast<int>( std::max( Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.25, 26.0 ) ) );
 }
 
 void QgsColorRampButton::showColorRampDialog()
@@ -524,23 +518,15 @@ void QgsColorRampButton::setButtonBackground( QgsColorRamp *colorramp )
       QStyleOptionToolButton opt;
       initStyleOption( &opt );
       const QRect buttonSize = QApplication::style()->subControlRect( QStyle::CC_ToolButton, &opt, QStyle::SC_ToolButton, this );
-      //make sure height of icon looks good under different platforms
-#ifdef Q_OS_WIN
-      mIconSize = QSize( buttonSize.width() - 10, height() - 6 );
-#else
-      mIconSize = QSize( buttonSize.width() - 10, height() - 12 );
-#endif
+      // consistent icon padding across all platforms
+      mIconSize = QSize( buttonSize.width() - 10, height() - 8 );
     }
     currentIconSize = mIconSize;
   }
   else
   {
     //no menu
-#ifdef Q_OS_WIN
-    currentIconSize = QSize( width() - 10, height() - 6 );
-#else
-    currentIconSize = QSize( width() - 10, height() - 12 );
-#endif
+    currentIconSize = QSize( width() - 10, height() - 8 );
   }
 
   if ( !currentIconSize.isValid() || currentIconSize.width() <= 0 || currentIconSize.height() <= 0 )

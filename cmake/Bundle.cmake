@@ -55,6 +55,8 @@ if(CREATE_DEB)
   set(CPACK_DEBIAN_PACKAGE_NAME "hake-geodesk")
   set(CPACK_DEBIAN_FILE_NAME "${HAKE_INSTALLER_FILE_NAME}.deb")
   set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+  # Declare Python runtime and plugin dependencies so apt automatically installs them
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "python3, python3-pyqt6, python3-pyqt6.sip, pyqt6-dev-tools, python3-packaging, python3-pyqt6.qsci, python3-pyqt6.qtsvg, python3-pyqt6.qtpositioning, python3-pyqt6.qtserialport, python3-requests, python3-yaml, python3-jinja2, python3-pyproj, python3-psycopg2, libsqlite3-mod-spatialite")
 endif()
 
 

@@ -22,6 +22,19 @@ __date__ = 'May 2014'
 __copyright__ = '(C) 2014, Nathan Woodrow'
 
 from qgis.PyQt import QtCore
+
+try:
+    import PyQt6.QtMultimedia as _QtMultimedia
+except ImportError:
+    import types as _types, sys as _sys
+    try:
+        import PyQt6 as _PyQt6
+        _fake_mm = _types.ModuleType('PyQt6.QtMultimedia')
+        _sys.modules['PyQt6.QtMultimedia'] = _fake_mm
+        setattr(_PyQt6, 'QtMultimedia', _fake_mm)
+    except Exception:
+        pass
+
 from qgis._gui import *
 from qgis.core import Qgis as _Qgis
 from .additions.qgssettingsenumflageditorwrapper import PyQgsSettingsEnumEditorWidgetWrapper

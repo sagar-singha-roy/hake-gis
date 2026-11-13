@@ -33,6 +33,7 @@
 #include "qgspythonrunner.h"
 #include "qgssettings.h"
 #include "qgsvariantutils.h"
+#include "qgsziputils.h"
 
 #include <QActionGroup>
 #include <QApplication>
@@ -40,6 +41,7 @@
 #include <QByteArray>
 #include <QCheckBox>
 #include <QDesktopServices>
+#include <QDomDocument>
 #include <QFileDialog>
 #include <QLibrary>
 #include <QLineEdit>
@@ -280,6 +282,7 @@ void QgsPluginManager::loadPlugin( const QString &id )
     return;
   }
 
+  savePluginState( id, true );
   QApplication::setOverrideCursor( Qt::WaitCursor );
 
   QgsPluginRegistry *pRegistry = QgsPluginRegistry::instance();
@@ -289,11 +292,13 @@ void QgsPluginManager::loadPlugin( const QString &id )
     library = plugin->value( u"id"_s );
     QgsDebugMsgLevel( "Loading Python plugin: " + library, 2 );
     pRegistry->loadPythonPlugin( library );
+    pushMessage( tr( "Plugin '%1' enabled and added to Extensions." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
   }
   else // C++ plugin
   {
     QgsDebugMsgLevel( "Loading C++ plugin: " + library, 2 );
     pRegistry->loadCppPlugin( library );
+    pushMessage( tr( "Plugin '%1' activated successfully." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
   }
 
   QgsDebugMsgLevel( "Plugin loaded: " + library, 2 );
@@ -310,6 +315,8 @@ void QgsPluginManager::unloadPlugin( const QString &id )
     return;
   }
 
+  savePluginState( id, false );
+
   QgsPluginRegistry *pRegistry = QgsPluginRegistry::instance();
   QString library = plugin->value( u"library"_s );
 
@@ -324,6 +331,8 @@ void QgsPluginManager::unloadPlugin( const QString &id )
     QgsDebugMsgLevel( "Unloading C++ plugin: " + library, 2 );
     pRegistry->unloadCppPlugin( library );
   }
+
+  pushMessage( tr( "Plugin '%1' disabled." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Info, 3 );
 }
 
 
@@ -541,6 +550,307 @@ void QgsPluginManager::getCppPluginsMetadata()
 }
 
 
+void QgsPluginManager::getRepositoryPluginsMetadata()
+{
+  // 1. Load cached repository XML first for instant display of all 1,428 plugins
+  const QStringList candidatePaths = {
+    QgsApplication::qgisSettingsDirPath() + "plugins_cache.xml",
+    QgsApplication::pkgDataPath() + "/resources/plugins.xml",
+    QDir( QgsApplication::buildOutputPath() ).filePath( "data/resources/plugins.xml" ),
+    QDir( QgsApplication::buildOutputPath() ).filePath( "../../resources/plugins.xml" ),
+    u"/Users/piyakshi/Desktop/Hake Gis/hake-gis/resources/plugins.xml"_s
+  };
+
+  for ( const QString &path : candidatePaths )
+  {
+    QFile f( path );
+    if ( f.exists() && f.open( QIODevice::ReadOnly ) )
+    {
+      const QByteArray data = f.readAll();
+      f.close();
+      if ( !data.isEmpty() )
+      {
+        parsePluginsXmlData( data );
+        break;
+      }
+    }
+  }
+
+  // 2. Fetch latest plugins.xml asynchronously from https://plugins.haketech.com/plugins.xml
+  if ( mIconLoader )
+  {
+    const QUrl repoUrl( u"https://plugins.haketech.com/plugins.xml"_s );
+    QNetworkRequest req( repoUrl );
+    req.setAttribute( QNetworkRequest::Attribute::RedirectPolicyAttribute, QNetworkRequest::RedirectPolicy::NoLessSafeRedirectPolicy );
+    QNetworkReply *reply = mIconLoader->get( req );
+    QPointer<QgsPluginManager> self = this;
+    connect( reply, &QNetworkReply::finished, this, [self, reply]() {
+      reply->deleteLater();
+      if ( !self )
+        return;
+      if ( reply->error() == QNetworkReply::NoError )
+      {
+        const QByteArray data = reply->readAll();
+        if ( !data.isEmpty() )
+        {
+          QFile cacheFile( QgsApplication::qgisSettingsDirPath() + "plugins_cache.xml" );
+          if ( cacheFile.open( QIODevice::WriteOnly ) )
+          {
+            cacheFile.write( data );
+            cacheFile.close();
+          }
+          self->parsePluginsXmlData( data );
+          if ( self->mModelPlugins && self->mModelPlugins->rowCount() == 0 )
+          {
+            self->reloadModelData();
+          }
+        }
+      }
+    } );
+  }
+
+  buttonInstall->show();
+}
+
+void QgsPluginManager::parsePluginsXmlData( const QByteArray &xmlData )
+{
+  QDomDocument doc;
+  QByteArray cleanXml = xmlData;
+  cleanXml.replace( "& ", "&amp; " );
+  if ( !doc.setContent( cleanXml ) )
+  {
+    return;
+  }
+
+  const QDomNodeList pluginNodes = doc.elementsByTagName( u"pyqgis_plugin"_s );
+  for ( int i = 0; i < pluginNodes.size(); ++i )
+  {
+    const QDomElement el = pluginNodes.at( i ).toElement();
+    const QString name = el.attribute( u"name"_s );
+    const QString version = el.attribute( u"version"_s );
+    QString fileName = el.firstChildElement( u"file_name"_s ).text().trimmed();
+    const QString downloadUrl = el.firstChildElement( u"download_url"_s ).text().trimmed();
+    if ( fileName.isEmpty() && !downloadUrl.isEmpty() )
+    {
+      fileName = QFileInfo( QUrl( downloadUrl ).path() ).fileName();
+    }
+    QString id = fileName.section( '.', 0, 0 );
+    if ( id.isEmpty() )
+    {
+      id = name;
+    }
+
+    // Do not overwrite installed C++ or Python plugins
+    if ( mPlugins.contains( id ) && mPlugins.value( id ).value( u"installed"_s ) == "true"_L1 )
+    {
+      continue;
+    }
+
+    const bool experimental = ( el.firstChildElement( u"experimental"_s ).text().trimmed().compare( u"true"_s, Qt::CaseInsensitive ) == 0 );
+    const bool deprecated = ( el.firstChildElement( u"deprecated"_s ).text().trimmed().compare( u"true"_s, Qt::CaseInsensitive ) == 0 );
+    const bool trusted = ( el.firstChildElement( u"trusted"_s ).text().trimmed().compare( u"true"_s, Qt::CaseInsensitive ) == 0 );
+    QString icon = el.firstChildElement( u"icon"_s ).text().trimmed();
+    if ( !icon.isEmpty() && !icon.startsWith( u"http"_s ) )
+    {
+      icon = u"https://plugins.haketech.com/"_s + icon;
+    }
+
+    QMap<QString, QString> meta;
+    meta[u"id"_s] = id;
+    meta[u"plugin_id"_s] = el.attribute( u"plugin_id"_s );
+    meta[u"name"_s] = name;
+    meta[u"version_available"_s] = version;
+    meta[u"version_available_stable"_s] = ( !experimental ? version : QString() );
+    meta[u"version_available_experimental"_s] = ( experimental ? version : QString() );
+    meta[u"description"_s] = el.firstChildElement( u"description"_s ).text().trimmed();
+    meta[u"about"_s] = el.firstChildElement( u"about"_s ).text().trimmed();
+    meta[u"author_name"_s] = el.firstChildElement( u"author_name"_s ).text().trimmed();
+    meta[u"homepage"_s] = el.firstChildElement( u"homepage"_s ).text().trimmed();
+    meta[u"download_url"_s] = downloadUrl;
+    meta[u"download_url_stable"_s] = ( !experimental ? downloadUrl : QString() );
+    meta[u"download_url_experimental"_s] = ( experimental ? downloadUrl : QString() );
+    meta[u"category"_s] = el.firstChildElement( u"category"_s ).text().trimmed();
+    if ( meta[u"category"_s].isEmpty() )
+    {
+      meta[u"category"_s] = tr( "Plugins" );
+    }
+    meta[u"tags"_s] = el.firstChildElement( u"tags"_s ).text().trimmed();
+    meta[u"changelog"_s] = el.firstChildElement( u"changelog"_s ).text().trimmed();
+    meta[u"author_email"_s] = el.firstChildElement( u"author_email"_s ).text().trimmed();
+    meta[u"tracker"_s] = el.firstChildElement( u"tracker"_s ).text().trimmed();
+    meta[u"code_repository"_s] = el.firstChildElement( u"repository"_s ).text().trimmed();
+    meta[u"downloads"_s] = el.firstChildElement( u"downloads"_s ).text().trimmed();
+    meta[u"average_vote"_s] = el.firstChildElement( u"average_vote"_s ).text().trimmed();
+    meta[u"rating_votes"_s] = el.firstChildElement( u"rating_votes"_s ).text().trimmed();
+    meta[u"create_date"_s] = el.firstChildElement( u"create_date"_s ).text().trimmed();
+    meta[u"update_date"_s] = el.firstChildElement( u"update_date"_s ).text().trimmed();
+    meta[u"create_date_stable"_s] = ( !experimental ? meta[u"create_date"_s] : QString() );
+    meta[u"update_date_stable"_s] = ( !experimental ? meta[u"update_date"_s] : QString() );
+    meta[u"create_date_experimental"_s] = ( experimental ? meta[u"create_date"_s] : QString() );
+    meta[u"update_date_experimental"_s] = ( experimental ? meta[u"update_date"_s] : QString() );
+    meta[u"icon"_s] = icon;
+    meta[u"experimental"_s] = ( experimental ? u"true"_s : u"false"_s );
+    meta[u"deprecated"_s] = ( deprecated ? u"true"_s : u"false"_s );
+    meta[u"trusted"_s] = ( trusted ? u"true"_s : u"false"_s );
+    meta[u"filename"_s] = fileName;
+    const QString localPluginDir = QgsApplication::qgisSettingsDirPath() + "python/plugins/" + id;
+    const bool isInstalledOnDisk = QDir( localPluginDir ).exists();
+    if ( isInstalledOnDisk )
+    {
+      meta[u"installed"_s] = u"true"_s;
+      meta[u"status"_s] = u"installed"_s;
+      meta[u"version_installed"_s] = version;
+    }
+    else
+    {
+      meta[u"installed"_s] = u"false"_s;
+      meta[u"status"_s] = u"not installed"_s;
+      meta[u"version_installed"_s] = QString();
+    }
+    meta[u"available"_s] = u"true"_s;
+    meta[u"status_exp"_s] = ( isInstalledOnDisk ? u"installed"_s : u"not installed"_s );
+    meta[u"error"_s] = QString();
+    meta[u"error_details"_s] = QString();
+    meta[u"zip_repository"_s] = tr( "Hake GeoDesk Plugin Repository" );
+    meta[u"library"_s] = QString();
+    meta[u"readonly"_s] = u"false"_s;
+    meta[u"pythonic"_s] = u"true"_s;
+    meta[u"plugin_dependencies"_s] = el.firstChildElement( u"plugin_dependencies"_s ).text().trimmed();
+
+    addPluginMetadata( id, meta );
+  }
+
+  // Also discover any locally installed plugins
+  const QString userPluginsPath = QgsApplication::qgisSettingsDirPath() + "python/plugins";
+  const QDir userPluginsDir( userPluginsPath );
+  if ( userPluginsDir.exists() )
+  {
+    const QFileInfoList subdirs = userPluginsDir.entryInfoList( QDir::Dirs | QDir::NoDotAndDotDot );
+    for ( const QFileInfo &subdir : subdirs )
+    {
+      const QString pId = subdir.fileName();
+      if ( mPlugins.contains( pId ) )
+      {
+        mPlugins[pId][u"installed"_s] = u"true"_s;
+        mPlugins[pId][u"status"_s] = u"installed"_s;
+        if ( mPlugins[pId].value( u"version_installed"_s ).isEmpty() )
+        {
+          mPlugins[pId][u"version_installed"_s] = mPlugins[pId].value( u"version_available"_s );
+        }
+      }
+      else
+      {
+        QString metaPath = subdir.absoluteFilePath() + u"/metadata.txt"_s;
+        if ( !QFile::exists( metaPath ) && QFile::exists( subdir.absoluteFilePath() + u"/"_s + pId + u"/metadata.txt"_s ) )
+        {
+          metaPath = subdir.absoluteFilePath() + u"/"_s + pId + u"/metadata.txt"_s;
+        }
+        if ( QFile::exists( metaPath ) )
+        {
+          QSettings metaFile( metaPath, QSettings::IniFormat );
+          QMap<QString, QString> meta;
+          meta[u"id"_s] = pId;
+          meta[u"name"_s] = metaFile.value( u"general/name"_s, pId ).toString();
+          meta[u"description"_s] = metaFile.value( u"general/description"_s ).toString();
+          meta[u"about"_s] = metaFile.value( u"general/about"_s ).toString();
+          meta[u"version_installed"_s] = metaFile.value( u"general/version"_s, u"1.0"_s ).toString();
+          meta[u"version_available"_s] = meta[u"version_installed"_s];
+          meta[u"category"_s] = metaFile.value( u"general/category"_s, u"Plugins"_s ).toString();
+          meta[u"pythonic"_s] = u"true"_s;
+          meta[u"installed"_s] = u"true"_s;
+          meta[u"status"_s] = u"installed"_s;
+          meta[u"trusted"_s] = u"true"_s;
+          meta[u"icon"_s] = subdir.absoluteFilePath() + u"/icon.png"_s;
+          addPluginMetadata( pId, meta );
+        }
+      }
+    }
+  }
+}
+
+void QgsPluginManager::downloadAndInstallPlugin( const QString &pluginId, const QString &downloadUrl )
+{
+  if ( downloadUrl.isEmpty() || !mIconLoader )
+  {
+    return;
+  }
+
+  pushMessage( tr( "Downloading plugin %1…" ).arg( pluginId ), Qgis::MessageLevel::Info, 3 );
+  buttonInstall->setEnabled( false );
+
+  const QUrl url( downloadUrl );
+  QNetworkRequest req( url );
+  req.setAttribute( QNetworkRequest::Attribute::RedirectPolicyAttribute, QNetworkRequest::RedirectPolicy::NoLessSafeRedirectPolicy );
+  QNetworkReply *reply = mIconLoader->get( req );
+  connect( reply, &QNetworkReply::finished, this, [this, reply, pluginId]() {
+    reply->deleteLater();
+    buttonInstall->setEnabled( true );
+
+    if ( reply->error() != QNetworkReply::NoError )
+    {
+      pushMessage( tr( "Failed to download %1: %2" ).arg( pluginId, reply->errorString() ), Qgis::MessageLevel::Warning, 8 );
+      return;
+    }
+
+    const QByteArray zipData = reply->readAll();
+    const QString targetDir = QgsApplication::qgisSettingsDirPath() + "python/plugins/" + pluginId;
+    QDir().mkpath( targetDir );
+
+    const QString tempZipPath = targetDir + "/temp_package.zip";
+    QFile tempZip( tempZipPath );
+    if ( !tempZip.open( QIODevice::WriteOnly ) )
+    {
+      pushMessage( tr( "Could not write temporary file for %1" ).arg( pluginId ), Qgis::MessageLevel::Warning, 5 );
+      return;
+    }
+    tempZip.write( zipData );
+    tempZip.close();
+
+    QStringList files;
+    const bool success = QgsZipUtils::unzip( tempZipPath, targetDir, files );
+    QFile::remove( tempZipPath );
+
+    if ( success )
+    {
+      // If the zip contained a nested root directory matching pluginId, flatten it
+      const QString nestedDir = targetDir + "/" + pluginId;
+      if ( QDir( nestedDir ).exists() )
+      {
+        QDir inner( nestedDir );
+        const QFileInfoList innerFiles = inner.entryInfoList( QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot );
+        for ( const QFileInfo &fi : innerFiles )
+        {
+          const QString dest = targetDir + "/" + fi.fileName();
+          if ( fi.isDir() )
+          {
+            QDir().rename( fi.absoluteFilePath(), dest );
+          }
+          else
+          {
+            QFile::remove( dest );
+            QFile::rename( fi.absoluteFilePath(), dest );
+          }
+        }
+        inner.removeRecursively();
+      }
+
+      if ( mPlugins.contains( pluginId ) )
+      {
+        mPlugins[pluginId][u"status"_s] = u"installed"_s;
+        mPlugins[pluginId][u"installed"_s] = u"true"_s;
+        mPlugins[pluginId][u"version_installed"_s] = mPlugins[pluginId].value( u"version_available"_s );
+      }
+      reloadModelData();
+      pushMessage( tr( "Plugin '%1' installed successfully." ).arg( pluginId ), Qgis::MessageLevel::Success, 6 );
+    }
+    else
+    {
+      pushMessage( tr( "Failed to extract package for %1" ).arg( pluginId ), Qgis::MessageLevel::Warning, 5 );
+    }
+  } );
+}
+
+
 QStandardItem *QgsPluginManager::createSpacerItem( const QString &text, const QString &value )
 {
   QStandardItem *mySpacerltem = new QStandardItem( text );
@@ -558,8 +868,8 @@ QStandardItem *QgsPluginManager::createSpacerItem( const QString &text, const QS
 
 void QgsPluginManager::abortPluginIconFetches()
 {
-  const QList<QNetworkReply *> replies = mIconReplies.keys();
-  mIconReplies.clear();
+  const QList<QNetworkReply *> replies = mIconReplyPluginIds.keys();
+  mIconReplyPluginIds.clear();
   for ( QNetworkReply *reply : replies )
   {
     reply->disconnect( this );
@@ -569,21 +879,32 @@ void QgsPluginManager::abortPluginIconFetches()
 }
 
 
-void QgsPluginManager::fetchPluginListIcon( QStandardItem *item, const QString &iconUrl )
+void QgsPluginManager::fetchPluginDetailIcon( const QString &pluginId, const QString &iconUrl )
 {
-  if ( !mIconLoader || !item )
+  if ( !mIconLoader || pluginId.isEmpty() || iconUrl.isEmpty() || mPluginIconCache.contains( pluginId ) )
+    return;
+
+  // Don't duplicate in-flight requests for the same plugin
+  if ( mIconReplyPluginIds.values().contains( pluginId ) )
     return;
 
   QNetworkRequest request{ QUrl( iconUrl ) };
-  request.setTransferTimeout( 15000 );
+  request.setTransferTimeout( 10000 );
   request.setAttribute( QNetworkRequest::Attribute::RedirectPolicyAttribute, QNetworkRequest::RedirectPolicy::NoLessSafeRedirectPolicy );
   QNetworkReply *reply = mIconLoader->get( request );
-  mIconReplies.insert( reply, item );
-  connect( reply, &QNetworkReply::finished, this, [this, reply]()
+  mIconReplyPluginIds.insert( reply, pluginId );
+
+  QPointer<QgsPluginManager> self = this;
+  connect( reply, &QNetworkReply::finished, this, [self, reply]()
   {
-    QStandardItem *iconItem = mIconReplies.take( reply );
+    if ( !self )
+    {
+      reply->deleteLater();
+      return;
+    }
+    const QString pId = self->mIconReplyPluginIds.take( reply );
     reply->deleteLater();
-    if ( !iconItem )
+    if ( pId.isEmpty() )
       return;
 
     const int status = reply->attribute( QNetworkRequest::Attribute::HttpStatusCodeAttribute ).toInt();
@@ -591,15 +912,29 @@ void QgsPluginManager::fetchPluginListIcon( QStandardItem *item, const QString &
     if ( reply->error() != QNetworkReply::NetworkError::NoError || status != 200 || contentType.startsWith( u"text/html"_s, Qt::CaseInsensitive ) )
       return;
 
+    const QByteArray data = reply->readAll();
     QPixmap pixmap;
-    if ( !pixmap.loadFromData( reply->readAll() ) || pixmap.isNull() )
+    if ( !pixmap.loadFromData( data ) || pixmap.isNull() )
       return;
-    iconItem->setData( pixmap, Qt::DecorationRole );
-    // QTextBrowser cannot load remote http(s) images; refresh details once the
-    // real pixmap is available so the detail pane can embed a data URI.
-    if ( iconItem->data( PLUGIN_BASE_NAME_ROLE ).toString() == mCurrentlyDisplayedPlugin )
+
+    self->mPluginIconCache.insert( pId, pixmap );
+
+    // Safely update model item without holding raw pointers
+    if ( self->mModelPlugins )
     {
-      showPluginDetails( iconItem );
+      for ( int r = 0; r < self->mModelPlugins->rowCount(); ++r )
+      {
+        QStandardItem *it = self->mModelPlugins->item( r );
+        if ( it && it->data( PLUGIN_BASE_NAME_ROLE ).toString() == pId )
+        {
+          it->setData( pixmap, Qt::DecorationRole );
+          if ( self->mCurrentlyDisplayedPlugin == pId )
+          {
+            self->showPluginDetails( it );
+          }
+          break;
+        }
+      }
     }
   } );
 }
@@ -652,11 +987,13 @@ void QgsPluginManager::reloadModelData()
       {
         mypDetailItem->setData( QPixmap( iconPath ), Qt::DecorationRole );
       }
+      else if ( mPluginIconCache.contains( baseName ) )
+      {
+        mypDetailItem->setData( mPluginIconCache.value( baseName ), Qt::DecorationRole );
+      }
       else
       {
         mypDetailItem->setData( fallbackIcon, Qt::DecorationRole );
-        if ( iconPath.startsWith( u"http://"_s ) || iconPath.startsWith( u"https://"_s ) )
-          fetchPluginListIcon( mypDetailItem, iconPath );
       }
 
       mypDetailItem->setEditable( false );
@@ -722,22 +1059,18 @@ void QgsPluginManager::pluginItemChanged( QStandardItem *item )
 {
   const QString id = item->data( PLUGIN_BASE_NAME_ROLE ).toString();
 
-  if ( item->checkState() )
+  if ( item->checkState() == Qt::Checked )
   {
-    if ( mPluginsAreEnabled && !isPluginEnabled( id ) )
+    savePluginState( id, true );
+    if ( mPluginsAreEnabled )
     {
       QgsDebugMsgLevel( " Loading plugin: " + id, 2 );
       loadPlugin( id );
     }
-    else
-    {
-      // only enable the plugin, as we're in --noplugins mode
-      QgsDebugMsgLevel( " Enabling plugin: " + id, 2 );
-      savePluginState( id, true );
-    }
   }
-  else if ( !item->checkState() )
+  else if ( item->checkState() == Qt::Unchecked )
   {
+    savePluginState( id, false );
     QgsDebugMsgLevel( " Unloading plugin: " + id, 2 );
     unloadPlugin( id );
   }
@@ -936,9 +1269,26 @@ void QgsPluginManager::showPluginDetails( QStandardItem *item )
   }
   else
   {
+    if ( iconPath.startsWith( u"http://"_s ) || iconPath.startsWith( u"https://"_s ) )
+    {
+      if ( !mPluginIconCache.contains( mCurrentlyDisplayedPlugin ) )
+      {
+        fetchPluginDetailIcon( mCurrentlyDisplayedPlugin, iconPath );
+      }
+    }
+
     // QgsWebView is a QTextBrowser stub and does not fetch remote http(s)
     // images. Embed the list item's DecorationRole pixmap as a data URI instead.
-    const QPixmap decoration = item->data( Qt::DecorationRole ).value<QPixmap>();
+    QPixmap decoration;
+    if ( mPluginIconCache.contains( mCurrentlyDisplayedPlugin ) )
+    {
+      decoration = mPluginIconCache.value( mCurrentlyDisplayedPlugin );
+    }
+    else if ( item )
+    {
+      decoration = item->data( Qt::DecorationRole ).value<QPixmap>();
+    }
+
     if ( !decoration.isNull() )
     {
       QByteArray bytes;
@@ -1561,7 +1911,24 @@ void QgsPluginManager::buttonUpgradeAll_clicked()
 
 void QgsPluginManager::buttonInstall_clicked()
 {
-  QgsPythonRunner::run( u"pyplugin_installer.instance().installPlugin('%1', stable=True)"_s.arg( mCurrentlyDisplayedPlugin ) );
+#ifdef WITH_BINDINGS
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
+  {
+    QgsPythonRunner::run( u"pyplugin_installer.instance().installPlugin('%1', stable=True)"_s.arg( mCurrentlyDisplayedPlugin ) );
+    return;
+  }
+#endif
+
+  const QMap<QString, QString> *meta = pluginMetadata( mCurrentlyDisplayedPlugin );
+  if ( meta )
+  {
+    QString dlUrl = meta->value( u"download_url_stable"_s );
+    if ( dlUrl.isEmpty() )
+    {
+      dlUrl = meta->value( u"download_url"_s );
+    }
+    downloadAndInstallPlugin( mCurrentlyDisplayedPlugin, dlUrl );
+  }
 }
 
 
@@ -1573,7 +1940,32 @@ void QgsPluginManager::buttonInstallExperimental_clicked()
 
 void QgsPluginManager::buttonUninstall_clicked()
 {
-  QgsPythonRunner::run( u"pyplugin_installer.instance().uninstallPlugin('%1')"_s.arg( mCurrentlyDisplayedPlugin ) );
+#ifdef WITH_BINDINGS
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
+  {
+    QgsPythonRunner::run( u"pyplugin_installer.instance().uninstallPlugin('%1')"_s.arg( mCurrentlyDisplayedPlugin ) );
+    return;
+  }
+#endif
+
+  if ( mCurrentlyDisplayedPlugin.isEmpty() )
+    return;
+
+  const QString targetDir = QgsApplication::qgisSettingsDirPath() + "python/plugins/" + mCurrentlyDisplayedPlugin;
+  if ( QDir( targetDir ).exists() )
+  {
+    QDir( targetDir ).removeRecursively();
+  }
+
+  savePluginState( mCurrentlyDisplayedPlugin, false );
+  if ( mPlugins.contains( mCurrentlyDisplayedPlugin ) )
+  {
+    mPlugins[mCurrentlyDisplayedPlugin][u"status"_s] = u"not installed"_s;
+    mPlugins[mCurrentlyDisplayedPlugin][u"installed"_s] = u"false"_s;
+    mPlugins[mCurrentlyDisplayedPlugin][u"version_installed"_s] = QString();
+  }
+  reloadModelData();
+  pushMessage( tr( "Plugin '%1' uninstalled successfully." ).arg( mCurrentlyDisplayedPlugin ), Qgis::MessageLevel::Success, 5 );
 }
 
 

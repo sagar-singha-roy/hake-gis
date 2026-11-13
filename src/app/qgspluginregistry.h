@@ -23,6 +23,9 @@
 #include "qgspluginmetadata.h"
 
 #include <QMap>
+#include <QPointer>
+#include <QAction>
+#include <QMenu>
 
 class QgsPythonUtils;
 class QgisPlugin;
@@ -96,6 +99,24 @@ class APP_EXPORT QgsPluginRegistry
     //! Returns metadata of all loaded plugins
     QList<QgsPluginMetadata *> pluginData();
 
+    struct NativePluginItem
+    {
+      QString packageName;
+      QString name;
+      QString description;
+      QString category;
+      QString iconPath;
+      QString pluginDir;
+      QPointer<QAction> toolBarAction;
+      QPointer<QMenu> menu;
+    };
+
+    //! Restore all enabled Python plugins from user profile and data directories
+    void restorePythonPlugins();
+
+    //! Launches or applies the Python plugin
+    void executePythonPlugin( const QString &packageName, const QString &name, const QString &pluginDir );
+
   protected:
     //! protected constructor
     QgsPluginRegistry() = default;
@@ -114,6 +135,8 @@ class APP_EXPORT QgsPluginRegistry
   private:
     static QgsPluginRegistry *sInstance;
     QMap<QString, QgsPluginMetadata> mPlugins;
+    QMap<QString, NativePluginItem> mNativePythonPlugins;
+    bool mPythonPluginsRestored = false;
     QgsPythonUtils *mPythonUtils = nullptr;
     QgisInterface *mQgisInterface = nullptr;
 };

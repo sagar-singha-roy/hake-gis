@@ -1,63 +1,60 @@
 # Creates version files
-#  qgsversion.h that defines QGSVERSION
+#  qgsversion.h that defines QGSVERSION (short code revision) and
+#    HAKE_GIT_REVISION / HAKE_GIT_REVISION_SHORT / HAKE_GIT_COMMIT_URL
 #  qgsversion.inc for doxygen
+#
+# The code revision is the Git commit the build was produced from. CI passes it
+# explicitly with -DHAKE_GIT_REVISION=<full sha>; otherwise the source tree's
+# HEAD is used, see cmake/HakeWriteQgsVersion.cmake.
 
-MACRO(CREATE_QGSVERSION)
-  IF (${ENABLE_LOCAL_BUILD_SHORTCUTS})
-    FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.h.out "#define QGSVERSION \"dev\"\n")
-    FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.inc "PROJECT_NUMBER = \"${COMPLETE_VERSION}-${RELEASE_NAME} (dev)\"\n")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/qgsversion.h.out ${CMAKE_BINARY_DIR}/qgsversion.h)
-  ELSE (${ENABLE_LOCAL_BUILD_SHORTCUTS})
-    IF (EXISTS ${CMAKE_SOURCE_DIR}/.git/index)
-      FIND_PROGRAM(GITCOMMAND git PATHS c:/cygwin/bin)
-      IF(GITCOMMAND)
-        IF(WIN32 AND NOT CMAKE_CROSS_COMPILING)
-          IF(USING_NINJA)
-           SET(ARG %a)
-          ELSE(USING_NINJA)
-           SET(ARG %%a)
-          ENDIF(USING_NINJA)
-          ADD_CUSTOM_COMMAND(
-            OUTPUT ${CMAKE_BINARY_DIR}/qgsversion.h ${CMAKE_BINARY_DIR}/qgsversion.inc
-            COMMAND for /f \"usebackq tokens=1\" ${ARG} in "(`\"${GITCOMMAND}\" log -n1 --oneline`)" do echo \#define QGSVERSION \"${ARG}\" >${CMAKE_BINARY_DIR}/qgsversion.h.temp
-            COMMAND for /f \"usebackq tokens=1\" ${ARG} in "(`\"${GITCOMMAND}\" log -n1 --oneline`)" do echo PROJECT_NUMBER = \"${COMPLETE_VERSION}-${RELEASE_NAME} \(${ARG}\)\" >${CMAKE_BINARY_DIR}/qgsversion.inc
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/qgsversion.h.temp ${CMAKE_BINARY_DIR}/qgsversion.h
-            MAIN_DEPENDENCY ${CMAKE_SOURCE_DIR}/.git/index
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-          )
-        ELSE(WIN32 AND NOT CMAKE_CROSS_COMPILING)
-          STRING(REPLACE "'" "%x27" _rn ${RELEASE_NAME})
-          ADD_CUSTOM_COMMAND(
-            OUTPUT ${CMAKE_BINARY_DIR}/qgsversion.h ${CMAKE_BINARY_DIR}/qgsversion.inc
-            COMMAND ${GITCOMMAND} log -n1 --pretty=\#define\\ QGSVERSION\\ \\"%h\\" >${CMAKE_BINARY_DIR}/qgsversion.h.temp
-            COMMAND ${GITCOMMAND} log -n1 --pretty='PROJECT_NUMBER = \"${COMPLETE_VERSION}-${_rn} \(%h\)\"' >${CMAKE_BINARY_DIR}/qgsversion.inc
-            COMMAND ${GITCOMMAND} config remote.$$\(${GITCOMMAND} config branch.$$\(${GITCOMMAND} name-rev --name-only HEAD\).remote\).url | sed -e 's/^/\#define QGS_GIT_REMOTE_URL \"/' -e 's/$$/\"/' >>${CMAKE_BINARY_DIR}/qgsversion.h.temp
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/qgsversion.h.temp ${CMAKE_BINARY_DIR}/qgsversion.h
-            MAIN_DEPENDENCY ${CMAKE_SOURCE_DIR}/.git/index
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-          )
-        ENDIF(WIN32 AND NOT CMAKE_CROSS_COMPILING)
-      ELSE(GITCOMMAND)
-        MESSAGE(STATUS "git marker, but no git found - version will be unknown")
-        IF(NOT SHA)
-          SET(SHA "unknown")
-        ENDIF(NOT SHA)
-        FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.h.out "#define QGSVERSION \"${SHA}\"\n")
-        FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.inc "PROJECT_NUMBER = \"${COMPLETE_VERSION}-${RELEASE_NAME} (${SHA})\"\n")
-        execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/qgsversion.h.out ${CMAKE_BINARY_DIR}/qgsversion.h)
-      ENDIF(GITCOMMAND)
-    ELSE (EXISTS ${CMAKE_SOURCE_DIR}/.git/index)
-      IF(NOT SHA)
-        SET(SHA "exported")
-      ENDIF(NOT SHA)
-      FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.h.out "#define QGSVERSION \"${SHA}\"\n")
-      FILE(WRITE ${CMAKE_BINARY_DIR}/qgsversion.inc "PROJECT_NUMBER = \"${COMPLETE_VERSION}-${RELEASE_NAME} (${SHA})\"\n")
-      execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/qgsversion.h.out ${CMAKE_BINARY_DIR}/qgsversion.h)
-    ENDIF (EXISTS ${CMAKE_SOURCE_DIR}/.git/index)
-  ENDIF (${ENABLE_LOCAL_BUILD_SHORTCUTS})
+function(CREATE_QGSVERSION)
+  # Consume the explicit revision and drop it from the cache so a later
+  # reconfigure without -DHAKE_GIT_REVISION cannot reuse a stale commit.
+  string(STRIP "${HAKE_GIT_REVISION}" _explicit)
+  string(TOLOWER "${_explicit}" _explicit)
+  unset(HAKE_GIT_REVISION CACHE)
+  if(_explicit)
+    string(LENGTH "${_explicit}" _len)
+    if(NOT _explicit MATCHES "^[0-9a-f]+$" OR NOT (_len EQUAL 40 OR _len EQUAL 64))
+      message(FATAL_ERROR "HAKE_GIT_REVISION must be a full hexadecimal Git commit SHA, got '${_explicit}'")
+    endif()
+  endif()
 
-  ADD_CUSTOM_TARGET(version ALL DEPENDS ${CMAKE_BINARY_DIR}/qgsversion.h)
-ENDMACRO(CREATE_QGSVERSION)
+  find_package(Git QUIET)
+  string(REGEX REPLACE "/+$" "" _repo_url "${HAKE_GIT_REPOSITORY_URL}")
+
+  set(_params "${CMAKE_BINARY_DIR}/hake_version_params.cmake")
+  file(WRITE "${_params}"
+    "set(HAKE_EXPLICIT_REVISION [==[${_explicit}]==])\n"
+    "set(HAKE_LOCAL_BUILD_SHORTCUTS [==[${ENABLE_LOCAL_BUILD_SHORTCUTS}]==])\n"
+    "set(HAKE_GIT_EXECUTABLE [==[${GIT_EXECUTABLE}]==])\n"
+    "set(HAKE_SOURCE_DIR [==[${CMAKE_SOURCE_DIR}]==])\n"
+    "set(HAKE_BINARY_DIR [==[${CMAKE_BINARY_DIR}]==])\n"
+    "set(HAKE_FALLBACK_SHA [==[${SHA}]==])\n"
+    "set(HAKE_REPOSITORY_URL [==[${_repo_url}]==])\n"
+    "set(HAKE_COMPLETE_VERSION [==[${COMPLETE_VERSION}]==])\n"
+    "set(HAKE_RELEASE_NAME [==[${RELEASE_NAME}]==])\n"
+  )
+
+  set(_script "${CMAKE_SOURCE_DIR}/cmake/HakeWriteQgsVersion.cmake")
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" "-DHAKE_VERSION_PARAMS=${_params}" -P "${_script}"
+    RESULT_VARIABLE _rc
+  )
+  if(NOT _rc EQUAL 0)
+    message(FATAL_ERROR "Failed to generate qgsversion.h")
+  endif()
+  file(STRINGS "${CMAKE_BINARY_DIR}/qgsversion.h" _rev_line REGEX "HAKE_GIT_REVISION ")
+  message(STATUS "Hake Geospatial code revision: ${_rev_line}")
+
+  # Re-evaluated on every build; outputs only change when the revision does.
+  add_custom_target(version ALL
+    COMMAND "${CMAKE_COMMAND}" "-DHAKE_VERSION_PARAMS=${_params}" -P "${_script}"
+    BYPRODUCTS "${CMAKE_BINARY_DIR}/qgsversion.h" "${CMAKE_BINARY_DIR}/qgsversion.inc"
+    COMMENT "Updating Hake Geospatial code revision"
+    VERBATIM
+  )
+endfunction()
 
 # Add the win32 resource for the QGIS icon
 # Only runs for WIN32 when called

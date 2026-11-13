@@ -64,7 +64,12 @@ QgsBrowserWidget::QgsBrowserWidget( QgsBrowserGuiModel *browserModel, QWidget *p
   layout()->setContentsMargins( 0, 0, 0, 0 );
   qgis::down_cast<QVBoxLayout *>( layout() )->setSpacing( 0 );
 
+  mBrowserToolbar->setIconSize( QSize( 22, 22 ) );
+  mBrowserToolbar->setContentsMargins( 2, 0, 14, 0 );
+
   mBrowserView = new QgsDockBrowserTreeView( this );
+  mBrowserView->setIconSize( QSize( 22, 22 ) );
+  mBrowserView->setIndentation( 22 );
   mLayoutBrowser->addWidget( mBrowserView );
 
   mWidgetFilter->hide();
@@ -102,7 +107,8 @@ QgsBrowserWidget::QgsBrowserWidget( QgsBrowserGuiModel *browserModel, QWidget *p
 
   connect( mActionRefresh, &QAction::triggered, this, &QgsBrowserWidget::refresh );
   connect( mActionAddLayers, &QAction::triggered, this, &QgsBrowserWidget::addSelectedLayers );
-  connect( mActionCollapse, &QAction::triggered, mBrowserView, &QgsDockBrowserTreeView::collapseAll );
+  connect( mActionExpandAll, &QAction::triggered, this, &QgsBrowserWidget::expandAll );
+  connect( mActionCollapse, &QAction::triggered, this, &QgsBrowserWidget::collapseAll );
   connect( mActionShowFilter, &QAction::triggered, this, &QgsBrowserWidget::showFilterWidget );
   connect( mActionPropertiesWidget, &QAction::triggered, this, &QgsBrowserWidget::propertiesWidgetToggled );
   connect( mLeFilter, &QgsFilterLineEdit::returnPressed, this, &QgsBrowserWidget::setFilter );
@@ -297,6 +303,38 @@ void QgsBrowserWidget::setDisabledDataItemsKeys( const QStringList &filter )
 void QgsBrowserWidget::refresh()
 {
   refreshModel( QModelIndex() );
+}
+
+void QgsBrowserWidget::expandAll()
+{
+  if ( !mBrowserView )
+    return;
+
+  const QModelIndex current = mBrowserView->currentIndex();
+  if ( current.isValid() )
+  {
+    mBrowserView->expandRecursively( current );
+  }
+  else
+  {
+    mBrowserView->expandAll();
+  }
+}
+
+void QgsBrowserWidget::collapseAll()
+{
+  if ( !mBrowserView )
+    return;
+
+  const QModelIndex current = mBrowserView->currentIndex();
+  if ( current.isValid() && mBrowserView->isExpanded( current ) )
+  {
+    mBrowserView->collapse( current );
+  }
+  else
+  {
+    mBrowserView->collapseAll();
+  }
 }
 
 void QgsBrowserWidget::refreshModel( const QModelIndex &index )
@@ -517,7 +555,24 @@ void QgsBrowserWidget::setPropertiesWidget()
       }
     }
   }
+  if ( mActionPropertiesWidget->isChecked() && mPropertiesLayout->count() == 0 )
+  {
+    QLabel *placeholder = new QLabel( tr( "Select an item in Geo Explorer to view its properties." ), mPropertiesWidget );
+    placeholder->setAlignment( Qt::AlignCenter );
+    placeholder->setWordWrap( true );
+    placeholder->setStyleSheet( u"QLabel { color: #7D90A5; padding: 16px; font-size: 11px; font-style: italic; }"_s );
+    mPropertiesLayout->addWidget( placeholder );
+  }
   mPropertiesWidget->setVisible( mPropertiesLayout->count() > 0 );
+  if ( mPropertiesWidget->isVisible() )
+  {
+    const QList<int> sizes = mSplitter->sizes();
+    if ( sizes.size() == 2 && sizes[1] < 50 )
+    {
+      const int total = sizes[0] + sizes[1];
+      mSplitter->setSizes( { std::max( 100, total * 2 / 3 ), std::max( 80, total / 3 ) } );
+    }
+  }
 }
 
 void QgsBrowserWidget::enablePropertiesWidget( bool enable )
@@ -528,7 +583,7 @@ void QgsBrowserWidget::enablePropertiesWidget( bool enable )
 
 void QgsBrowserWidget::propertiesWidgetToggled( bool enabled )
 {
-  if ( enabled && selectedItemsCount() == 1 )
+  if ( enabled )
   {
     setPropertiesWidget();
   }

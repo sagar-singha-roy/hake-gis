@@ -31,10 +31,17 @@
 #include "qgsruntimeprofiler.h"
 #include "qgssettings.h"
 
+#include <QAction>
 #include <QDir>
 #include <QFileInfo>
+#include <QIcon>
 #include <QLibrary>
+#include <QMainWindow>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
+#include <QProcess>
+#include <QStandardPaths>
 #include <QString>
 
 using namespace Qt::StringLiterals;
@@ -77,6 +84,9 @@ bool QgsPluginRegistry::isLoaded( const QString &key ) const
   if ( it != mPlugins.end() ) // found a c++ plugin?
     return true;
 
+  if ( mNativePythonPlugins.contains( key ) )
+    return true;
+
 #ifdef WITH_BINDINGS
   if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
@@ -92,6 +102,9 @@ QString QgsPluginRegistry::library( const QString &key )
   const QMap<QString, QgsPluginMetadata>::const_iterator it = mPlugins.constFind( key );
   if ( it != mPlugins.constEnd() )
     return it->library();
+
+  if ( mNativePythonPlugins.contains( key ) )
+    return key;
 
 #ifdef WITH_BINDINGS
   if ( mPythonUtils && mPythonUtils->isEnabled() )
@@ -117,6 +130,9 @@ QgisPlugin *QgsPluginRegistry::plugin( const QString &key )
 
 bool QgsPluginRegistry::isPythonPlugin( const QString &key ) const
 {
+  if ( mNativePythonPlugins.contains( key ) )
+    return true;
+
 #ifdef WITH_BINDINGS
   if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
@@ -268,6 +284,13 @@ bool QgsPluginRegistry::checkQgisVersion( const QString &minVersion, const QStri
   const QString maxVer = u"%1%2%3"_s.arg( maxVerMajor, 2, 10, QChar( '0' ) ).arg( maxVerMinor, 2, 10, QChar( '0' ) ).arg( maxVerBugfix, 2, 10, QChar( '0' ) );
   const QString curVer = u"%1%2%3"_s.arg( qgisMajor, 2, 10, QChar( '0' ) ).arg( qgisMinor, 2, 10, QChar( '0' ) ).arg( qgisBugfix, 2, 10, QChar( '0' ) );
 
+  // For Hake GeoDesk (QGIS 4.x runtime), allow modern QGIS 3.x ecosystem plugins (minVerMajor >= 3)
+  // as the community repository metadata capped maxVersion at 3.99.
+  if ( qgisMajor >= 4 && minVerMajor >= 3 )
+  {
+    return minVer <= curVer;
+  }
+
   // compare
   return ( minVer <= curVer && maxVer >= curVer );
 }
@@ -276,42 +299,194 @@ bool QgsPluginRegistry::checkQgisVersion( const QString &minVersion, const QStri
 void QgsPluginRegistry::loadPythonPlugin( const QString &packageName )
 {
 #ifdef WITH_BINDINGS
-  if ( !mPythonUtils || !mPythonUtils->isEnabled() )
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
-    QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    QgsSettings settings;
+
+    // is loaded already?
+    if ( !isLoaded( packageName ) )
+    {
+      // if plugin is not compatible, disable it
+      if ( !isPythonPluginCompatible( packageName ) )
+      {
+        QgsMessageLog::logMessage( QObject::tr( "Plugin \"%1\" is not compatible with this version of Hake Geospatial.\nIt will be disabled." ).arg( packageName ), QObject::tr( "Plugins" ) );
+        settings.setValue( "/PythonPlugins/" + packageName, false );
+        return;
+      }
+
+      const QgsScopedRuntimeProfile profile( packageName );
+      mPythonUtils->loadPlugin( packageName );
+      mPythonUtils->startPlugin( packageName );
+
+      // TODO: test success
+
+      const QString pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
+
+      // add to settings
+      settings.setValue( "/PythonPlugins/" + packageName, true );
+      QgsMessageLog::logMessage( QObject::tr( "Loaded %1 (package: %2)" ).arg( pluginName, packageName ), QObject::tr( "Plugins" ), Qgis::MessageLevel::Info );
+
+      settings.remove( "/PythonPlugins/watchDogTimestamp/" + packageName );
+    }
+    return;
+  }
+#endif
+
+  // Native / Fallback loading for macOS, Linux, and environments without in-process Python bindings
+  if ( mNativePythonPlugins.contains( packageName ) )
+  {
     return;
   }
 
   QgsSettings settings;
+  settings.setValue( u"/PythonPlugins/"_s + packageName, true );
 
-  // is loaded already?
-  if ( !isLoaded( packageName ) )
+  // 1. Locate plugin directory
+  QString pluginDir = QgsApplication::qgisSettingsDirPath() + u"python/plugins/"_s + packageName;
+  if ( !QDir( pluginDir ).exists() )
   {
-    // if plugin is not compatible, disable it
-    if ( !isPythonPluginCompatible( packageName ) )
-    {
-      QgsMessageLog::logMessage( QObject::tr( "Plugin \"%1\" is not compatible with this version of Hake Geospatial.\nIt will be disabled." ).arg( packageName ), QObject::tr( "Plugins" ) );
-      settings.setValue( "/PythonPlugins/" + packageName, false );
-      return;
-    }
-
-    const QgsScopedRuntimeProfile profile( packageName );
-    mPythonUtils->loadPlugin( packageName );
-    mPythonUtils->startPlugin( packageName );
-
-    // TODO: test success
-
-    const QString pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
-
-    // add to settings
-    settings.setValue( "/PythonPlugins/" + packageName, true );
-    QgsMessageLog::logMessage( QObject::tr( "Loaded %1 (package: %2)" ).arg( pluginName, packageName ), QObject::tr( "Plugins" ), Qgis::MessageLevel::Info );
-
-    settings.remove( "/PythonPlugins/watchDogTimestamp/" + packageName );
+    pluginDir = QgsApplication::pkgDataPath() + u"/python/plugins/"_s + packageName;
   }
-#else
-  Q_UNUSED( packageName )
-#endif
+  if ( !QDir( pluginDir ).exists() )
+  {
+    const QStringList searchPaths = settings.value( u"plugins/searchPathsForPlugins"_s ).toStringList();
+    for ( const QString &path : searchPaths )
+    {
+      const QString candidate = path + u"/python/plugins/"_s + packageName;
+      if ( QDir( candidate ).exists() )
+      {
+        pluginDir = candidate;
+        break;
+      }
+    }
+  }
+
+  // Handle nested folder if present (e.g. plugin/plugin/metadata.txt)
+  if ( !QFile::exists( pluginDir + u"/metadata.txt"_s ) && QFile::exists( pluginDir + u"/"_s + packageName + u"/metadata.txt"_s ) )
+  {
+    pluginDir = pluginDir + u"/"_s + packageName;
+  }
+
+  QString name = packageName;
+  QString description;
+  QString category;
+  QString iconPath;
+  QString version;
+
+  QString metadataPath = pluginDir + u"/metadata.txt"_s;
+  if ( QFile::exists( metadataPath ) )
+  {
+    QSettings meta( metadataPath, QSettings::IniFormat );
+    name = meta.value( u"general/name"_s ).toString();
+    if ( name.isEmpty() )
+      name = meta.value( u"name"_s ).toString();
+    description = meta.value( u"general/description"_s ).toString();
+    if ( description.isEmpty() )
+      description = meta.value( u"description"_s ).toString();
+    category = meta.value( u"general/category"_s ).toString();
+    if ( category.isEmpty() )
+      category = meta.value( u"category"_s ).toString();
+    version = meta.value( u"general/version"_s ).toString();
+    const QString metaIcon = meta.value( u"general/icon"_s ).toString();
+    if ( !metaIcon.isEmpty() )
+    {
+      if ( QFile::exists( pluginDir + u"/"_s + metaIcon ) )
+        iconPath = pluginDir + u"/"_s + metaIcon;
+      else if ( QFile::exists( QgsApplication::pkgDataPath() + u"/resources/"_s + metaIcon ) )
+        iconPath = QgsApplication::pkgDataPath() + u"/resources/"_s + metaIcon;
+    }
+  }
+
+  if ( name.isEmpty() )
+    name = packageName;
+
+  // Resolve icon
+  if ( iconPath.isEmpty() || !QFile::exists( iconPath ) )
+  {
+    const QStringList candidates = {
+      pluginDir + u"/icon.png"_s,
+      pluginDir + u"/icon.svg"_s,
+      pluginDir + u"/icons/icon.png"_s,
+      pluginDir + u"/icons/"_s + packageName + u".png"_s,
+      pluginDir + u"/icons/logo.png"_s
+    };
+    for ( const QString &candidate : candidates )
+    {
+      if ( QFile::exists( candidate ) )
+      {
+        iconPath = candidate;
+        break;
+      }
+    }
+  }
+
+  QIcon icon;
+  if ( !iconPath.isEmpty() && QFile::exists( iconPath ) )
+  {
+    icon = QIcon( iconPath );
+  }
+  if ( icon.isNull() )
+  {
+    icon = QgsApplication::getThemeIcon( u"/mActionShowPluginManager.svg"_s );
+  }
+
+  QString actionText = name;
+  if ( !actionText.startsWith( u"Open "_s, Qt::CaseInsensitive ) )
+  {
+    actionText = QObject::tr( "Open %1" ).arg( name );
+  }
+
+  QWidget *parentWindow = mQgisInterface ? mQgisInterface->mainWindow() : nullptr;
+  QAction *action = new QAction( icon, actionText, parentWindow );
+  action->setObjectName( QStringLiteral( "mActionPlugin_%1" ).arg( packageName ) );
+  action->setToolTip( description.isEmpty() ? name : description );
+  action->setStatusTip( description );
+
+  QObject::connect( action, &QAction::triggered, [this, packageName, name, pluginDir]() {
+    executePythonPlugin( packageName, name, pluginDir );
+  } );
+
+  // Register on plugin toolbar -> mirrors to Extensions tab "Installed" group
+  if ( mQgisInterface )
+  {
+    mQgisInterface->addToolBarIcon( action );
+  }
+
+  // Register menu on menubar -> mirrors to Extensions tab "Installed Menus" group
+  QMenu *pluginMenu = nullptr;
+  if ( parentWindow )
+  {
+    QMenuBar *menuBar = parentWindow->findChild<QMenuBar *>();
+    if ( menuBar )
+    {
+      pluginMenu = new QMenu( name, menuBar );
+      pluginMenu->setObjectName( QStringLiteral( "mPluginMenu_%1" ).arg( packageName ) );
+      pluginMenu->setIcon( icon );
+      pluginMenu->addAction( action );
+      menuBar->addMenu( pluginMenu );
+    }
+  }
+
+  QString menuCategory = category.trimmed();
+  if ( menuCategory.isEmpty() )
+    menuCategory = name;
+  if ( mQgisInterface )
+  {
+    mQgisInterface->addPluginToMenu( menuCategory, action );
+  }
+
+  NativePluginItem item;
+  item.packageName = packageName;
+  item.name = name;
+  item.description = description;
+  item.category = menuCategory;
+  item.iconPath = iconPath;
+  item.pluginDir = pluginDir;
+  item.toolBarAction = action;
+  item.menu = pluginMenu;
+  mNativePythonPlugins.insert( packageName, item );
+
+  QgsMessageLog::logMessage( QObject::tr( "Loaded %1 (package: %2)" ).arg( name, packageName ), QObject::tr( "Plugins" ), Qgis::MessageLevel::Info );
 }
 
 
@@ -427,24 +602,45 @@ void QgsPluginRegistry::loadCppPlugin( const QString &fullPathName )
 void QgsPluginRegistry::unloadPythonPlugin( const QString &packageName )
 {
 #ifdef WITH_BINDINGS
-  if ( !mPythonUtils || !mPythonUtils->isEnabled() )
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
-    QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    if ( isLoaded( packageName ) )
+    {
+      mPythonUtils->unloadPlugin( packageName );
+      QgsDebugMsgLevel( "Python plugin successfully unloaded: " + packageName, 2 );
+    }
+    QgsSettings settings;
+    settings.setValue( "/PythonPlugins/" + packageName, false );
     return;
   }
-
-  if ( isLoaded( packageName ) )
-  {
-    mPythonUtils->unloadPlugin( packageName );
-    QgsDebugMsgLevel( "Python plugin successfully unloaded: " + packageName, 2 );
-  }
-
-  // disable the plugin no matter if successfully loaded or not
-  QgsSettings settings;
-  settings.setValue( "/PythonPlugins/" + packageName, false );
-#else
-  Q_UNUSED( packageName )
 #endif
+
+  QgsSettings settings;
+  settings.setValue( u"/PythonPlugins/"_s + packageName, false );
+
+  if ( mNativePythonPlugins.contains( packageName ) )
+  {
+    NativePluginItem item = mNativePythonPlugins.take( packageName );
+    if ( item.toolBarAction && mQgisInterface )
+    {
+      mQgisInterface->removeToolBarIcon( item.toolBarAction );
+      mQgisInterface->removePluginMenu( item.category, item.toolBarAction );
+    }
+    if ( item.menu && mQgisInterface && mQgisInterface->mainWindow() )
+    {
+      QMenuBar *menuBar = mQgisInterface->mainWindow()->findChild<QMenuBar *>();
+      if ( menuBar )
+      {
+        menuBar->removeAction( item.menu->menuAction() );
+      }
+      delete item.menu;
+    }
+    if ( item.toolBarAction )
+    {
+      delete item.toolBarAction;
+    }
+    QgsMessageLog::logMessage( QObject::tr( "Unloaded %1" ).arg( item.name ), QObject::tr( "Plugins" ), Qgis::MessageLevel::Info );
+  }
 }
 
 
@@ -682,7 +878,158 @@ void QgsPluginRegistry::restoreSessionPlugins( const QString &pluginDirString )
   }
 #endif
 
+  // Ensure enabled Python plugins are restored across sessions on all platforms
+  restorePythonPlugins();
+
   QgsDebugMsgLevel( u"Plugin loading completed"_s, 2 );
+}
+
+void QgsPluginRegistry::restorePythonPlugins()
+{
+  if ( mPythonPluginsRestored )
+    return;
+  mPythonPluginsRestored = true;
+
+  QgsSettings settings;
+  QSet<QString> checkedPackages;
+
+  // 1. Discover all packages explicitly enabled in QSettings
+  const QStringList allKeys = settings.allKeys();
+  for ( const QString &key : allKeys )
+  {
+    if ( key.startsWith( u"/PythonPlugins/"_s ) )
+    {
+      const QString pkg = key.mid( 15 );
+      if ( pkg.isEmpty() || pkg == u"watchDogTimestamp"_s || pkg == u"db_manager"_s || pkg.startsWith( u"watchDogTimestamp/"_s ) )
+        continue;
+      if ( settings.value( key, false ).toBool() )
+      {
+        checkedPackages.insert( pkg );
+      }
+    }
+  }
+
+  // 2. Scan installed plugin directories for enabled plugins
+  QStringList pluginDirs;
+  pluginDirs << QgsApplication::qgisSettingsDirPath() + u"python/plugins"_s;
+  pluginDirs << QgsApplication::pkgDataPath() + u"/python/plugins"_s;
+  const QStringList searchPaths = settings.value( u"plugins/searchPathsForPlugins"_s ).toStringList();
+  for ( const QString &path : searchPaths )
+  {
+    pluginDirs << path + u"/python/plugins"_s;
+  }
+
+  for ( const QString &dirPath : std::as_const( pluginDirs ) )
+  {
+    const QDir dir( dirPath );
+    if ( !dir.exists() )
+      continue;
+    const QFileInfoList subdirs = dir.entryInfoList( QDir::Dirs | QDir::NoDotAndDotDot );
+    for ( const QFileInfo &sub : subdirs )
+    {
+      const QString pkg = sub.fileName();
+      if ( settings.value( u"/PythonPlugins/"_s + pkg, false ).toBool() )
+      {
+        checkedPackages.insert( pkg );
+      }
+    }
+  }
+
+  for ( const QString &pkg : std::as_const( checkedPackages ) )
+  {
+    if ( !isLoaded( pkg ) )
+    {
+      loadPythonPlugin( pkg );
+    }
+  }
+}
+
+void QgsPluginRegistry::executePythonPlugin( const QString &packageName, const QString &name, const QString &pluginDir )
+{
+  if ( mQgisInterface && mQgisInterface->messageBar() )
+  {
+    mQgisInterface->messageBar()->pushMessage(
+      QObject::tr( "Plugin: %1" ).arg( name ),
+      QObject::tr( "Starting %1…" ).arg( name ),
+      Qgis::MessageLevel::Info,
+      3
+    );
+  }
+
+  // Look for python 3 executable
+  QString pythonExe;
+  const QStringList candidates = {
+    QStringLiteral( "/opt/homebrew/bin/python3.15" ),
+    QStringLiteral( "/opt/homebrew/bin/python3" ),
+    QStringLiteral( "/usr/local/bin/python3" ),
+    QStringLiteral( "/usr/bin/python3" ),
+    QStandardPaths::findExecutable( QStringLiteral( "python3" ) )
+  };
+  for ( const QString &candidate : candidates )
+  {
+    if ( !candidate.isEmpty() && QFile::exists( candidate ) )
+    {
+      pythonExe = candidate;
+      break;
+    }
+  }
+
+  if ( pythonExe.isEmpty() )
+  {
+    if ( mQgisInterface && mQgisInterface->messageBar() )
+    {
+      mQgisInterface->messageBar()->pushMessage(
+        QObject::tr( "Plugin: %1" ).arg( name ),
+        QObject::tr( "Python 3 is required to launch %1." ).arg( name ),
+        Qgis::MessageLevel::Warning,
+        6
+      );
+    }
+    return;
+  }
+
+  // Check launcher script location
+  QString launcherScript = QgsApplication::pkgDataPath() + QStringLiteral( "/python/hake_plugin_launcher.py" );
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QCoreApplication::applicationDirPath() + QStringLiteral( "/../Resources/python/hake_plugin_launcher.py" );
+  }
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QgsApplication::buildSourcePath() + QStringLiteral( "/src/app/hake_plugin_launcher.py" );
+  }
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QgsApplication::qgisSettingsDirPath() + QStringLiteral( "python/hake_plugin_launcher.py" );
+  }
+
+  if ( QFile::exists( launcherScript ) )
+  {
+    QStringList args;
+    args << launcherScript << pluginDir << packageName;
+    const bool started = QProcess::startDetached( pythonExe, args );
+    if ( started && mQgisInterface && mQgisInterface->messageBar() )
+    {
+      mQgisInterface->messageBar()->pushMessage(
+        QObject::tr( "Plugin: %1" ).arg( name ),
+        QObject::tr( "%1 is active." ).arg( name ),
+        Qgis::MessageLevel::Success,
+        4
+      );
+    }
+  }
+  else
+  {
+    if ( mQgisInterface && mQgisInterface->messageBar() )
+    {
+      mQgisInterface->messageBar()->pushMessage(
+        QObject::tr( "Plugin: %1" ).arg( name ),
+        QObject::tr( "%1 is installed and enabled." ).arg( name ),
+        Qgis::MessageLevel::Success,
+        4
+      );
+    }
+  }
 }
 
 
@@ -712,40 +1059,62 @@ bool QgsPluginRegistry::checkCppPlugin( const QString &pluginFullPath )
 bool QgsPluginRegistry::checkPythonPlugin( const QString &packageName )
 {
 #ifdef WITH_BINDINGS
-  QString pluginName, description, /*category,*/ version;
-
-  // get information from the plugin
-  // if there are some problems, don't continue with metadata retrieval
-  pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
-  description = mPythonUtils->getPluginMetadata( packageName, u"description"_s );
-  version = mPythonUtils->getPluginMetadata( packageName, u"version"_s );
-  // for Python plugins category still optional, by default used "Plugins" category
-  //category = mPythonUtils->getPluginMetadata( packageName, "category" );
-
-  if ( pluginName == "__error__"_L1 || description == "__error__"_L1 || version == "__error__"_L1 )
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
-    QgsMessageLog::logMessage( QObject::tr( "Error when reading metadata of plugin %1" ).arg( packageName ), QObject::tr( "Plugins" ) );
-    return false;
-  }
+    QString pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
+    QString description = mPythonUtils->getPluginMetadata( packageName, u"description"_s );
+    QString version = mPythonUtils->getPluginMetadata( packageName, u"version"_s );
 
-  return true;
-#else
-  Q_UNUSED( packageName )
-  return false;
+    if ( pluginName == "__error__"_L1 || description == "__error__"_L1 || version == "__error__"_L1 )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "Error when reading metadata of plugin %1" ).arg( packageName ), QObject::tr( "Plugins" ) );
+      return false;
+    }
+
+    return true;
+  }
 #endif
+
+  QString pluginDir = QgsApplication::qgisSettingsDirPath() + u"python/plugins/"_s + packageName;
+  if ( !QDir( pluginDir ).exists() )
+  {
+    pluginDir = QgsApplication::pkgDataPath() + u"/python/plugins/"_s + packageName;
+  }
+  return QDir( pluginDir ).exists();
 }
 
 bool QgsPluginRegistry::isPythonPluginCompatible( const QString &packageName ) const
 {
 #ifdef WITH_BINDINGS
-  const QString minVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMinimumVersion"_s );
-  // try to read qgisMaximumVersion. Note checkQgisVersion can cope with "__error__" value.
-  const QString maxVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMaximumVersion"_s );
-  return minVersion != "__error__"_L1 && checkQgisVersion( minVersion, maxVersion );
-#else
-  Q_UNUSED( packageName )
-  return false;
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
+  {
+    const QString minVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMinimumVersion"_s );
+    // try to read qgisMaximumVersion. Note checkQgisVersion can cope with "__error__" value.
+    const QString maxVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMaximumVersion"_s );
+    return minVersion != "__error__"_L1 && checkQgisVersion( minVersion, maxVersion );
+  }
 #endif
+
+  QString pluginDir = QgsApplication::qgisSettingsDirPath() + u"python/plugins/"_s + packageName;
+  if ( !QDir( pluginDir ).exists() )
+  {
+    pluginDir = QgsApplication::pkgDataPath() + u"/python/plugins/"_s + packageName;
+  }
+  QString metaPath = pluginDir + u"/metadata.txt"_s;
+  if ( !QFile::exists( metaPath ) && QFile::exists( pluginDir + u"/"_s + packageName + u"/metadata.txt"_s ) )
+  {
+    metaPath = pluginDir + u"/"_s + packageName + u"/metadata.txt"_s;
+  }
+  if ( QFile::exists( metaPath ) )
+  {
+    QSettings meta( metaPath, QSettings::IniFormat );
+    const QString minVer = meta.value( u"general/qgisMinimumVersion"_s ).toString();
+    const QString maxVer = meta.value( u"general/qgisMaximumVersion"_s ).toString();
+    if ( minVer.isEmpty() )
+      return true;
+    return checkQgisVersion( minVer, maxVer );
+  }
+  return true;
 }
 
 QList<QgsPluginMetadata *> QgsPluginRegistry::pluginData()

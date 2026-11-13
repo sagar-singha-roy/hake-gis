@@ -19,6 +19,7 @@
 #include "qgsapplication.h"
 #include "qgsdoublespinbox.h"
 #include "qgsguiutils.h"
+#include "qgshakeicons.h"
 #include "qgssettings.h"
 #include "qgssettingsregistrygui.h"
 
@@ -64,7 +65,8 @@ QgsStatusBarMagnifierWidget::QgsStatusBarMagnifierWidget( QWidget *parent )
   connect( mSpinBox, static_cast<void ( QgsDoubleSpinBox::* )( double )>( &QgsDoubleSpinBox::valueChanged ), this, &QgsStatusBarMagnifierWidget::setMagnification );
 
   mLockButton = new QToolButton();
-  mLockButton->setIcon( QIcon( QgsApplication::getThemeIcon( "/lockedGray.svg" ) ) );
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
+  mLockButton->setIconSize( QSize( 16, 16 ) );
   mLockButton->setToolTip( tr( "Lock the scale to use magnifier to zoom in or out." ) );
   mLockButton->setCheckable( true );
   mLockButton->setChecked( false );
@@ -72,14 +74,20 @@ QgsStatusBarMagnifierWidget::QgsStatusBarMagnifierWidget( QWidget *parent )
 
   connect( mLockButton, &QAbstractButton::toggled, this, &QgsStatusBarMagnifierWidget::scaleLockChanged );
 
+  QLabel *magnifierIcon = new QLabel( this );
+  magnifierIcon->setObjectName( u"mMagnifierIcon"_s );
+  magnifierIcon->setPixmap( QgsHakeIcons::icon( u"navigation/hake-navigation-zoom-in.svg"_s ).pixmap( 16, 16 ) );
+  magnifierIcon->setToolTip( tr( "Magnifier" ) );
+
   // layout
   mLayout = new QHBoxLayout( this );
   mLayout->addWidget( mLockButton );
+  mLayout->addWidget( magnifierIcon );
   mLayout->addWidget( mLabel );
   mLayout->addWidget( mSpinBox );
   mLayout->setContentsMargins( 0, 0, 0, 0 );
   mLayout->setAlignment( Qt::AlignRight );
-  mLayout->setSpacing( 0 );
+  mLayout->setSpacing( 2 );
 
   setLayout( mLayout );
 }
@@ -93,6 +101,15 @@ void QgsStatusBarMagnifierWidget::setFont( const QFont &myFont )
 {
   mLabel->setFont( myFont );
   mSpinBox->setFont( myFont );
+}
+
+void QgsStatusBarMagnifierWidget::refreshIcons()
+{
+  QLabel *iconLabel = findChild<QLabel *>( u"mMagnifierIconLabel"_s );
+  if ( iconLabel )
+    iconLabel->setPixmap( QgsHakeIcons::icon( u"navigation/hake-navigation-zoom-in.svg"_s ).pixmap( 16, 16 ) );
+  mLockButton->setIcon( QgsHakeIcons::iconFor( u"statusbar:magnifier-lock"_s, u"/lockedGray.svg"_s ) );
+  mLockButton->setIconSize( QSize( 16, 16 ) );
 }
 
 void QgsStatusBarMagnifierWidget::updateMagnification( double factor )

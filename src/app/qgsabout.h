@@ -33,6 +33,9 @@ class APP_EXPORT QgsAbout : public QgsOptionsDialogBase, private Ui::QgsAbout
     void setVersion( const QString &v );
     static QString fileSystemSafe( const QString &string );
 
+  protected:
+    bool event( QEvent *e ) override;
+
   private slots:
     void btnCopyToClipboard_clicked();
     void btnQgisUser_clicked();
@@ -44,10 +47,12 @@ class APP_EXPORT QgsAbout : public QgsOptionsDialogBase, private Ui::QgsAbout
     void setWhatsNew();
     void setLicence();
     void init();
+    void updateLogo();
     void updateWindowTitle() override;
 
     void showWhatsNewHtml( const QString &html );
     void showWhatsNewFile( const QString &path );
+    static QString defaultWhatsNewHtml();
     static QString whatsNewCachePath();
     static bool isWhatsNewCacheFresh( const QString &path );
     static void writeWhatsNewCache( const QString &path, const QByteArray &data );

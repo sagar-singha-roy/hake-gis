@@ -549,11 +549,7 @@ void QgsProjectionSelectionTreeWidget::updateBoundsPreview()
     = u"<dt><b>%1</b></dt><dd><code>%2</code></dd>"_s.arg( tr( "WKT" ), currentCrs.toWkt( Qgis::CrsWktVariant::Preferred, true ).replace( '\n', "<br>"_L1 ).replace( ' ', "&nbsp;"_L1 ) );
   const QString proj4String = u"<dt><b>%1</b></dt><dd><code>%2</code></dd>"_s.arg( tr( "Proj4" ), currentCrs.toProj() );
 
-#ifdef Q_OS_WIN
-  const int smallerPointSize = std::max( font().pointSize() - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
-#else
-  const int smallerPointSize = std::max( font().pointSize() - 2, 6 );
-#endif
+  const int smallerPointSize = std::max( font().pointSize() - 1, 8 );
 
   const QModelIndex currentIndex = lstCoordinateSystems->selectionModel()->selectedRows( 0 ).value( 0 );
   QString selectedName;

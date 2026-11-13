@@ -11,6 +11,13 @@ set(QGIS_APP_SRCS
   qgisappinterface.cpp
   qgisappstylesheet.cpp
   qgsappribbon.cpp
+  qgshakebuildinfo.cpp
+  qgshakeicons.cpp
+  qgshaketheme.cpp
+  qgspythonconsoledockwidget.cpp
+  qgsprocessingtoolboxdockwidget.cpp
+  qgsmetasearchdialog.cpp
+  ${CMAKE_SOURCE_DIR}/resources/icons/hake/hake_icons.qrc
   qgsabout.cpp
   qgsappauthrequesthandler.cpp
   qgsappbrowserproviders.cpp
@@ -502,6 +509,15 @@ endif()
 
 set_target_properties(qgis PROPERTIES OUTPUT_NAME "${QGIS_APP_NAME}")
 
+if(APPLE)
+  add_custom_command(TARGET qgis POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      "${QGIS_OUTPUT_DIRECTORY}"
+      "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app"
+    COMMENT "Ensuring Hake GeoDesk.app bundle symlink is up-to-date"
+  )
+endif()
+
 if(NOT LIBRARY_TYPE EQUAL STATIC)
   win32_version_info("Hake Geospatial App Library" "hake-gis-app" QGIS_APP_SRCS)
 endif()
@@ -509,6 +525,7 @@ endif()
 # Putting IMAGE_RCC_SRCS into qgis_app lib is causing problems when the lib is
 # loaded (by plugin for example) in test unit (qgis_layoutpicturetest).
 add_library(qgis_app ${LIBRARY_TYPE} ${QGIS_APP_SRCS})
+add_dependencies(qgis_app version)
 if(HAKE_M4A_RENAME_DLL_OUTPUTS OR QGISPOSTFIX)
   hake_set_output_name(qgis_app qgis_app hakegis_app)
 endif()
@@ -536,11 +553,10 @@ qt_add_qml_module(qgis_app
     RESOURCE_PREFIX
         /qt/qml/
     RESOURCES
-        qml/images/basemap.jpg
         qml/images/close.svg
         qml/images/hake-gis.svg
         qml/images/hake-gis-icon.png
-        qml/images/love.svg
+        qml/images/welcome-contours.svg
 )
 else()
 qt_add_qml_module(qgis_app
@@ -558,11 +574,10 @@ qt_add_qml_module(qgis_app
     RESOURCE_PREFIX
         /qt/qml/
     RESOURCES
-        qml/images/basemap.jpg
         qml/images/close.svg
         qml/images/hake-gis.svg
         qml/images/hake-gis-icon.png
-        qml/images/love.svg
+        qml/images/welcome-contours.svg
     NO_GENERATE_EXTRA_QMLDIRS
 )
 endif()

@@ -99,10 +99,12 @@ runs:
           echo "::warning::manifest-install-log not found at ${MANIFEST_INSTALL_LOG}"
         fi
 
-        python3 "${GITHUB_ACTION_PATH}/parse_failures.py" "${args[@]}"
+        # Windows runners only provide python.exe, not python3.
+        PY="$(command -v python3 || command -v python)"
+        "$PY" "${GITHUB_ACTION_PATH}/parse_failures.py" "${args[@]}"
 
-        count=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))))" "${out_json}")
-        ports=$(python3 -c "import json,sys; print(','.join(f['port'] for f in json.load(open(sys.argv[1]))))" "${out_json}")
+        count=$("$PY" -c "import json,sys; print(len(json.load(open(sys.argv[1]))))" "${out_json}")
+        ports=$("$PY" -c "import json,sys; print(','.join(f['port'] for f in json.load(open(sys.argv[1]))))" "${out_json}")
         echo "failure-count=${count}" >> "$GITHUB_OUTPUT"
         echo "failed-ports=${ports}" >> "$GITHUB_OUTPUT"
         echo "Detected ${count} vcpkg port build failure(s): ${ports:-<none>}"
@@ -119,7 +121,8 @@ runs:
         FAILURES_JSON: ${{ steps.parse.outputs.json-path }}
       run: |
         set -euo pipefail
-        python3 - <<'PY'
+        PY="$(command -v python3 || command -v python)"
+        "$PY" - <<'PY'
         import json, os
         failures = json.load(open(os.environ["FAILURES_JSON"], encoding="utf-8"))
         for f in failures:
@@ -147,7 +150,8 @@ runs:
         rm -rf "${pkg_root}"
         mkdir -p "${pkg_root}"
         echo "path=${pkg_root}" >> "$GITHUB_OUTPUT"
-        python3 - "$FAILURES_JSON" "$BUILDTREES_DIR" "$pkg_root" <<'PY'
+        PY="$(command -v python3 || command -v python)"
+        "$PY" - "$FAILURES_JSON" "$BUILDTREES_DIR" "$pkg_root" <<'PY'
         import json, shutil, sys
         from pathlib import Path
         failures_json, src_root, dst_root = sys.argv[1:]
@@ -193,7 +197,8 @@ runs:
           echo "url=" >> "$GITHUB_OUTPUT"
           exit 0
         fi
-        url=$(JOBS_JSON="${jobs_json}" python3 - <<'PY'
+        PY="$(command -v python3 || command -v python)"
+        url=$(JOBS_JSON="${jobs_json}" "$PY" - <<'PY'
         import json, os
         data = json.loads(open(os.environ["JOBS_JSON"], encoding="utf-8").read())
         runner = os.environ.get("RUNNER_NAME", "")
@@ -263,7 +268,8 @@ runs:
         if [ -n "${DIFF_REPORT}" ] && [ -f "${DIFF_REPORT}" ]; then
           args+=( --diff-report "${DIFF_REPORT}" )
         fi
-        python3 "${GITHUB_ACTION_PATH}/format_report.py" "${args[@]}"
+        PY="$(command -v python3 || command -v python)"
+        "$PY" "${GITHUB_ACTION_PATH}/format_report.py" "${args[@]}"
 
         # Expose the rendered markdown as a multi-line step output so the
         # post_sticky_comment step can consume it.
@@ -293,7 +299,8 @@ runs:
         FAILURES_JSON: ${{ steps.parse.outputs.json-path }}
       run: |
         set -euo pipefail
-        python3 - <<'PY'
+        PY="$(command -v python3 || command -v python)"
+        "$PY" - <<'PY'
         import json, os
         triplet = os.environ["TRIPLET"]
         path = os.environ["FAILURES_JSON"]

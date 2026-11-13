@@ -116,6 +116,16 @@ class GUI_EXPORT QgsBrowserWidget : public QgsPanelWidget, private Ui::QgsBrowse
      */
     void refresh();
 
+    /**
+     * Expands all items or the currently selected subtree.
+     */
+    void expandAll();
+
+    /**
+     * Collapses all items or the currently selected subtree.
+     */
+    void collapseAll();
+
     // keep the stable API slim for now!
 #ifndef SIP_RUN
 
