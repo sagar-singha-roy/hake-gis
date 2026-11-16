@@ -1190,7 +1190,7 @@ QHeaderView::up-arrow {
 }
 
 QHeaderView::up-arrow:disabled {
-    image: url(@theme_path/icons/up-down-disabled.svg);
+    image: url(@theme_path/icons/arrow-up-disabled.svg);
 }
 
 /* ==================================================================================== */
