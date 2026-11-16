@@ -78,17 +78,6 @@ jobs:
       - name: 🔨 Prepare build env
         run: |
           brew install automake bison flex gnu-sed autoconf-archive nasm libtool fdupes || true
-          # GDAL 3.12.x typemaps still use PyInt_*; SWIG 4.5 removed those macros.
-          # Pin SWIG 4.4.1 so vcpkg GDAL python bindings can rebuild when binary cache misses.
-          brew tap-new --no-git local/pinned || true
-          brew extract --version=4.4.1 swig local/pinned || true
-          brew install local/pinned/swig@4.4.1 || brew install swig || true
-          SWIG_BIN="$(brew --prefix local/pinned/swig@4.4.1 2>/dev/null || brew --prefix swig 2>/dev/null)/bin"
-          if [ -d "$SWIG_BIN" ]; then
-            echo "${SWIG_BIN}" >> "$GITHUB_PATH"
-            export PATH="${SWIG_BIN}:${PATH}"
-          fi
-          swig -version || true
           echo $(brew --prefix bison)/bin >> $GITHUB_PATH
           echo $(brew --prefix flex)/bin >> $GITHUB_PATH
           echo $(brew --prefix libtool)/bin >> $GITHUB_PATH
@@ -105,6 +94,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+
+      - name: 🐍 Install compatible SWIG via pip
+        run: |
+          # GDAL 3.12.x typemaps still use PyInt_*; SWIG 4.5+ removed those compat macros.
+          # Installing SWIG < 4.5 via pip provides a precompiled native binary that bypasses Homebrew tap issues.
+          python3 -m pip install "swig<4.5"
+          which swig
+          swig -version
 
       - name: 🍭 Setup XCode
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
@@ -290,6 +287,19 @@ jobs:
           name: hake-geodesk-installer-macos
           path: |
             *.dmg
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "## 🍎 macOS Qt6 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Distributable Component | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          if ls *.dmg 1>/dev/null 2>&1; then
+            echo "| **macOS Disk Image (.dmg)** | 🟢 Available | $(ls -lh *.dmg | awk '{print $9, \"(\" $5 \")\"}') |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **macOS Disk Image (.dmg)** | 🔴 Not generated | Build or packaging failed |" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload release assets
         uses: AButler/upload-release-assets@v3.0

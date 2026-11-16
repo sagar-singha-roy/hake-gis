@@ -411,12 +411,14 @@ Type=Application
 Name=Hake GeoDesk (Desktop GIS)
 GenericName=Geographic Information System
 Comment=Professional GIS for Mapping, Analysis & Spatial Intelligence
-Exec=AppRun %F
+Exec=hake-geodesk %F
+TryExec=hake-geodesk
 Icon=hake-gis
 Terminal=false
-StartupNotify=true
-Categories=Science;Geoscience;Geography;Graphics;Qt;
-MimeType=application/x-qgis-project;application/geopackage+sqlite3;image/tiff;application/x-shapefile;
+StartupNotify=false
+Categories=Qt;Education;Science;Geography;
+MimeType=application/x-qgis-project;application/x-qgis-project-container;application/x-qgis-layer-settings;application/x-qgis-layer-definition;application/x-qgis-composer-template;image/tiff;image/jpeg;image/jp2;application/x-raster-aig;application/x-raster-ecw;application/x-raster-mrsid;application/x-mapinfo-mif;application/x-esri-shape;application/vnd.google-earth.kml+xml;application/vnd.google-earth.kmz;application/geopackage+sqlite3;
+Keywords=map;globe;postgis;wms;wfs;ogc;osgeo;
 StartupWMClass=org.hake.geospatial
 EOF
 
@@ -426,6 +428,11 @@ cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/usr/share/applications/hak
 # AppImage specification requires EXACTLY ONE .desktop file in AppDir root.
 # Remove duplicate desktop file in AppDir root so appimagetool does not fail.
 rm -f "${APPDIR}/hake-geodesk.desktop"
+
+# Validate desktop file compliance if desktop-file-validate is available
+if command -v desktop-file-validate &>/dev/null; then
+    desktop-file-validate "${APPDIR}/org.hake.geospatial.desktop" || true
+fi
 
 # Install application icons across standard XDG sizes and names
 ICON_512="${REPO_ROOT}/images/icons/hake-gis-icon-512x512.png"
@@ -588,18 +595,36 @@ if [[ "${SKIP_APPIMAGE}" == "false" ]]; then
         APPIMAGETOOL_EXTRACTED="${BUILD_DIR}/appimagetool_extracted"
         if [[ "${APPIMAGETOOL_BIN}" == *.AppImage* && ! -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
             rm -rf "${APPIMAGETOOL_EXTRACTED}" "${BUILD_DIR}/squashfs-root"
-            (cd "${BUILD_DIR}" && "${APPIMAGETOOL_BIN}" --appimage-extract >/dev/null 2>&1 && mv "${BUILD_DIR}/squashfs-root" "${APPIMAGETOOL_EXTRACTED}") || true
+            echo "    Extracting appimagetool to bypass FUSE requirements..."
+            if command -v unsquashfs &>/dev/null; then
+                unsquashfs -f -d "${APPIMAGETOOL_EXTRACTED}" "${APPIMAGETOOL_BIN}" || true
+            fi
+            if [[ ! -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
+                (cd "${BUILD_DIR}" && "${APPIMAGETOOL_BIN}" --appimage-extract && mv "${BUILD_DIR}/squashfs-root" "${APPIMAGETOOL_EXTRACTED}") || true
+            fi
         fi
 
+        APPIMAGE_BUILT=false
         if [[ -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
             echo "    Executing extracted appimagetool (no FUSE required)..."
-            ARCH="${ARCH}" "${APPIMAGETOOL_EXTRACTED}/AppRun" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"
-        else
-            ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --appimage-extract-and-run --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}" || \
-            ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"
+            if ARCH="${ARCH}" "${APPIMAGETOOL_EXTRACTED}/AppRun" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"; then
+                APPIMAGE_BUILT=true
+            fi
         fi
-        chmod +x "${OUTPUT_DIR}/${APPIMAGE_NAME}"
-        echo "    ✓ Successfully generated AppImage: ${OUTPUT_DIR}/${APPIMAGE_NAME}"
+
+        if [[ "${APPIMAGE_BUILT}" != "true" ]]; then
+            echo "    Attempting fallback appimagetool execution..."
+            if ARCH="${ARCH}" APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_BIN}" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"; then
+                APPIMAGE_BUILT=true
+            fi
+        fi
+
+        if [[ -f "${OUTPUT_DIR}/${APPIMAGE_NAME}" ]]; then
+            chmod +x "${OUTPUT_DIR}/${APPIMAGE_NAME}"
+            echo "    ✓ Successfully generated AppImage: ${OUTPUT_DIR}/${APPIMAGE_NAME}"
+        else
+            echo "WARNING: AppImage generation did not produce an image; self-contained portable tarball is available: ${OUTPUT_DIR}/${TARBALL_NAME}" >&2
+        fi
     else
         echo "    Notice: appimagetool unavailable in this environment; portable bundle generated."
     fi
