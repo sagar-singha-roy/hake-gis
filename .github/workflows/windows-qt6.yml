@@ -153,14 +153,6 @@ jobs:
           # To make ccache work properly with precompiled headers
           ccache --set-config sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime
 
-      - name: 🎡 Cache vcpkg binary cache
-        uses: actions/cache@v4
-        with:
-          path: C:/vcpkg_cache
-          key: vcpkg-bin-win64-${{ hashFiles('vcpkg/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-bin-win64-
-
       - name: 🍓 Setup Strawberry Perl for vcpkg/openssl
         shell: powershell
         run: |
@@ -186,7 +178,6 @@ jobs:
         shell: bash
         env:
           X_VCPKG_ASSET_SOURCES: x-azurl,https://assetcache.open-vcpkg.org/assetcache,,read
-          VCPKG_DEFAULT_BINARY_CACHE: C:/vcpkg_cache
           PERL: C:\Strawberry\perl\bin\perl.exe
           DISTUTILS_USE_SDK: 1
         run: |
@@ -392,6 +383,15 @@ jobs:
           path: |
             sdk/vcpkg-export-*.zip
 
+      - name: 📋 Collect failure logs
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p "${{ github.workspace }}/build/failure_logs"
+          if [ -d "C:/src" ]; then
+            find "C:/src" -name "*.log" -exec cp {} "${{ github.workspace }}/build/failure_logs/" \; 2>/dev/null || true
+          fi
+
       - name: 📑 Upload dep build logs
         id: upload-build-logs
         uses: actions/upload-artifact@v7
@@ -399,11 +399,12 @@ jobs:
         with:
           name: build-logs-x64-windows
           path: |
-            C:/src/**/*.log
+            ${{ github.workspace }}/build/failure_logs/*.log
             ${{ github.workspace }}/build/vcpkg-manifest-install.log
             ${{ github.workspace }}/build/CMakeFiles/CMakeConfigureLog.yaml
             ${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log
             ${{ github.workspace }}/build/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
 
       - name: 🧮 Report vcpkg build failures
         if: failure() && github.event_name == 'pull_request'
