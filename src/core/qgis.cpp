@@ -711,6 +711,24 @@ QString Qgis::whatsNewUrl()
   return QString::fromUtf8( HAKE_WHATSNEW_URL );
 }
 
+QString Qgis::licenseServerUrl()
+{
+#ifdef HAKE_LICENSE_SERVER_URL
+  return QString::fromUtf8( HAKE_LICENSE_SERVER_URL );
+#else
+  return QStringLiteral( "http://127.0.0.1:8000" );
+#endif
+}
+
+QString Qgis::licensePublicKey()
+{
+#ifdef HAKE_LICENSE_PUBLIC_KEY
+  return QString::fromUtf8( HAKE_LICENSE_PUBLIC_KEY );
+#else
+  return QStringLiteral( "2b4da3349550d72beaea782dcba13895cce0d0d180d8f780513055734bfde61c" );
+#endif
+}
+
 QString Qgis::devVersion()
 {
   return QString::fromUtf8( QGIS_DEV_VERSION );

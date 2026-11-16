@@ -1,0 +1,22 @@
+# Secrets & Private Keys (never commit Ed25519 private keys)
+server_ed25519_key.json
+.env
+*.pem
+*.key
+
+# Local Databases
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local Spool & Logs
+sent_emails/
+*.log

@@ -105,6 +105,8 @@ typedef SInt32 SRefCon;
 #include "qgsziputils.h"
 #include "qgsversionmigration.h"
 #include "qgsfirstrundialog.h"
+#include "hakelicensemanager.h"
+#include "hakeactivationdialog.h"
 #include "qgsproxystyle.h"
 #include "qgsmessagebar.h"
 #include "qgsfileutils.h"
@@ -1800,6 +1802,27 @@ int main( int argc, char *argv[] )
   if ( defaultFontCustomized )
   {
     QApplication::setFont( defaultFont );
+  }
+
+  // Check Hake GeoDesk licensing gate before launching main GIS workspace
+  if ( !HakeLicenseManager::instance()->isLicenseValidOffline() )
+  {
+    if ( mypSplash )
+    {
+      mypSplash->hide();
+    }
+
+    HakeActivationDialog licenseDialog;
+    if ( licenseDialog.exec() != QDialog::Accepted || !HakeLicenseManager::instance()->isLicenseValidOffline() )
+    {
+      // Clean exit if user closes licensing dialog without activating
+      return 0;
+    }
+
+    if ( mypSplash )
+    {
+      mypSplash->show();
+    }
   }
 
   QgisApp *qgis = new QgisApp( mypSplash, qgisAppOptions, rootProfileFolder, profileName, nullptr, Qt::Window, std::move( customization ) ); // "QgisApp" used to find canonical instance

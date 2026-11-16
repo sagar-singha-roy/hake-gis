@@ -65,6 +65,7 @@ set(TESTS
   testqgsgpsintegration.cpp
   testqgslabelpropertydialog.cpp
   testqgsmergeattributesdialog.cpp
+  testhakelicensemanager.cpp
 )
 
 if (HAVE_GEOREFERENCER)

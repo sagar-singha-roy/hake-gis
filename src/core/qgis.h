@@ -106,6 +106,20 @@ int QgisEvent = QEvent::User + 1;
      */
     static QString whatsNewUrl();
 
+    /**
+     * License server URL used for activation and validation.
+     *
+     * \since QGIS 4.0
+     */
+    static QString licenseServerUrl();
+
+    /**
+     * Hex-encoded Ed25519 public key used for offline license token signature verification.
+     *
+     * \since QGIS 4.0
+     */
+    static QString licensePublicKey();
+
     //! The development version
     static const char *QGIS_DEV_VERSION;
 

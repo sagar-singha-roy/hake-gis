@@ -1,0 +1,564 @@
+#include "hakeactivationdialog.h"
+#include "ui_hakeactivationdialogbase.h"
+#include "hakelicensemanager.h"
+
+#include <QDesktopServices>
+#include <QUrl>
+#include <QRegularExpression>
+#include <QMessageBox>
+#include <QInputDialog>
+
+HakeActivationDialog::HakeActivationDialog( QWidget *parent )
+  : QDialog( parent )
+  , mUi( std::make_unique<Ui::HakeActivationDialogBase>() )
+{
+  mUi->setupUi( this );
+  setModal( true );
+
+  // Display workstation hardware id in UI
+  QString hwId = HakeLicenseManager::instance()->hardwareId();
+  QString shortHw = hwId.left( 12 ) + QStringLiteral( "..." );
+  mUi->lblWorkstationId->setText( tr( "Workstation ID: %1" ).arg( shortHw ) );
+  mUi->lblActivateHwId->setText( hwId );
+
+  setupConnections();
+
+  // If a valid license is already loaded, go straight to Dashboard
+  if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+  {
+    refreshDashboardView();
+    setPage( PageDashboard );
+  }
+  else
+  {
+    setPage( PageWelcome );
+  }
+}
+
+HakeActivationDialog::~HakeActivationDialog() = default;
+
+void HakeActivationDialog::setPage( Page page )
+{
+  hideErrors();
+  mUi->stackedWidget->setCurrentIndex( static_cast<int>( page ) );
+}
+
+void HakeActivationDialog::setupConnections()
+{
+  // Navigation: Welcome Page
+  connect( mUi->btnStartTrial, &QPushButton::clicked, this, &HakeActivationDialog::onStartTrialClicked );
+  connect( mUi->btnGoActivate, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
+  connect( mUi->btnGoLogin, &QPushButton::clicked, this, &HakeActivationDialog::onGoLoginClicked );
+  connect( mUi->btnGoSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoSignUpClicked );
+  connect( mUi->btnGoPricing, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
+
+  // Navigation: Back Buttons
+  connect( mUi->btnBackFromTrial, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromLogin, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+
+  // Navigation: Inter-page shortcuts
+  connect( mUi->btnLoginGoSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoSignUpClicked );
+  connect( mUi->btnSelectTrialPlan, &QPushButton::clicked, this, &HakeActivationDialog::onStartTrialClicked );
+  connect( mUi->btnSelectAnnualPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
+  connect( mUi->btnSelectBusinessPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
+
+  // Actions
+  connect( mUi->btnSubmitTrial, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitTrial );
+  connect( mUi->btnSubmitActivate, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitActivate );
+  connect( mUi->btnSubmitLogin, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitLogin );
+  connect( mUi->btnSubmitSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitSignUp );
+  connect( mUi->btnLaunchApp, &QPushButton::clicked, this, &HakeActivationDialog::onLaunchApp );
+  connect( mUi->btnDashLogout, &QPushButton::clicked, this, &HakeActivationDialog::onSignOut );
+  connect( mUi->btnDashChangeKey, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
+  connect( mUi->btnDashRenew, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
+  connect( mUi->btnDashRefresh, &QPushButton::clicked, this, &HakeActivationDialog::onRefreshLicenseClicked );
+  connect( mUi->btnDashDeactivate, &QPushButton::clicked, this, &HakeActivationDialog::onDeactivateWorkstationClicked );
+  connect( mUi->btnBuyAnnual, &QPushButton::clicked, this, &HakeActivationDialog::onBuyAnnualClicked );
+  connect( mUi->btnBuyBusiness, &QPushButton::clicked, this, &HakeActivationDialog::onBuyBusinessClicked );
+
+  // Live Auto-formatting for 16-character code
+  connect( mUi->txtActivationCode, &QLineEdit::textEdited, this, &HakeActivationDialog::onActivationCodeEdited );
+}
+
+void HakeActivationDialog::onStartTrialClicked()
+{
+  setPage( PageTrial );
+}
+
+void HakeActivationDialog::onGoActivateClicked()
+{
+  setPage( PageActivate );
+}
+
+void HakeActivationDialog::onGoLoginClicked()
+{
+  setPage( PageLogin );
+}
+
+void HakeActivationDialog::onGoSignUpClicked()
+{
+  setPage( PageSignUp );
+}
+
+void HakeActivationDialog::onGoPricingClicked()
+{
+  setPage( PagePricing );
+}
+
+void HakeActivationDialog::onBackToWelcomeClicked()
+{
+  setPage( PageWelcome );
+}
+
+void HakeActivationDialog::hideErrors()
+{
+  mUi->lblTrialError->hide();
+  mUi->lblLoginError->hide();
+  mUi->lblSignUpError->hide();
+  mUi->lblActivateError->hide();
+}
+
+void HakeActivationDialog::showError( Page page, const QString &errorText )
+{
+  hideErrors();
+  QLabel *target = nullptr;
+  switch ( page )
+  {
+    case PageTrial:
+      target = mUi->lblTrialError;
+      break;
+    case PageLogin:
+      target = mUi->lblLoginError;
+      break;
+    case PageSignUp:
+      target = mUi->lblSignUpError;
+      break;
+    case PageActivate:
+      target = mUi->lblActivateError;
+      break;
+    default:
+      break;
+  }
+
+  if ( target )
+  {
+    target->setText( errorText );
+    target->show();
+  }
+}
+
+void HakeActivationDialog::setButtonsBusy( bool busy )
+{
+  mUi->btnSubmitTrial->setEnabled( !busy );
+  mUi->btnSubmitActivate->setEnabled( !busy );
+  mUi->btnSubmitLogin->setEnabled( !busy );
+  mUi->btnSubmitSignUp->setEnabled( !busy );
+}
+
+void HakeActivationDialog::onActivationCodeEdited( const QString &text )
+{
+  // Crockford Base32 alphabet: 0123456789ABCDEFGHJKMNPQRSTVWXYZ
+  QString cleaned;
+  cleaned.reserve( 16 );
+
+  for ( const QChar &ch : text )
+  {
+    if ( ch == '-' || ch == ' ' || ch == ':' )
+      continue;
+
+    QChar up = ch.toUpper();
+    // Forgiving mapping
+    if ( up == 'O' )
+      up = '0';
+    else if ( up == 'I' || up == 'L' )
+      up = '1';
+
+    // Verify valid Crockford symbol
+    const QString alphabet = QStringLiteral( "0123456789ABCDEFGHJKMNPQRSTVWXYZ" );
+    if ( alphabet.contains( up ) )
+    {
+      cleaned.append( up );
+      if ( cleaned.length() == 16 )
+        break;
+    }
+  }
+
+  // Format into XXXX-XXXX-XXXX-XXXX
+  QString formatted;
+  for ( int i = 0; i < cleaned.length(); ++i )
+  {
+    if ( i > 0 && i % 4 == 0 )
+    {
+      formatted.append( '-' );
+    }
+    formatted.append( cleaned.at( i ) );
+  }
+
+  mUi->txtActivationCode->blockSignals( true );
+  mUi->txtActivationCode->setText( formatted );
+  mUi->txtActivationCode->blockSignals( false );
+}
+
+void HakeActivationDialog::onSubmitTrial()
+{
+  QString name = mUi->txtTrialName->text().trimmed();
+  QString email = mUi->txtTrialEmail->text().trimmed();
+  QString password = mUi->txtTrialPassword->text();
+
+  if ( name.isEmpty() )
+  {
+    showError( PageTrial, tr( "Please enter your full name." ) );
+    return;
+  }
+  if ( email.isEmpty() || !email.contains( '@' ) )
+  {
+    showError( PageTrial, tr( "Please enter a valid email address." ) );
+    return;
+  }
+  if ( password.length() < 8 )
+  {
+    showError( PageTrial, tr( "Password must be at least 8 characters long." ) );
+    return;
+  }
+
+  setButtonsBusy( true );
+  hideErrors();
+
+  HakeLicenseManager::instance()->startTrial( name, email, password,
+    [this]( bool success, const QString &message ) {
+      setButtonsBusy( false );
+      if ( success )
+      {
+        refreshDashboardView();
+        setPage( PageDashboard );
+      }
+      else
+      {
+        showError( PageTrial, message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::onSubmitActivate()
+{
+  QString code = mUi->txtActivationCode->text().trimmed();
+  QString email = mUi->txtActivateEmail->text().trimmed();
+
+  if ( code.isEmpty() )
+  {
+    showError( PageActivate, tr( "Please enter your 16-character activation code." ) );
+    return;
+  }
+
+  setButtonsBusy( true );
+  hideErrors();
+
+  HakeLicenseManager::instance()->activateCode( code, email,
+    [this]( bool success, const QString &message ) {
+      setButtonsBusy( false );
+      if ( success )
+      {
+        refreshDashboardView();
+        setPage( PageDashboard );
+      }
+      else
+      {
+        showError( PageActivate, message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::onSubmitLogin()
+{
+  QString email = mUi->txtLoginEmail->text().trimmed();
+  QString password = mUi->txtLoginPassword->text();
+
+  if ( email.isEmpty() || !email.contains( '@' ) )
+  {
+    showError( PageLogin, tr( "Please enter your registered email address." ) );
+    return;
+  }
+  if ( password.isEmpty() )
+  {
+    showError( PageLogin, tr( "Please enter your password." ) );
+    return;
+  }
+
+  setButtonsBusy( true );
+  hideErrors();
+
+  HakeLicenseManager::instance()->loginAccount( email, password,
+    [this, email]( bool success, const QString &message, const QJsonObject &data ) {
+      setButtonsBusy( false );
+      if ( success )
+      {
+        // Populate email in activation field and navigate to activate or dashboard
+        mUi->txtActivateEmail->setText( email );
+        if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+        {
+          refreshDashboardView();
+          setPage( PageDashboard );
+        }
+        else
+        {
+          setPage( PageActivate );
+        }
+      }
+      else
+      {
+        showError( PageLogin, message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::onSubmitSignUp()
+{
+  QString name = mUi->txtSignUpName->text().trimmed();
+  QString email = mUi->txtSignUpEmail->text().trimmed();
+  QString pass = mUi->txtSignUpPassword->text();
+  QString confirm = mUi->txtSignUpConfirm->text();
+
+  if ( name.isEmpty() )
+  {
+    showError( PageSignUp, tr( "Please enter your full name." ) );
+    return;
+  }
+  if ( email.isEmpty() || !email.contains( '@' ) )
+  {
+    showError( PageSignUp, tr( "Please enter a valid email address." ) );
+    return;
+  }
+  if ( pass.length() < 8 )
+  {
+    showError( PageSignUp, tr( "Password must be at least 8 characters long." ) );
+    return;
+  }
+  if ( pass != confirm )
+  {
+    showError( PageSignUp, tr( "Passwords do not match." ) );
+    return;
+  }
+  if ( !mUi->chkAcceptTerms->isChecked() )
+  {
+    showError( PageSignUp, tr( "Please accept the Terms of Service to continue." ) );
+    return;
+  }
+
+  setButtonsBusy( true );
+  hideErrors();
+
+  HakeLicenseManager::instance()->registerAccount( name, email, pass,
+    [this, name, email, pass]( bool success, const QString &message ) {
+      setButtonsBusy( false );
+      if ( success )
+      {
+        // Pre-fill trial and activate forms with new account info
+        mUi->txtTrialName->setText( name );
+        mUi->txtTrialEmail->setText( email );
+        mUi->txtTrialPassword->setText( pass );
+        mUi->txtActivateEmail->setText( email );
+        setPage( PageTrial );
+      }
+      else
+      {
+        showError( PageSignUp, message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::refreshDashboardView()
+{
+  HakeLicenseManager::LicenseInfo info = HakeLicenseManager::instance()->currentLicense();
+
+  QString customerStr = info.customerName;
+  if ( !info.customerEmail.isEmpty() && info.customerEmail != info.customerName )
+  {
+    customerStr += QStringLiteral( " (%1)" ).arg( info.customerEmail );
+  }
+  mUi->lblValCustomer->setText( customerStr.isEmpty() ? tr( "Active User" ) : customerStr );
+
+  QString planDisplay = info.planTier.toUpper();
+  if ( info.planTier == QLatin1String( "trial" ) )
+    planDisplay = tr( "7-Day Free Trial (Full Access)" );
+  else if ( info.planTier == QLatin1String( "annual" ) )
+    planDisplay = tr( "Annual Pro Workstation License" );
+  else if ( info.planTier == QLatin1String( "business" ) )
+    planDisplay = tr( "Business Team Enterprise License" );
+
+  mUi->lblValPlan->setText( planDisplay );
+  mUi->lblValExpires->setText( info.expiresAt.isValid() ? info.expiresAt.toString( Qt::ISODate ) : tr( "Perpetual" ) );
+
+  int days = HakeLicenseManager::instance()->remainingDays();
+  mUi->lblValRemaining->setText( tr( "%1 days remaining" ).arg( days ) );
+
+  mUi->lblValDevice->setText( HakeLicenseManager::instance()->machineName() );
+
+  if ( info.isValid )
+  {
+    mUi->lblDashStatusBadge->setText( tr( "ACTIVE" ) );
+    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 4px 12px; font-weight: bold; font-size: 12px;" ) );
+
+    // Display grace period warning if offline for > 24 hours
+    if ( HakeLicenseManager::instance()->isGracePeriodActive() )
+    {
+      int graceRemaining = HakeLicenseManager::instance()->offlineGraceDaysRemaining();
+      mUi->lblGraceWarning->setText( tr( "⚠️ Offline Grace Active: %1 days remaining before online check-in is required." ).arg( graceRemaining ) );
+      mUi->lblGraceWarning->show();
+    }
+    else
+    {
+      mUi->lblGraceWarning->hide();
+    }
+  }
+  else
+  {
+    mUi->lblDashStatusBadge->setText( tr( "EXPIRED" ) );
+    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 4px 12px; font-weight: bold; font-size: 12px;" ) );
+    mUi->lblGraceWarning->hide();
+  }
+}
+
+void HakeActivationDialog::onRefreshLicenseClicked()
+{
+  mUi->btnDashRefresh->setEnabled( false );
+  mUi->btnDashRefresh->setText( tr( "Checking in..." ) );
+
+  HakeLicenseManager::instance()->refreshLicense( [this]( bool success, const QString &message ) {
+    mUi->btnDashRefresh->setEnabled( true );
+    mUi->btnDashRefresh->setText( tr( "↻ Check-in" ) );
+
+    if ( success )
+    {
+      refreshDashboardView();
+      QMessageBox::information( this, tr( "License Check-in" ), tr( "Workstation successfully verified with the license server." ) );
+    }
+    else
+    {
+      refreshDashboardView();
+      QMessageBox::warning( this, tr( "Check-in Status" ), message );
+    }
+  } );
+}
+
+void HakeActivationDialog::onDeactivateWorkstationClicked()
+{
+  QMessageBox::StandardButton reply = QMessageBox::question(
+    this,
+    tr( "Deactivate Workstation" ),
+    tr( "Are you sure you want to deactivate Hake GeoDesk on this computer?\n\n"
+        "This will unbind your license seat from this workstation and allow you to activate it on another device." ),
+    QMessageBox::Yes | QMessageBox::No,
+    QMessageBox::No
+  );
+
+  if ( reply == QMessageBox::Yes )
+  {
+    HakeLicenseManager::instance()->deactivateWorkstation( [this]( bool success, const QString &message ) {
+      if ( success )
+      {
+        QMessageBox::information( this, tr( "Deactivation Successful" ), message );
+        setPage( PageWelcome );
+      }
+      else
+      {
+        QMessageBox::warning( this, tr( "Deactivation Failed" ), message );
+      }
+    } );
+  }
+}
+
+void HakeActivationDialog::onBuyAnnualClicked()
+{
+  bool ok = false;
+  QString email = QInputDialog::getText(
+    this,
+    tr( "Purchase Annual Pro License" ),
+    tr( "Enter the email address for license delivery:" ),
+    QLineEdit::Normal,
+    mUi->txtTrialEmail->text(),
+    &ok
+  );
+
+  if ( !ok || email.isEmpty() || !email.contains( '@' ) )
+    return;
+
+  HakeLicenseManager::instance()->purchasePlanOnline(
+    QStringLiteral( "annual" ),
+    email.trimmed(),
+    email.split( '@' ).first(),
+    [this, email]( bool success, const QString &message, const QString &code ) {
+      if ( success && !code.isEmpty() )
+      {
+        QMessageBox::information(
+          this,
+          tr( "Order Completed" ),
+          tr( "Thank you! Your Annual Pro license has been provisioned.\n\nActivation Code: %1\n\nA confirmation email has been dispatched." ).arg( code )
+        );
+        mUi->txtActivationCode->setText( code );
+        mUi->txtActivateEmail->setText( email );
+        setPage( PageActivate );
+      }
+      else
+      {
+        QMessageBox::warning( this, tr( "Checkout Issue" ), message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::onBuyBusinessClicked()
+{
+  bool ok = false;
+  QString email = QInputDialog::getText(
+    this,
+    tr( "Purchase Business Team License" ),
+    tr( "Enter the organization email for license delivery (5 seats):" ),
+    QLineEdit::Normal,
+    mUi->txtTrialEmail->text(),
+    &ok
+  );
+
+  if ( !ok || email.isEmpty() || !email.contains( '@' ) )
+    return;
+
+  HakeLicenseManager::instance()->purchasePlanOnline(
+    QStringLiteral( "business" ),
+    email.trimmed(),
+    email.split( '@' ).first(),
+    [this, email]( bool success, const QString &message, const QString &code ) {
+      if ( success && !code.isEmpty() )
+      {
+        QMessageBox::information(
+          this,
+          tr( "Team Order Provisioned" ),
+          tr( "Your Business Team License (5 Workstation Seats) is ready!\n\nActivation Code: %1\n\nDelivery email sent to %2." ).arg( code, email )
+        );
+        mUi->txtActivationCode->setText( code );
+        mUi->txtActivateEmail->setText( email );
+        setPage( PageActivate );
+      }
+      else
+      {
+        QMessageBox::warning( this, tr( "Checkout Issue" ), message );
+      }
+    }
+  );
+}
+
+void HakeActivationDialog::onLaunchApp()
+{
+  accept(); // Closes dialog with QDialog::Accepted to launch GeoDesk
+}
+
+void HakeActivationDialog::onSignOut()
+{
+  HakeLicenseManager::instance()->clearLicense();
+  setPage( PageWelcome );
+}

@@ -98,6 +98,8 @@ using namespace Qt::StringLiterals;
 #include "qgsdevtoolspanelwidget.h"
 #include "qgstaskmanager.h"
 #include "qgsziputils.h"
+#include "hakelicensemanager.h"
+#include "hakeactivationdialog.h"
 #include "qgsbrowserguimodel.h"
 #include "qgsvectorlayerjoinbuffer.h"
 #include "qgsgeometryvalidationservice.h"
@@ -2177,6 +2179,19 @@ QgisApp::QgisApp(
     if ( mActionPan )
       mActionPan->setChecked( false );
   }
+
+  // Display expiration notice if subscription/trial is nearing expiry
+  if ( HakeLicenseManager::instance()->isExpiringSoon() )
+  {
+    const int days = HakeLicenseManager::instance()->remainingDays();
+    visibleMessageBar()->pushMessage(
+      tr( "License Notice" ),
+      tr( "Your Hake GeoDesk subscription expires in %1 day(s). Please renew to maintain uninterrupted access." ).arg( days ),
+      Qgis::MessageLevel::Warning,
+      10
+    );
+  }
+
   endProfile();
 }
 
@@ -3338,6 +3353,11 @@ void QgisApp::createActions()
   connect( mActionCheckQgisVersion, &QAction::triggered, this, &QgisApp::checkQgisVersion );
   connect( mActionAbout, &QAction::triggered, this, &QgisApp::about );
   connect( mActionSponsors, &QAction::triggered, this, &QgisApp::sponsors );
+
+  QAction *actionLicense = new QAction( tr( "License Information..." ), this );
+  actionLicense->setObjectName( u"mActionLicense"_s );
+  connect( actionLicense, &QAction::triggered, this, &QgisApp::showLicenseDialog );
+  mHelpMenu->insertAction( mActionAbout, actionLicense );
 
   // Created here, before the ribbon is built; the locator itself only exists once the status bar is created.
   mActionToolSearch = new QAction( QgsApplication::getThemeIcon( u"/search.svg"_s ), tr( "Tool Search" ), this );
@@ -6270,6 +6290,12 @@ void QgisApp::about()
   mAboutDialog->show();
   mAboutDialog->raise();
   mAboutDialog->activateWindow();
+}
+
+void QgisApp::showLicenseDialog()
+{
+  HakeActivationDialog dlg( this );
+  dlg.exec();
 }
 
 QString QgisApp::getVersionString()

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hake GeoDesk — License Administration Panel</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--card-border); margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+    .brand h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .brand span { font-size: 13px; color: var(--accent); background: rgba(6, 182, 212, 0.1); padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+    .nav-actions { display: flex; gap: 12px; }
+    button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background 0.15s; font-size: 13px; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #374151; color: var(--text); }
+    button.secondary:hover { background: #4b5563; }
+    button.danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    button.danger:hover { background: var(--danger); color: white; }
+    button.success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    button.success:hover { background: var(--success); color: white; }
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px; }
+    .stat-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-val { font-size: 28px; font-weight: 700; color: #fff; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; }
+    .tab { padding: 8px 16px; cursor: pointer; border-radius: 6px; font-size: 14px; font-weight: 500; color: var(--text-muted); }
+    .tab.active { background: #1f2937; color: white; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #131d2e; text-align: left; padding: 12px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
+    td { padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-trial { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+    .badge-revoked { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge-expired { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; width: 100%; max-width: 480px; padding: 24px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-header h3 { font-size: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .form-group input, .form-group select { width: 100%; background: #0b1120; border: 1px solid var(--card-border); border-radius: 6px; padding: 9px 12px; color: white; font-size: 13px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+    .code-display { background: #030712; border: 1px dashed var(--accent); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 16px; text-align: center; color: #38bdf8; margin: 12px 0; letter-spacing: 2px; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; display: none; }
+    .alert-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .alert-success { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">H</div>
+      <div>
+        <h1>Hake GeoDesk <span>Staff Licensing Admin</span></h1>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button onclick="openModal('createModal')">+ Create License</button>
+      <button class="secondary" onclick="openModal('batchModal')">Batch Generator</button>
+      <button class="success" onclick="openModal('simStripeModal')">💳 Simulate Stripe Buy</button>
+      <button class="secondary" onclick="refreshData()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Licenses</div>
+      <div class="stat-val" id="statTotal">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Trials</div>
+      <div class="stat-val" id="statTrials" style="color: var(--accent);">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Devices</div>
+      <div class="stat-val" id="statDevices" style="color: var(--success);">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Server Status</div>
+      <div class="stat-val" style="font-size: 16px; color: var(--success); padding-top: 8px;">● Operational (Ed25519)</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('licenses')">Licenses &amp; Activations</div>
+    <div class="tab" onclick="switchTab('audit')">Audit Logs</div>
+    <div class="tab" onclick="switchTab('emails')">Emails Spooled</div>
+  </div>
+
+  <div id="licensesView" class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer Email</th>
+          <th>Plan Tier</th>
+          <th>Code Last 4</th>
+          <th>Workstations</th>
+          <th>Expires At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="licensesTableBody">
+        <tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading licenses...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="auditView" class="card" style="display: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp (UTC)</th>
+          <th>Event Type</th>
+          <th>Details</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody id="auditTableBody">
+        <tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading logs...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="emailsView" class="card" style="display: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Sent At (UTC)</th>
+          <th>Recipient</th>
+          <th>Plan</th>
+          <th>Activation Code</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="emailsTableBody">
+        <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading spooled emails...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Create Single License Modal -->
+  <div id="createModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create New License</h3>
+        <span style="cursor:pointer;" onclick="closeModal('createModal')">✕</span>
+      </div>
+      <div id="createResult" style="display:none;">
+        <p style="font-size: 13px; color: var(--text-muted);">New 16-character Crockford Base32 Code (Store safely, not saved in plaintext):</p>
+        <div class="code-display" id="generatedCode">XXXX-XXXX-XXXX-XXXX</div>
+        <button style="width:100%; margin-top: 8px;" onclick="closeModal('createModal'); refreshData();">Done</button>
+      </div>
+      <div id="createFormContainer">
+        <div class="form-group">
+          <label>Customer Email</label>
+          <input type="email" id="newEmail" placeholder="client@company.com" required>
+        </div>
+        <div class="form-group">
+          <label>Plan Tier</label>
+          <select id="newTier">
+            <option value="annual">Annual Plan (365 Days, 1 Workstation)</option>
+            <option value="business">Business Plan (365 Days, 1 Seat)</option>
+            <option value="trial">7-Day Free Trial</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Duration (Days)</label>
+          <input type="number" id="newDays" value="365">
+        </div>
+        <button style="width:100%;" onclick="submitCreateLicense()">Generate Activation Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Modal -->
+  <div id="batchModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Batch License Generator</h3>
+        <span style="cursor:pointer;" onclick="closeModal('batchModal')">✕</span>
+      </div>
+      <div class="form-group">
+        <label>Number of Codes (1 - 50)</label>
+        <input type="number" id="batchCount" value="5" min="1" max="50">
+      </div>
+      <div class="form-group">
+        <label>Email Identifier Prefix</label>
+        <input type="text" id="batchPrefix" value="enterprise-seat">
+      </div>
+      <button style="width:100%;" onclick="submitBatch()">Generate Batch Codes</button>
+      <div id="batchResults" style="margin-top: 14px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Simulate Stripe Modal -->
+  <div id="simStripeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💳 Simulate Stripe Checkout</h3>
+        <span style="cursor:pointer;" onclick="closeModal('simStripeModal')">✕</span>
+      </div>
+      <div class="form-group">
+        <label>Customer Email</label>
+        <input type="email" id="stripeEmail" value="analyst@geodesk.org">
+      </div>
+      <div class="form-group">
+        <label>Customer Full Name</label>
+        <input type="text" id="stripeName" value="Alex Rivera">
+      </div>
+      <div class="form-group">
+        <label>Plan Tier</label>
+        <select id="stripeTier">
+          <option value="annual">Annual Pro Plan (1 Seat)</option>
+          <option value="business">Business Team Plan (5 Seats)</option>
+        </select>
+      </div>
+      <button style="width:100%;" onclick="submitSimStripe()">Simulate Payment &amp; Trigger Webhook</button>
+      <div id="stripeResult" style="margin-top: 14px; display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = localStorage.getItem("hake_admin_token") || "";
+
+    async function apiFetch(endpoint, options = {}) {
+      options.headers = options.headers || {};
+      options.headers["Content-Type"] = "application/json";
+      if (authToken) options.headers["Authorization"] = `Bearer ${authToken}`;
+      const res = await fetch(endpoint, options);
+      if (res.status === 401) {
+        const password = prompt("Hake Staff Admin Password:");
+        if (password) {
+          const loginRes = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({username: "admin@haketech.com", password: password})
+          });
+          const loginData = await loginRes.json();
+          if (loginData.token) {
+            authToken = loginData.token;
+            localStorage.setItem("hake_admin_token", authToken);
+            return apiFetch(endpoint, options);
+          }
+        }
+      }
+      return res;
+    }
+
+    async function refreshData() {
+      try {
+        const res = await apiFetch("/api/admin/licenses");
+        if (!res.ok) return;
+        const licenses = await res.json();
+        renderLicenses(licenses);
+        updateStats(licenses);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function updateStats(licenses) {
+      document.getElementById("statTotal").innerText = licenses.length;
+      document.getElementById("statTrials").innerText = licenses.filter(l => l.plan_tier === "trial").length;
+      document.getElementById("statDevices").innerText = licenses.reduce((sum, l) => sum + (l.active_devices || 0), 0);
+    }
+
+    function renderLicenses(licenses) {
+      const tbody = document.getElementById("licensesTableBody");
+      if (licenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px;">No licenses found. Create your first one above!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = licenses.map(l => `
+        <tr>
+          <td><strong>${l.customer_email}</strong></td>
+          <td><span class="badge ${l.plan_tier === 'trial' ? 'badge-trial' : 'badge-active'}">${l.plan_tier}</span></td>
+          <td><code>••••-${l.code_last4}</code></td>
+          <td>${l.active_devices || 0} / ${l.max_devices}</td>
+          <td>${l.expires_at ? l.expires_at.substring(0, 10) : 'Never'}</td>
+          <td><span class="badge badge-${l.status}">${l.status}</span></td>
+          <td>
+            <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="extendLicense('${l.license_id}', 30)">+30d</button>
+            <button class="success" style="padding: 4px 8px; font-size: 11px;" onclick="resetDevice('${l.license_id}')">Reset Device</button>
+            ${l.status === 'active' ? `<button class="danger" style="padding: 4px 8px; font-size: 11px;" onclick="revokeLicense('${l.license_id}')">Revoke</button>` : ''}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function extendLicense(id, days) {
+      if (!confirm(`Extend license by ${days} days?`)) return;
+      await apiFetch(`/api/admin/licenses/${id}/extend`, {
+        method: "POST",
+        body: JSON.stringify({additional_days: days})
+      });
+      refreshData();
+    }
+
+    async function resetDevice(id) {
+      if (!confirm("Reset workstation binding? The customer can then activate GeoDesk on a new machine.")) return;
+      await apiFetch(`/api/admin/licenses/${id}/reset-device`, {method: "POST"});
+      alert("Workstation bindings reset successfully.");
+      refreshData();
+    }
+
+    async function revokeLicense(id) {
+      if (!confirm("Are you sure you want to permanently revoke this license?")) return;
+      await apiFetch(`/api/admin/licenses/${id}/revoke`, {
+        method: "POST",
+        body: JSON.stringify({reason: "Staff administrator revocation"})
+      });
+      refreshData();
+    }
+
+    async function submitCreateLicense() {
+      const email = document.getElementById("newEmail").value;
+      const tier = document.getElementById("newTier").value;
+      const days = parseInt(document.getElementById("newDays").value) || 365;
+      if (!email) return alert("Please enter email");
+
+      const res = await apiFetch("/api/admin/licenses", {
+        method: "POST",
+        body: JSON.stringify({customer_email: email, plan_tier: tier, valid_days: days})
+      });
+      if (!res.ok) return alert("Error creating license");
+      const data = await res.json();
+      document.getElementById("createFormContainer").style.display = "none";
+      document.getElementById("createResult").style.display = "block";
+      document.getElementById("generatedCode").innerText = data.activation_code;
+    }
+
+    async function submitBatch() {
+      const count = parseInt(document.getElementById("batchCount").value) || 5;
+      const prefix = document.getElementById("batchPrefix").value || "enterprise";
+      const res = await apiFetch("/api/admin/licenses/batch", {
+        method: "POST",
+        body: JSON.stringify({count: count, email_prefix: prefix, plan_tier: "business", valid_days: 365})
+      });
+      if (!res.ok) return alert("Error creating batch");
+      const list = await res.json();
+      const div = document.getElementById("batchResults");
+      div.style.display = "block";
+      div.innerHTML = list.map(item => `<div>${item.customer_email}: <strong>${item.activation_code}</strong></div>`).join("");
+      refreshData();
+    }
+
+    async function switchTab(tab) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.getElementById("licensesView").style.display = "none";
+      document.getElementById("auditView").style.display = "none";
+      document.getElementById("emailsView").style.display = "none";
+
+      if (tab === "licenses") {
+        document.querySelector(".tab:nth-child(1)").classList.add("active");
+        document.getElementById("licensesView").style.display = "block";
+      } else if (tab === "audit") {
+        document.querySelector(".tab:nth-child(2)").classList.add("active");
+        document.getElementById("auditView").style.display = "block";
+        loadAuditLogs();
+      } else if (tab === "emails") {
+        document.querySelector(".tab:nth-child(3)").classList.add("active");
+        document.getElementById("emailsView").style.display = "block";
+        loadEmails();
+      }
+    }
+
+    async function loadEmails() {
+      const res = await apiFetch("/api/admin/emails");
+      if (!res.ok) return;
+      const emails = await res.json();
+      const tbody = document.getElementById("emailsTableBody");
+      if (emails.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 24px;">No emails spooled yet. Try "Simulate Stripe Buy" above!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = emails.map(e => `
+        <tr>
+          <td><code>${e.sent_at ? e.sent_at.substring(0, 19).replace('T', ' ') : ''}</code></td>
+          <td><strong>${e.customer_name}</strong> &lt;${e.to_email}&gt;</td>
+          <td><span class="badge badge-active">${e.plan_tier}</span></td>
+          <td><code>${e.activation_code}</code></td>
+          <td><span style="color: var(--success); font-size: 11px;">✓ ${e.relay_status}</span></td>
+        </tr>
+      `).join("");
+    }
+
+    async function submitSimStripe() {
+      const email = document.getElementById("stripeEmail").value;
+      const name = document.getElementById("stripeName").value;
+      const tier = document.getElementById("stripeTier").value;
+
+      const res = await apiFetch("/api/admin/simulate-checkout", {
+        method: "POST",
+        body: JSON.stringify({customer_email: email, customer_name: name, plan_tier: tier})
+      });
+      if (!res.ok) return alert("Simulation failed");
+      const data = await res.json();
+      const resDiv = document.getElementById("stripeResult");
+      resDiv.style.display = "block";
+      resDiv.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); padding: 12px; border-radius: 6px;">
+          <strong style="color: var(--success);">Payment Succeeded & License Issued!</strong><br>
+          <div style="font-family: monospace; font-size: 16px; margin: 8px 0; color: #38bdf8;">${data.activation_code}</div>
+          <small style="color: var(--text-muted);">Delivery email sent to <strong>${data.customer_email}</strong>. Workstation can now activate this key.</small>
+        </div>
+      `;
+      refreshData();
+    }
+
+    async function loadAuditLogs() {
+      const res = await apiFetch("/api/admin/audit-logs");
+      if (!res.ok) return;
+      const logs = await res.json();
+      const tbody = document.getElementById("auditTableBody");
+      tbody.innerHTML = logs.map(l => `
+        <tr>
+          <td><code>${l.timestamp}</code></td>
+          <td><strong>${l.event_type}</strong></td>
+          <td>${l.details}</td>
+          <td>${l.ip_address}</td>
+        </tr>
+      `).join("");
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+      if (id === "createModal") {
+        document.getElementById("createFormContainer").style.display = "block";
+        document.getElementById("createResult").style.display = "none";
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    window.onload = refreshData;
+  </script>
+</body>
+</html>

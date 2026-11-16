@@ -88,6 +88,8 @@ set(HAKE_WHATSNEW_URL "http://plugins.haketech.com/news/latest.html" CACHE STRIN
 # -DHAKE_GIT_REVISION=<full sha>; it is consumed once and not kept in the cache
 # (see cmake/CreateQgsVersion.cmake). The About link is <repository>/commit/<sha>.
 set(HAKE_GIT_REPOSITORY_URL "https://github.com/sagar-singha-roy/hake-gis" CACHE STRING "Repository base URL for code revision links")
+set(HAKE_LICENSE_SERVER_URL "http://127.0.0.1:8000" CACHE STRING "Hake GeoDesk licensing server URL")
+set(HAKE_LICENSE_PUBLIC_KEY "2b4da3349550d72beaea782dcba13895cce0d0d180d8f780513055734bfde61c" CACHE STRING "Hex-encoded Ed25519 public key for verifying license tokens")
 set(HAKE_INSTALLER_NAME "Hake Geodesk Installer" CACHE STRING "User-facing installer package name")
 set(HAKE_INSTALLER_FILE_NAME "Hake-Geodesk-Installer" CACHE STRING "Filesystem-safe installer artifact basename")
 project(hake-gis VERSION ${COMPLETE_VERSION})

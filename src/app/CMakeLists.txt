@@ -14,6 +14,9 @@ set(QGIS_APP_SRCS
   qgshakebuildinfo.cpp
   qgshakeicons.cpp
   qgshaketheme.cpp
+  licensing/ed25519_verify.cpp
+  licensing/hakelicensemanager.cpp
+  licensing/hakeactivationdialog.cpp
   qgspythonconsoledockwidget.cpp
   qgsprocessingtoolboxdockwidget.cpp
   qgsmetasearchdialog.cpp
@@ -584,6 +587,7 @@ target_include_directories(qgis_app PUBLIC
   ${CMAKE_SOURCE_DIR}/external/nmea
 
   ${CMAKE_SOURCE_DIR}/src/app
+  ${CMAKE_SOURCE_DIR}/src/app/licensing
   ${CMAKE_SOURCE_DIR}/src/app/decorations
   ${CMAKE_SOURCE_DIR}/src/app/devtools
   ${CMAKE_SOURCE_DIR}/src/app/georeferencer
