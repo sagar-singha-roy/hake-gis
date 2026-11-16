@@ -6,7 +6,29 @@ on:
       - master
       - release-**
       - ribbon-ui-enhancements
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/windows-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   pull_request:
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/windows-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   release:
     types: ['published']
   workflow_dispatch:

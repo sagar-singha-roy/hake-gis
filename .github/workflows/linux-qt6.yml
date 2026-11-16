@@ -6,9 +6,22 @@ on:
       - master
       - release-**
       - ribbon-ui-enhancements
+    paths-ignore:
+      - '.github/workflows/windows-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
   pull_request:
+    paths-ignore:
+      - '.github/workflows/windows-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
   release:
     types: ['published']
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -125,13 +138,18 @@ jobs:
           # Install PyQt6 Multimedia extension with fallback
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             python3-pyqt6.qtmultimedia || sudo python3 -m pip install --break-system-packages PyQt6-QtMultimedia || true
+          # Install FUSE compatibility for AppImage packaging tools
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libfuse2t64 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libfuse2 || true
 
       - name: 🛍️ Setup ccache
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
         with:
-          max-size: 1G
+          max-size: 4G
           key: build-ccache-linux-qt6-${{ matrix.suffix }}-${{ github.event.pull_request.base.ref || github.ref_name }}
-          save: ${{ github.event_name == 'push' }}
+          restore-keys: |
+            build-ccache-linux-qt6-${{ matrix.suffix }}-
+          save: true
 
       - name: 🌱 Configure
         run: |
@@ -139,6 +157,7 @@ jobs:
                 -B build \
                 -G Ninja \
                 -D CMAKE_BUILD_TYPE=Release \
+                -D CMAKE_INSTALL_PREFIX=/usr \
                 -D CMAKE_C_COMPILER=gcc \
                 -D CMAKE_CXX_COMPILER=g++ \
                 -D USE_CCACHE=ON \

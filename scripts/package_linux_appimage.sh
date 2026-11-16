@@ -75,6 +75,13 @@ mkdir -p "${APPDIR}"
 echo "==> [1/8] Installing build artifacts into AppDir..."
 DESTDIR="${APPDIR}" cmake --install "${BUILD_DIR}" --strip
 
+# If files were installed to usr/local instead of usr, normalize them to usr
+if [[ -d "${APPDIR}/usr/local" ]]; then
+    echo "    Normalizing usr/local hierarchy into usr..."
+    cp -rn "${APPDIR}/usr/local"/* "${APPDIR}/usr/" 2>/dev/null || true
+    rm -rf "${APPDIR}/usr/local"
+fi
+
 # Ensure standard directory layout exists
 mkdir -p "${APPDIR}/usr/bin"
 mkdir -p "${APPDIR}/usr/lib"
@@ -409,8 +416,10 @@ EOF
 
 mkdir -p "${APPDIR}/usr/share/applications"
 cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/usr/share/applications/org.hake.geospatial.desktop"
-cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/hake-geodesk.desktop"
 cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/usr/share/applications/hake-geodesk.desktop"
+# AppImage specification requires EXACTLY ONE .desktop file in AppDir root.
+# Remove duplicate desktop file in AppDir root so appimagetool does not fail.
+rm -f "${APPDIR}/hake-geodesk.desktop"
 
 # Install application icons across standard XDG sizes and names
 ICON_512="${REPO_ROOT}/images/icons/hake-gis-icon-512x512.png"
@@ -565,10 +574,23 @@ if [[ "${SKIP_APPIMAGE}" == "false" ]]; then
     fi
 
     if [[ -n "${APPIMAGETOOL_BIN}" ]]; then
-        echo "    Building AppImage via ${APPIMAGETOOL_BIN}..."
         APPIMAGE_NAME="Hake-GeoDesk-${ARCH}.AppImage"
-        ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --appimage-extract-and-run --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}" || \
-        ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"
+        echo "    Building AppImage via ${APPIMAGETOOL_BIN}..."
+
+        # Extract appimagetool if it is an AppImage to avoid requiring FUSE on modern runners
+        APPIMAGETOOL_EXTRACTED="${BUILD_DIR}/appimagetool_extracted"
+        if [[ "${APPIMAGETOOL_BIN}" == *.AppImage* && ! -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
+            rm -rf "${APPIMAGETOOL_EXTRACTED}" "${BUILD_DIR}/squashfs-root"
+            (cd "${BUILD_DIR}" && "${APPIMAGETOOL_BIN}" --appimage-extract >/dev/null 2>&1 && mv squashfs-root "${APPIMAGETOOL_EXTRACTED}") || true
+        fi
+
+        if [[ -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
+            echo "    Executing extracted appimagetool (no FUSE required)..."
+            ARCH="${ARCH}" "${APPIMAGETOOL_EXTRACTED}/AppRun" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"
+        else
+            ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --appimage-extract-and-run --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}" || \
+            ARCH="${ARCH}" "${APPIMAGETOOL_BIN}" --no-appstream "${APPDIR}" "${OUTPUT_DIR}/${APPIMAGE_NAME}"
+        fi
         chmod +x "${OUTPUT_DIR}/${APPIMAGE_NAME}"
         echo "    ✓ Successfully generated AppImage: ${OUTPUT_DIR}/${APPIMAGE_NAME}"
     else

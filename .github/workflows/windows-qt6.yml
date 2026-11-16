@@ -6,7 +6,23 @@ on:
       - master
       - release-**
       - ribbon-ui-enhancements
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   pull_request:
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   release:
     types: ['published']
   workflow_dispatch:
@@ -125,15 +141,25 @@ jobs:
       - name: 🛍️ Setup ccache
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
         with:
-          max-size: 1G
+          max-size: 5G
           key: build-ccache-win64-qt6-${{ github.event.pull_request.base.ref || github.ref_name }}
-          save: ${{ github.event_name == 'push' }}
+          restore-keys: |
+            build-ccache-win64-qt6-
+          save: true
 
       - name: 🛍️ Tune ccache configuration
         shell: bash
         run: |
           # To make ccache work properly with precompiled headers
           ccache --set-config sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime
+
+      - name: 🎡 Cache vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: C:/vcpkg_cache
+          key: vcpkg-bin-win64-${{ hashFiles('vcpkg/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-bin-win64-
 
       - name: 🍓 Setup Strawberry Perl for vcpkg/openssl
         shell: powershell
@@ -160,6 +186,7 @@ jobs:
         shell: bash
         env:
           X_VCPKG_ASSET_SOURCES: x-azurl,https://assetcache.open-vcpkg.org/assetcache,,read
+          VCPKG_DEFAULT_BINARY_CACHE: C:/vcpkg_cache
           PERL: C:\Strawberry\perl\bin\perl.exe
           DISTUTILS_USE_SDK: 1
         run: |
