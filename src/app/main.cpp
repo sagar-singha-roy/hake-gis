@@ -1260,6 +1260,21 @@ int main( int argc, char *argv[] )
     }
   }
 
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS) && !defined(Q_OS_ANDROID)
+  // Ensure High-DPI scaling policy handles fractional display scaling smoothly without rounding blur
+  QGuiApplication::setHighDpiScaleFactorRoundingPolicy( Qt::HighDpiScaleFactorRoundingPolicy::PassThrough );
+
+  // Ensure automatic platform backend fallback if QT_QPA_PLATFORM is unset
+  if ( !qEnvironmentVariableIsSet( "QT_QPA_PLATFORM" ) )
+  {
+    if ( qEnvironmentVariableIsSet( "WAYLAND_DISPLAY" ) )
+    {
+      // In Wayland sessions, prefer native Wayland with automatic fallback to XWayland (xcb)
+      qputenv( "QT_QPA_PLATFORM", "wayland;xcb" );
+    }
+  }
+#endif
+
   // Create the application. At this point, the profile is not yet selected
   // But we need the Qt Application to be created to be able to display the
   // profile selection dialog if needed
@@ -1559,15 +1574,9 @@ int main( int argc, char *argv[] )
   // Set hidpi icons; use SVG icons, as PNGs will be relatively too small
   QCoreApplication::setAttribute( Qt::AA_UseHighDpiPixmaps );
 #else
-  if ( QgsApplication::platformName() == "wayland"_L1 )
-  {
-    // wayland requires a desktop file to correct set window icons
-    QgsApplication::setDesktopFileName( "org.hake.geospatial" );
-  }
-  else
-  {
-    QgsApplication::setWindowIcon( QIcon( QgsApplication::appIconPath() ) );
-  }
+  // Register desktop file name for Wayland app_id and XDG desktop integration
+  QgsApplication::setDesktopFileName( QStringLiteral( "org.hake.geospatial" ) );
+  QgsApplication::setWindowIcon( QIcon( QgsApplication::appIconPath() ) );
 #endif
 
 #ifdef Q_OS_MACOS

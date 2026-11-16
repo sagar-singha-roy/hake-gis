@@ -151,11 +151,19 @@ fi
 
 if [[ -d "${QT_PLUGIN_SRC}" ]]; then
     echo "    Found Qt6 plugins at: ${QT_PLUGIN_SRC}"
-    # Copy essential plugin subdirectories
-    for plug_dir in platforms imageformats xcbglintegrations wayland-graphics-integration-client wayland-shell-integration sqldrivers multimedia tls; do
+    # Copy essential plugin subdirectories (including Wayland, XCB, and Multimedia)
+    for plug_dir in platforms imageformats xcbglintegrations wayland-graphics-integration-client wayland-shell-integration wayland-decoration-client sqldrivers multimedia tls; do
         if [[ -d "${QT_PLUGIN_SRC}/${plug_dir}" ]]; then
             mkdir -p "${APPDIR}/usr/plugins/${plug_dir}"
             cp -r "${QT_PLUGIN_SRC}/${plug_dir}"/* "${APPDIR}/usr/plugins/${plug_dir}/"
+        fi
+    done
+    echo "    Verifying bundled Qt6 platform plugins:"
+    for p in libqxcb.so libqwayland-generic.so libqwayland-egl.so; do
+        if [[ -f "${APPDIR}/usr/plugins/platforms/${p}" ]]; then
+            echo "      ✓ ${p} bundled"
+        else
+            echo "      ! ${p} not found in Qt plugin directory"
         fi
     done
 else
@@ -383,8 +391,8 @@ fi
 # ------------------------------------------------------------------------------
 echo "==> [6/8] Setting up desktop integration..."
 
-# Install desktop file
-cat <<'EOF' > "${APPDIR}/hake-geodesk.desktop"
+# Install desktop files (both org.hake.geospatial.desktop and hake-geodesk.desktop)
+cat <<'EOF' > "${APPDIR}/org.hake.geospatial.desktop"
 [Desktop Entry]
 Type=Application
 Name=Hake GeoDesk (Desktop GIS)
@@ -396,24 +404,34 @@ Terminal=false
 StartupNotify=true
 Categories=Science;Geoscience;Geography;Graphics;Qt;
 MimeType=application/x-qgis-project;application/geopackage+sqlite3;image/tiff;application/x-shapefile;
-StartupWMClass=hake-geodesk
+StartupWMClass=org.hake.geospatial
 EOF
 
-cp "${APPDIR}/hake-geodesk.desktop" "${APPDIR}/usr/share/applications/hake-geodesk.desktop"
+mkdir -p "${APPDIR}/usr/share/applications"
+cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/usr/share/applications/org.hake.geospatial.desktop"
+cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/hake-geodesk.desktop"
+cp "${APPDIR}/org.hake.geospatial.desktop" "${APPDIR}/usr/share/applications/hake-geodesk.desktop"
 
-# Install application icons
+# Install application icons across standard XDG sizes and names
 ICON_512="${REPO_ROOT}/images/icons/hake-gis-icon-512x512.png"
 ICON_SVG="${REPO_ROOT}/images/svg/logos/hake-gis-icon.svg"
 
+mkdir -p "${APPDIR}/usr/share/icons/hicolor/512x512/apps"
+mkdir -p "${APPDIR}/usr/share/icons/hicolor/scalable/apps"
+
 if [[ -f "${ICON_512}" ]]; then
     cp "${ICON_512}" "${APPDIR}/hake-gis.png"
+    cp "${ICON_512}" "${APPDIR}/org.hake.geospatial.png"
     cp "${ICON_512}" "${APPDIR}/.DirIcon"
     cp "${ICON_512}" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/hake-gis.png"
+    cp "${ICON_512}" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/org.hake.geospatial.png"
 fi
 
 if [[ -f "${ICON_SVG}" ]]; then
     cp "${ICON_SVG}" "${APPDIR}/hake-gis.svg"
+    cp "${ICON_SVG}" "${APPDIR}/org.hake.geospatial.svg"
     cp "${ICON_SVG}" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/hake-gis.svg"
+    cp "${ICON_SVG}" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/org.hake.geospatial.svg"
 fi
 
 # ------------------------------------------------------------------------------
@@ -455,6 +473,48 @@ fi
 # Qt6 plugins and QML
 export QT_PLUGIN_PATH="${APPDIR}/usr/plugins:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/plugins"
 export QML2_IMPORT_PATH="${APPDIR}/usr/qml:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/qml"
+
+# ==============================================================================
+# Display Platform Backend Detection (Wayland / XWayland / X11)
+# ==============================================================================
+# Honor explicit user choice via QT_QPA_PLATFORM if already defined
+if [ -z "${QT_QPA_PLATFORM}" ]; then
+    if [ "${HAKE_USE_XWAYLAND:-0}" = "1" ] && [ -n "${DISPLAY}" ]; then
+        # Explicit user preference for XWayland compatibility mode
+        export QT_QPA_PLATFORM="xcb"
+    elif [ -n "${WAYLAND_DISPLAY}" ]; then
+        # Wayland desktop session detected (Ubuntu Wayland, GNOME, KDE Plasma, etc.)
+        # Check if native Wayland platform plugin is bundled
+        WAYLAND_PLUGIN="${APPDIR}/usr/plugins/platforms/libqwayland-generic.so"
+        if [ ! -f "${WAYLAND_PLUGIN}" ]; then
+            WAYLAND_PLUGIN="${APPDIR}/usr/plugins/platforms/libqwayland-egl.so"
+        fi
+
+        if [ -f "${WAYLAND_PLUGIN}" ]; then
+            # Both native Wayland and XWayland (xcb) are available.
+            # Configure Qt with "wayland;xcb" so it initializes native Wayland
+            # while providing seamless, automatic fallback to XWayland if the
+            # compositor socket connection fails.
+            export QT_QPA_PLATFORM="wayland;xcb"
+        elif [ -n "${DISPLAY}" ]; then
+            # Wayland plugin not present but XWayland is available
+            export QT_QPA_PLATFORM="xcb"
+        else
+            export QT_QPA_PLATFORM="wayland"
+        fi
+    elif [ -n "${DISPLAY}" ]; then
+        # Traditional X11 session
+        export QT_QPA_PLATFORM="xcb"
+    else
+        # Headless environment (CI, automated pipelines, Docker)
+        export QT_QPA_PLATFORM="offscreen"
+    fi
+fi
+
+# High-DPI and fractional scaling configuration for pristine rendering
+export QT_ENABLE_HIGHDPI_SCALING=1
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
 
 # Prevent host Python user-site packages (~/.local) from conflicting with bundled libraries
 export PYTHONNOUSERSITE=1

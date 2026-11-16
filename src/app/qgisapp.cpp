@@ -1053,7 +1053,7 @@ const QgsSettingsEntryBool *QgisApp::settingsProjOpenedOKAtLaunch
 const QgsSettingsEntryBool *QgisApp::settingsShowScriptWarning
   = new QgsSettingsEntryBool( u"show-script-warning"_s, QgsSettingsTree::sTreeApp, true, u"Whether to warn the user before running a Python script embedded in a project"_s );
 const QgsSettingsEntryBool *QgisApp::settingsDisplayWaylandWarning
-  = new QgsSettingsEntryBool( u"display-wayland-warning"_s, QgsSettingsTree::sTreeGui, true, u"Whether to show the warning dialog when running Hake Geospatial under Wayland"_s );
+  = new QgsSettingsEntryBool( u"display-wayland-warning"_s, QgsSettingsTree::sTreeGui, false, u"Whether to show the warning dialog when running Hake Geospatial under Wayland"_s );
 const QgsSettingsEntryBool *QgisApp::settingsRestoreDefaultWindowState
   = new QgsSettingsEntryBool( u"restore-default-window-state"_s, QgsSettingsTree::sTreeApp, false, u"Whether to restore the default window state on next Hake Geospatial startup"_s );
 
@@ -2074,41 +2074,45 @@ QgisApp::QgisApp(
 
   if ( QGuiApplication::platformName() == "wayland"_L1 )
   {
+    QgsMessageLog::logMessage(
+      tr( "Desktop session: native Wayland (Qt %1). Desktop integration and high-DPI scaling active." ).arg( qVersion() ),
+      tr( "Desktop" ),
+      Qgis::MessageLevel::Info
+    );
+
     const bool displayWaylandWarning = settingsDisplayWaylandWarning->value();
     if ( displayWaylandWarning )
     {
-      const QString shortMessage = tr( "Wayland session detected: User experience will be degraded" );
+      const QString shortMessage = tr( "Running in native Wayland session" );
       QgsMessageBarItem *messageWidget = QgsMessageBar::createMessage( QString(), shortMessage );
 
       QPushButton *detailsButton = new QPushButton( tr( "More Info" ) );
       connect( detailsButton, &QPushButton::clicked, this, [detailsButton] {
         QgsMessageViewer *dialog = new QgsMessageViewer( detailsButton );
-        dialog->setTitle( tr( "Wayland Session Detected" ) );
-        // NOTE: black coloring MUST be specified here or the message shows white-on-white on wayland sessions 🙃
-        const QString warning = u"<p style=\"color: black\">%1</p><p style=\"color: black\"><b>%2</b></p>"_s.arg(
+        dialog->setTitle( tr( "Wayland Session" ) );
+        const QString info = u"<p>%1</p><p>%2</p>"_s.arg(
           tr(
-            "Running Hake Geospatial in a Wayland session will result "
-            "in a degraded experience due to limitations in the "
-            "underlying Qt library and current versions of the Wayland protocol."
+            "Hake GeoDesk is running natively under Wayland. "
+            "All mapping, analysis, and data editing tools are available."
           ),
           tr(
-            "It is highly recommended that you switch to a traditional X11 session "
-            "for an optimal user experience."
+            "If your desktop compositor experiences any window-docking or cursor-grab quirks, "
+            "you can switch to XWayland compatibility by launching with: QT_QPA_PLATFORM=xcb."
           )
         );
-        dialog->setMessageAsHtml( warning );
+        dialog->setMessageAsHtml( info );
         dialog->showMessage();
       } );
       messageWidget->layout()->addWidget( detailsButton );
 
-      QPushButton *ignoreButton = new QPushButton( tr( "Ignore" ) );
+      QPushButton *ignoreButton = new QPushButton( tr( "Don't Show Again" ) );
       connect( ignoreButton, &QPushButton::clicked, this, [this, messageWidget] {
         QgisApp::settingsDisplayWaylandWarning->setValue( false );
         messageBar()->popWidget( messageWidget );
       } );
       messageWidget->layout()->addWidget( ignoreButton );
 
-      messageBar()->pushWidget( messageWidget, Qgis::MessageLevel::Critical, 0 );
+      messageBar()->pushWidget( messageWidget, Qgis::MessageLevel::Info, 0 );
     }
   }
 

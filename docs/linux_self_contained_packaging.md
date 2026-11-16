@@ -77,12 +77,48 @@ When the user launches the AppImage or double-clicks `AppRun`, the launcher scri
    * Sets `PYTHONHOME="${APPDIR}/usr"`.
    * Sets `PYTHONNOUSERSITE=1` to prevent broken packages in `~/.local/lib/python3.X` from poisoning the bundled runtime.
    * Configures `PYTHONPATH` to load the bundled `PyQt6` and `qgis` packages first.
-4. **Qt6 Platform & Plugins (`QT_PLUGIN_PATH`):** Points Qt to `${APPDIR}/usr/plugins`, enabling both X11 (XCB) and Wayland desktops out-of-the-box.
+4. **Qt6 Platform & Plugins (`QT_PLUGIN_PATH`):** Points Qt to `${APPDIR}/usr/plugins`, enabling both X11 (`libqxcb.so`) and Wayland (`libqwayland-generic.so`, `libqwayland-egl.so`) desktop backends out-of-the-box.
 5. **Geospatial Definitions (`PROJ_DATA` & `GDAL_DATA`):** Points PROJ to `${APPDIR}/usr/share/proj` (containing `proj.db`), ensuring projections and datum transformations work without host PROJ packages.
 
 ---
 
-## 4. How to Build the Linux Distributables
+## 4. Wayland and Desktop Display Architecture
+
+Hake GeoDesk supports modern Wayland environments (Ubuntu 22.04/24.04, GNOME 44+, KDE Plasma 6, Sway, Fedora) as well as traditional X11 sessions with automatic, zero-configuration display backend selection:
+
+### 1. Automatic Display Backend Selection
+When launching `AppRun` (or the `hake-geodesk` binary), the application automatically detects the active display server:
+
+* **Wayland Desktop (`WAYLAND_DISPLAY` set):**
+  * Configures `QT_QPA_PLATFORM="wayland;xcb"`.
+  * Qt initializes native Wayland client integration when the Wayland compositor connection succeeds.
+  * If the Wayland compositor or protocol experiences an incompatibility, Qt seamlessly and automatically falls back to XWayland (`xcb`) without crashing or showing error dialogs.
+* **XWayland Compatibility Mode (`HAKE_USE_XWAYLAND=1`):**
+  * If the user prefers running under XWayland for legacy floating panel geometry, setting `HAKE_USE_XWAYLAND=1` or `QT_QPA_PLATFORM=xcb` automatically routes rendering through XWayland.
+* **X11 Desktop (`DISPLAY` set, `WAYLAND_DISPLAY` unset):**
+  * Automatically selects `QT_QPA_PLATFORM="xcb"`.
+* **Headless / CI Environments:**
+  * Automatically falls back to `QT_QPA_PLATFORM="offscreen"`.
+
+### 2. High-DPI and Fractional Display Scaling
+To prevent blurry map canvases and dialog text on modern 125%, 150%, and 200% displays:
+* Configures `QT_ENABLE_HIGHDPI_SCALING=1`.
+* Sets `QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)`.
+
+### 3. Desktop Integration & Window Matching (`StartupWMClass`)
+Wayland compositors associate running windows with their dock icon and desktop launcher using the `app_id` (matched to `StartupWMClass` and `setDesktopFileName`):
+* Both `org.hake.geospatial.desktop` and `hake-geodesk.desktop` are registered with `StartupWMClass=org.hake.geospatial`.
+* High-resolution icons (512x512 and scalable SVG) are installed under `${APPDIR}/usr/share/icons/hicolor/`.
+
+### 4. Resolution of the "Wayland session detected" Warning
+Upstream QGIS historically displayed an alarming critical warning banner on Wayland sessions advising users to change their operating system to X11. Hake GeoDesk resolves this:
+* `settingsDisplayWaylandWarning` defaults to `false`.
+* Native Wayland session initialization is logged cleanly to `QgsMessageLog` under "Desktop" at `Info` level.
+* If explicitly enabled in advanced settings, the dialog provides clear, constructive information rather than displaying an intrusive banner.
+
+---
+
+## 5. How to Build the Linux Distributables
 
 ### Automated CI/CD (GitHub Actions)
 The workflow [`.github/workflows/linux-qt6.yml`](file:///.github/workflows/linux-qt6.yml) automatically:

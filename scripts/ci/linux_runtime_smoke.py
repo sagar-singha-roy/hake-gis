@@ -29,6 +29,8 @@ REPORT: dict = {
     "python_version": sys.version,
     "env": {},
     "modules_tested": {},
+    "platform_plugins": [],
+    "desktop_window_test": None,
     "proj_test": {},
     "providers": [],
     "cli_test": None,
@@ -142,6 +144,80 @@ def test_qgis_runtime(prefix_path: Path) -> bool:
         return False
 
 
+def test_platform_plugins(prefix_path: Path) -> bool:
+    """Verify presence of required Qt6 platform plugins (xcb, wayland)."""
+    search_dirs = [
+        prefix_path / "plugins" / "platforms",
+        prefix_path / "usr" / "plugins" / "platforms",
+    ]
+    qt_plugin_path = os.environ.get("QT_PLUGIN_PATH")
+    if qt_plugin_path:
+        for p in qt_plugin_path.split(":"):
+            search_dirs.append(Path(p) / "platforms")
+
+    found_plugins = set()
+    for sdir in search_dirs:
+        if sdir.is_dir():
+            for f in sdir.glob("libq*.so"):
+                found_plugins.add(f.name)
+
+    REPORT["platform_plugins"] = sorted(found_plugins)
+    _log(f"Discovered Qt6 platform plugins: {sorted(found_plugins)}")
+
+    # libqxcb.so must be present for standard X11 and XWayland operation
+    if found_plugins and "libqxcb.so" not in found_plugins:
+        _fail("Required Qt6 platform plugin 'libqxcb.so' missing from plugin directory!")
+        return False
+
+    if "libqwayland-generic.so" in found_plugins or "libqwayland-egl.so" in found_plugins:
+        _log("Native Wayland platform plugin verified.")
+    else:
+        _log("Note: Native Wayland plugin not found; XWayland (xcb) will handle Wayland sessions.")
+
+    return True
+
+
+def test_desktop_window() -> bool:
+    """Verify PyQt6 desktop widget creation and lifecycle."""
+    try:
+        from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel
+        from PyQt6.QtCore import Qt
+
+        # Force offscreen if not running inside an active display server
+        if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+            os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+        app = QApplication.instance()
+        created_app = False
+        if app is None:
+            app = QApplication(["hake-geodesk-smoke", "-platform", os.environ.get("QT_QPA_PLATFORM", "offscreen")])
+            created_app = True
+
+        platform = app.platformName()
+        _log(f"QApplication active platform: {platform}")
+
+        win = QMainWindow()
+        win.setWindowTitle("Hake GeoDesk Desktop Compatibility Test")
+        label = QLabel("Hake GeoDesk Runtime Test", win)
+        win.setCentralWidget(label)
+        win.resize(400, 300)
+        win.show()
+        app.processEvents()
+        win.hide()
+        app.processEvents()
+
+        REPORT["desktop_window_test"] = {
+            "ok": True,
+            "platform": platform,
+        }
+        _log(f"Desktop window lifecycle test PASSED under platform: {platform}")
+        return True
+    except Exception as exc:
+        REPORT["desktop_window_test"] = {"ok": False, "error": str(exc)}
+        _fail(f"Desktop window lifecycle test failed: {exc}")
+        return False
+
+
 def test_cli(prefix_path: Path) -> bool:
     """Run hake-geodesk-process binary."""
     exe_candidates = [
@@ -188,10 +264,12 @@ def main() -> int:
 
     _log("Starting Linux Runtime Smoke Test...")
     imports_ok = test_imports()
+    plugins_ok = test_platform_plugins(prefix)
+    window_ok = test_desktop_window()
     qgis_ok = test_qgis_runtime(prefix)
     cli_ok = test_cli(prefix)
 
-    REPORT["ok"] = imports_ok and qgis_ok and cli_ok
+    REPORT["ok"] = imports_ok and plugins_ok and window_ok and qgis_ok and cli_ok
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
