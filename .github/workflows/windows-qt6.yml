@@ -142,10 +142,10 @@ jobs:
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
         with:
           max-size: 5G
-          key: build-ccache-win64-qt6-${{ github.event.pull_request.base.ref || github.ref_name }}
+          key: build-ccache-win64-qt6-v3-${{ github.event.pull_request.base.ref || github.ref_name }}
           restore-keys: |
-            build-ccache-win64-qt6-
-          save: true
+            build-ccache-win64-qt6-v3-
+          save: ${{ github.event_name == 'push' }}
 
       - name: 🛍️ Tune ccache configuration
         shell: bash
@@ -198,9 +198,13 @@ jobs:
           fi
           CMAKE_BIN=$(dirname "$(command -v cmake)")
           NINJA_BIN="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja"
-          export PATH="${CL_BINDIR}:${RC_BINDIR}:/c/Strawberry/perl/bin:/c/.vcpkg:${CMAKE_BIN}:${NINJA_BIN}:/c/Windows/system32:/c/Windows"
+          GIT_BINDIR=$(dirname "$(command -v git.exe || command -v git || echo '/c/Program Files/Git/cmd')")
+          CCACHE_BINDIR=$(dirname "$(command -v ccache.exe || command -v ccache || echo '/usr/bin')")
+          POWERSHELL_BINDIR="/c/Windows/System32/WindowsPowerShell/v1.0"
+          export PATH="${CL_BINDIR}:${RC_BINDIR}:${GIT_BINDIR}:${CCACHE_BINDIR}:/c/Strawberry/perl/bin:/c/.vcpkg:${CMAKE_BIN}:${NINJA_BIN}:${POWERSHELL_BINDIR}:/c/Windows/system32:/c/Windows"
           echo "Using MSVC from ${CL_BINDIR}"
           echo "Using Windows SDK rc from ${RC_BINDIR}"
+          echo "Using Git from ${GIT_BINDIR}"
           echo "PATH length: ${#PATH}"
 
           BUILD_DIR=$( "/c/Program Files/Git/usr/bin/cygpath" "${{ github.workspace }}/build" )

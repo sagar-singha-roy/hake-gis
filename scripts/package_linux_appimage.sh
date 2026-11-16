@@ -55,6 +55,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Ensure BUILD_DIR and OUTPUT_DIR are absolute paths to prevent tar -C or subshell cd breakage
+mkdir -p "${BUILD_DIR}"
+BUILD_DIR="$(cd "${BUILD_DIR}" && pwd)"
+mkdir -p "${OUTPUT_DIR}"
+OUTPUT_DIR="$(cd "${OUTPUT_DIR}" && pwd)"
+
 APPDIR="${BUILD_DIR}/Hake-GeoDesk.AppDir"
 
 echo "======================================================================"
@@ -578,10 +584,11 @@ if [[ "${SKIP_APPIMAGE}" == "false" ]]; then
         echo "    Building AppImage via ${APPIMAGETOOL_BIN}..."
 
         # Extract appimagetool if it is an AppImage to avoid requiring FUSE on modern runners
+        export APPIMAGE_EXTRACT_AND_RUN=1
         APPIMAGETOOL_EXTRACTED="${BUILD_DIR}/appimagetool_extracted"
         if [[ "${APPIMAGETOOL_BIN}" == *.AppImage* && ! -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
             rm -rf "${APPIMAGETOOL_EXTRACTED}" "${BUILD_DIR}/squashfs-root"
-            (cd "${BUILD_DIR}" && "${APPIMAGETOOL_BIN}" --appimage-extract >/dev/null 2>&1 && mv squashfs-root "${APPIMAGETOOL_EXTRACTED}") || true
+            (cd "${BUILD_DIR}" && "${APPIMAGETOOL_BIN}" --appimage-extract >/dev/null 2>&1 && mv "${BUILD_DIR}/squashfs-root" "${APPIMAGETOOL_EXTRACTED}") || true
         fi
 
         if [[ -x "${APPIMAGETOOL_EXTRACTED}/AppRun" ]]; then
