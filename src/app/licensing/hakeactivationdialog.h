@@ -5,6 +5,8 @@
 #include <memory>
 #include "qgis_app.h"
 
+class QTimer;
+
 namespace Ui
 {
   class HakeActivationDialogBase;
@@ -20,6 +22,7 @@ namespace Ui
  * - Subscription & Pricing information
  * - 16-character Crockford Base32 license activation with live auto-formatting
  * - Interactive License & Account Dashboard
+ * - Interactive Rainbow Color Wave Animation on "Hake Technologies"
  */
 class APP_EXPORT HakeActivationDialog : public QDialog
 {
@@ -37,11 +40,14 @@ public:
     PageDashboard = 6
   };
 
-  explicit HakeActivationDialog( QWidget *parent = nullptr );
+  explicit HakeActivationDialog( QWidget *parent = nullptr, bool requireStartupLogin = false );
   ~HakeActivationDialog() override;
 
   //! Set active page directly
   void setPage( Page page );
+
+protected:
+  bool eventFilter( QObject *watched, QEvent *event ) override;
 
 private slots:
   // Navigation
@@ -64,8 +70,9 @@ private slots:
   void onBuyAnnualClicked();
   void onBuyBusinessClicked();
 
-  // Formatting
+  // Formatting & Animation
   void onActivationCodeEdited( const QString &text );
+  void onRainbowTimerTick();
 
 private:
   void setupConnections();
@@ -75,6 +82,9 @@ private:
   void setButtonsBusy( bool busy );
 
   std::unique_ptr<Ui::HakeActivationDialogBase> mUi;
+  bool mRequireStartupLogin = false;
+  QTimer *mRainbowTimer = nullptr;
+  int mRainbowHue = 0;
 };
 
 #endif // HAKE_ACTIVATION_DIALOG_H

@@ -1804,25 +1804,22 @@ int main( int argc, char *argv[] )
     QApplication::setFont( defaultFont );
   }
 
-  // Check Hake GeoDesk licensing gate before launching main GIS workspace
-  if ( !HakeLicenseManager::instance()->isLicenseValidOffline() )
+  // Check Hake GeoDesk licensing & sign-in gate before launching main GIS workspace
+  if ( mypSplash )
   {
-    if ( mypSplash )
-    {
-      mypSplash->hide();
-    }
+    mypSplash->hide();
+  }
 
-    HakeActivationDialog licenseDialog;
-    if ( licenseDialog.exec() != QDialog::Accepted || !HakeLicenseManager::instance()->isLicenseValidOffline() )
-    {
-      // Clean exit if user closes licensing dialog without activating
-      return 0;
-    }
+  HakeActivationDialog licenseDialog( nullptr, /*requireStartupLogin=*/true );
+  if ( licenseDialog.exec() != QDialog::Accepted || !HakeLicenseManager::instance()->isLicenseValidOffline() )
+  {
+    // Clean exit if user closes dialog without signing in or activating
+    return 0;
+  }
 
-    if ( mypSplash )
-    {
-      mypSplash->show();
-    }
+  if ( mypSplash )
+  {
+    mypSplash->show();
   }
 
   QgisApp *qgis = new QgisApp( mypSplash, qgisAppOptions, rootProfileFolder, profileName, nullptr, Qt::Window, std::move( customization ) ); // "QgisApp" used to find canonical instance

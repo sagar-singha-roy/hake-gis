@@ -133,6 +133,16 @@ public:
                            const QString &fullName,
                            std::function<void( bool success, const QString &message, const QString &activationCode )> callback );
 
+  /**
+   * \brief Caches verified user credentials for offline authentication fallback.
+   */
+  void saveCachedCredentials( const QString &email, const QString &password );
+
+  /**
+   * \brief Verifies entered credentials against local workstation cache (for offline grace period).
+   */
+  bool verifyCachedCredentials( const QString &email, const QString &password ) const;
+
 signals:
   void licenseStatusChanged( bool isValid, const QString &planTier );
   void licenseRevoked( const QString &message );

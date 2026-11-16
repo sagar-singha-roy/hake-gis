@@ -7,35 +7,111 @@
 #include <QRegularExpression>
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QTimer>
+#include <QColor>
 
-HakeActivationDialog::HakeActivationDialog( QWidget *parent )
+HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartupLogin )
   : QDialog( parent )
   , mUi( std::make_unique<Ui::HakeActivationDialogBase>() )
+  , mRequireStartupLogin( requireStartupLogin )
 {
   mUi->setupUi( this );
   setModal( true );
 
-  // Display workstation hardware id in UI
+  // Display workstation hardware id in UI header and activate form
   QString hwId = HakeLicenseManager::instance()->hardwareId();
-  QString shortHw = hwId.left( 12 ) + QStringLiteral( "..." );
-  mUi->lblWorkstationId->setText( tr( "Workstation ID: %1" ).arg( shortHw ) );
+  QString shortHw = hwId.left( 8 ) + QStringLiteral( "..." );
+  mUi->lblWorkstationId->setText( tr( "Workstation: %1" ).arg( shortHw ) );
   mUi->lblActivateHwId->setText( hwId );
+
+  // Setup interactive animated rainbow effect on brand label "Hake Technologies"
+  mUi->lblBrandHakeTech->installEventFilter( this );
+  mUi->lblBrandHakeTech->setMouseTracking( true );
+  mRainbowTimer = new QTimer( this );
+  mRainbowTimer->setInterval( 35 ); // ~30 FPS smooth wave
+  connect( mRainbowTimer, &QTimer::timeout, this, &HakeActivationDialog::onRainbowTimerTick );
+  mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='color:#0f172a; font-weight:800; font-size:17px; letter-spacing:0.5px;'>Hake Technologies</span>" ) );
 
   setupConnections();
 
-  // If a valid license is already loaded, go straight to Dashboard
-  if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+  // Navigation logic:
+  // If launching from app startup (requireStartupLogin=true), always require credentials
+  if ( mRequireStartupLogin )
   {
-    refreshDashboardView();
-    setPage( PageDashboard );
+    if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+    {
+      // Pre-fill email of active license and prompt for password
+      QString activeEmail = HakeLicenseManager::instance()->currentLicense().customerEmail;
+      mUi->txtLoginEmail->setText( activeEmail );
+      mUi->txtLoginPassword->clear();
+      mUi->txtLoginPassword->setFocus();
+      mUi->lblLoginSubtitle->setText( tr( "Workstation License Active • Enter your password to unlock Hake GeoDesk." ) );
+      setPage( PageLogin );
+    }
+    else
+    {
+      setPage( PageWelcome );
+    }
   }
   else
   {
-    setPage( PageWelcome );
+    // Opened from inside GeoDesk (Help -> License & Account)
+    if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+    {
+      refreshDashboardView();
+      setPage( PageDashboard );
+    }
+    else
+    {
+      setPage( PageWelcome );
+    }
   }
 }
 
 HakeActivationDialog::~HakeActivationDialog() = default;
+
+bool HakeActivationDialog::eventFilter( QObject *watched, QEvent *event )
+{
+  if ( watched == mUi->lblBrandHakeTech )
+  {
+    if ( event->type() == QEvent::Enter || event->type() == QEvent::MouseMove )
+    {
+      if ( !mRainbowTimer->isActive() )
+      {
+        mRainbowTimer->start();
+      }
+    }
+    else if ( event->type() == QEvent::Leave )
+    {
+      mRainbowTimer->stop();
+      mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='color:#0f172a; font-weight:800; font-size:17px; letter-spacing:0.5px;'>Hake Technologies</span>" ) );
+    }
+  }
+  return QDialog::eventFilter( watched, event );
+}
+
+void HakeActivationDialog::onRainbowTimerTick()
+{
+  mRainbowHue = ( mRainbowHue + 7 ) % 360;
+  const QString brand = QStringLiteral( "Hake Technologies" );
+  QString html = QStringLiteral( "<span style='font-size:17px; font-weight:800; letter-spacing:0.5px;'>" );
+  for ( int i = 0; i < brand.length(); ++i )
+  {
+    QChar c = brand.at( i );
+    if ( c.isSpace() )
+    {
+      html += QStringLiteral( "&nbsp;" );
+    }
+    else
+    {
+      int hue = ( mRainbowHue + i * 22 ) % 360;
+      QColor col = QColor::fromHsv( hue, 235, 240 );
+      html += QStringLiteral( "<span style='color:%1;'>%2</span>" ).arg( col.name(), c );
+    }
+  }
+  html += QStringLiteral( "</span>" );
+  mUi->lblBrandHakeTech->setText( html );
+}
 
 void HakeActivationDialog::setPage( Page page )
 {
@@ -55,7 +131,7 @@ void HakeActivationDialog::setupConnections()
   // Navigation: Back Buttons
   connect( mUi->btnBackFromTrial, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
   connect( mUi->btnBackFromLogin, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
-  connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoLoginClicked );
   connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
   connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
 
@@ -81,6 +157,11 @@ void HakeActivationDialog::setupConnections()
 
   // Live Auto-formatting for 16-character code
   connect( mUi->txtActivationCode, &QLineEdit::textEdited, this, &HakeActivationDialog::onActivationCodeEdited );
+
+  // Enter key shortcuts for fast keyboard navigation
+  connect( mUi->txtLoginPassword, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitLogin );
+  connect( mUi->txtLoginEmail, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitLogin );
+  connect( mUi->txtActivationCode, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitActivate );
 }
 
 void HakeActivationDialog::onStartTrialClicked()
@@ -156,41 +237,30 @@ void HakeActivationDialog::setButtonsBusy( bool busy )
   mUi->btnSubmitActivate->setEnabled( !busy );
   mUi->btnSubmitLogin->setEnabled( !busy );
   mUi->btnSubmitSignUp->setEnabled( !busy );
+
+  setCursor( busy ? Qt::WaitCursor : Qt::ArrowCursor );
 }
 
 void HakeActivationDialog::onActivationCodeEdited( const QString &text )
 {
-  // Crockford Base32 alphabet: 0123456789ABCDEFGHJKMNPQRSTVWXYZ
   QString cleaned;
-  cleaned.reserve( 16 );
-
   for ( const QChar &ch : text )
   {
-    if ( ch == '-' || ch == ' ' || ch == ':' )
-      continue;
-
-    QChar up = ch.toUpper();
-    // Forgiving mapping
-    if ( up == 'O' )
-      up = '0';
-    else if ( up == 'I' || up == 'L' )
-      up = '1';
-
-    // Verify valid Crockford symbol
-    const QString alphabet = QStringLiteral( "0123456789ABCDEFGHJKMNPQRSTVWXYZ" );
-    if ( alphabet.contains( up ) )
+    if ( ch.isLetterOrNumber() )
     {
-      cleaned.append( up );
-      if ( cleaned.length() == 16 )
-        break;
+      cleaned.append( ch.toUpper() );
     }
   }
 
-  // Format into XXXX-XXXX-XXXX-XXXX
+  if ( cleaned.length() > 16 )
+  {
+    cleaned = cleaned.left( 16 );
+  }
+
   QString formatted;
   for ( int i = 0; i < cleaned.length(); ++i )
   {
-    if ( i > 0 && i % 4 == 0 )
+    if ( i > 0 && ( i % 4 == 0 ) )
     {
       formatted.append( '-' );
     }
@@ -298,15 +368,15 @@ void HakeActivationDialog::onSubmitLogin()
       setButtonsBusy( false );
       if ( success )
       {
-        // Populate email in activation field and navigate to activate or dashboard
         mUi->txtActivateEmail->setText( email );
         if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
         {
-          refreshDashboardView();
-          setPage( PageDashboard );
+          // Valid workstation license confirmed: directly launch GeoDesk!
+          accept();
         }
         else
         {
+          // User account authenticated, proceed to activation code entry
           setPage( PageActivate );
         }
       }
@@ -359,12 +429,12 @@ void HakeActivationDialog::onSubmitSignUp()
       setButtonsBusy( false );
       if ( success )
       {
-        // Pre-fill trial and activate forms with new account info
         mUi->txtTrialName->setText( name );
         mUi->txtTrialEmail->setText( email );
         mUi->txtTrialPassword->setText( pass );
         mUi->txtActivateEmail->setText( email );
-        setPage( PageTrial );
+        mUi->txtLoginEmail->setText( email );
+        setPage( PageLogin );
       }
       else
       {
@@ -404,7 +474,7 @@ void HakeActivationDialog::refreshDashboardView()
   if ( info.isValid )
   {
     mUi->lblDashStatusBadge->setText( tr( "ACTIVE" ) );
-    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 4px 12px; font-weight: bold; font-size: 12px;" ) );
+    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 12px; padding: 4px 14px; font-weight: bold; font-size: 12px;" ) );
 
     // Display grace period warning if offline for > 24 hours
     if ( HakeLicenseManager::instance()->isGracePeriodActive() )
@@ -421,7 +491,7 @@ void HakeActivationDialog::refreshDashboardView()
   else
   {
     mUi->lblDashStatusBadge->setText( tr( "EXPIRED" ) );
-    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 4px 12px; font-weight: bold; font-size: 12px;" ) );
+    mUi->lblDashStatusBadge->setStyleSheet( QStringLiteral( "background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 12px; padding: 4px 14px; font-weight: bold; font-size: 12px;" ) );
     mUi->lblGraceWarning->hide();
   }
 }

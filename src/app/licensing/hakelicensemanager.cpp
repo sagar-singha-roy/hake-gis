@@ -342,9 +342,38 @@ void HakeLicenseManager::clearLicense()
 
   QgsSettings settings;
   settings.remove( QString::fromLatin1( AUTH_SETTING_TOKEN_KEY ) );
+  settings.remove( QStringLiteral( "hake/cached_login_email" ) );
+  settings.remove( QStringLiteral( "hake/cached_login_hash" ) );
 
   mCurrentLicense = LicenseInfo();
   emit licenseStatusChanged( false, QString() );
+}
+
+void HakeLicenseManager::saveCachedCredentials( const QString &email, const QString &password )
+{
+  if ( email.isEmpty() || password.isEmpty() )
+    return;
+  QgsSettings settings;
+  settings.setValue( QStringLiteral( "hake/cached_login_email" ), email.trimmed().toLower() );
+  QString salt = hardwareId();
+  QByteArray hash = QCryptographicHash::hash( ( salt + email.trimmed().toLower() + password ).toUtf8(), QCryptographicHash::Sha256 ).toHex();
+  settings.setValue( QStringLiteral( "hake/cached_login_hash" ), QString::fromLatin1( hash ) );
+}
+
+bool HakeLicenseManager::verifyCachedCredentials( const QString &email, const QString &password ) const
+{
+  if ( email.isEmpty() || password.isEmpty() )
+    return false;
+  QgsSettings settings;
+  QString cachedEmail = settings.value( QStringLiteral( "hake/cached_login_email" ) ).toString();
+  QString cachedHash = settings.value( QStringLiteral( "hake/cached_login_hash" ) ).toString();
+  if ( cachedEmail.isEmpty() || cachedHash.isEmpty() )
+    return false;
+  if ( cachedEmail != email.trimmed().toLower() )
+    return false;
+  QString salt = hardwareId();
+  QByteArray hash = QCryptographicHash::hash( ( salt + email.trimmed().toLower() + password ).toUtf8(), QCryptographicHash::Sha256 ).toHex();
+  return ( cachedHash == QString::fromLatin1( hash ) );
 }
 
 // -------------------------------------------------------------------------
@@ -408,11 +437,12 @@ void HakeLicenseManager::startTrial(
   payload["client_version"] = clientVersion();
 
   sendPostRequest( QStringLiteral( "/api/trial" ), payload,
-    [this, fullName, callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
+    [this, fullName, email, password, callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
       if ( statusCode == 200 || statusCode == 201 )
       {
         if ( saveLicenseToken( json, fullName ) )
         {
+          saveCachedCredentials( email, password );
           callback( true, tr( "7-day free trial successfully activated!" ) );
           return;
         }
@@ -472,13 +502,24 @@ void HakeLicenseManager::loginAccount(
   payload["password"] = password;
 
   sendPostRequest( QStringLiteral( "/api/auth/login" ), payload,
-    [callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
+    [this, email, password, callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
       if ( statusCode == 200 )
       {
+        saveCachedCredentials( email, password );
         callback( true, tr( "Signed in successfully." ), json );
       }
       else
       {
+        // If offline or network unreachable, check cached credentials and offline license
+        if ( ( statusCode == 0 || errorMsg.contains( QLatin1String( "refused" ), Qt::CaseInsensitive ) ) &&
+             verifyCachedCredentials( email, password ) && isLicenseValidOffline() )
+        {
+          QJsonObject offlineUser;
+          offlineUser["email"] = email;
+          callback( true, tr( "Signed in (Offline Mode)." ), offlineUser );
+          return;
+        }
+
         QString err = errorMsg.isEmpty() ? tr( "Sign in failed (Code %1)." ).arg( statusCode ) : errorMsg;
         callback( false, err, QJsonObject() );
       }
@@ -498,10 +539,11 @@ void HakeLicenseManager::registerAccount(
   payload["password"] = password;
 
   sendPostRequest( QStringLiteral( "/api/auth/register" ), payload,
-    [callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
+    [this, email, password, callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
       Q_UNUSED( json );
       if ( statusCode == 200 || statusCode == 201 )
       {
+        saveCachedCredentials( email, password );
         callback( true, tr( "Account created successfully!" ) );
       }
       else
