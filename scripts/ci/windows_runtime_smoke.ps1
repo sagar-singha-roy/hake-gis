@@ -19,7 +19,7 @@ param(
     [string]$ReportDir = "",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("All", "AssertZip", "Install", "Smoke", "Process", "Runtime")]
+    [ValidateSet("All", "AssertZip", "Install", "Smoke", "Process", "Portable", "Runtime")]
     [string]$Mode = "All"
 )
 
@@ -64,11 +64,21 @@ function Assert-ZipContents {
         $process = @($names | Where-Object { $_ -match '(^|/)bin/hake-geodesk-process\.exe$' })
         $allProjDb = @($names | Where-Object { $_ -match '(^|/)proj\.db$' })
         $projDlls = @($names | Where-Object { $_ -match '(^|/)bin/proj[^/]*\.dll$' })
+        $qtPlatform = @($names | Where-Object { $_ -match '(^|/)bin/Qt6/plugins/platforms/qwindows\.dll$' })
+        $qtMultimediaDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Multimedia\.dll$' })
+        $pyqtMultimedia = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtMultimedia[^/]*\.pyd$' })
+        $pyqtPositioning = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtPositioning[^/]*\.pyd$' })
+        $qgisCore = @($names | Where-Object { $_ -match '(^|/)python/qgis/core/__init__\.py$' })
+        $qgisGui = @($names | Where-Object { $_ -match '(^|/)python/qgis/gui/__init__\.py$' })
 
         Write-Host "proj.db entries:"
         $allProjDb | ForEach-Object { Write-Host "  $_" }
         Write-Host "proj*.dll entries:"
         $projDlls | ForEach-Object { Write-Host "  $_" }
+        Write-Host "Qt6 platform plugin entries:"
+        $qtPlatform | ForEach-Object { Write-Host "  $_" }
+        Write-Host "PyQt6 multimedia entries:"
+        $pyqtMultimedia | ForEach-Object { Write-Host "  $_" }
 
         $missing = @()
         if (-not $projDb) { $missing += "share/proj/proj.db" }
@@ -79,6 +89,12 @@ function Assert-ZipContents {
         if (-not $osgeo) { $missing += "bin/Lib/site-packages/osgeo/" }
         if (-not $envFile) { $missing += "bin/hake-geodesk.env" }
         if (-not $process) { $missing += "bin/hake-geodesk-process.exe" }
+        if (-not $qtPlatform) { $missing += "bin/Qt6/plugins/platforms/qwindows.dll" }
+        if (-not $qtMultimediaDll) { $missing += "bin/Qt6Multimedia.dll" }
+        if (-not $pyqtMultimedia) { $missing += "bin/Lib/site-packages/PyQt6/QtMultimedia*.pyd" }
+        if (-not $pyqtPositioning) { $missing += "bin/Lib/site-packages/PyQt6/QtPositioning*.pyd" }
+        if (-not $qgisCore) { $missing += "python/qgis/core/__init__.py" }
+        if (-not $qgisGui) { $missing += "python/qgis/gui/__init__.py" }
 
         if ($missing.Count -gt 0) {
             throw "ZIP missing required packaged paths: $($missing -join ', ')"
@@ -423,6 +439,35 @@ assert count >= 2, count
     Write-Host "hake-geodesk-process polygonize PASSED"
 }
 
+function Test-PortableZip {
+    Write-Section "Portable ZIP extract and runtime smoke"
+    $zip = Get-CPackZip
+    $tempBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
+    $portableTarget = Join-Path $tempBase "HakeGeoDeskPortable"
+    if (Test-Path -LiteralPath $portableTarget) {
+        Remove-Item -Recurse -Force -LiteralPath $portableTarget
+    }
+    New-Item -ItemType Directory -Force -Path $portableTarget | Out-Null
+    Write-Host "Extracting $($zip.FullName) to $portableTarget ..."
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip.FullName, $portableTarget)
+
+    $portableRoot = $portableTarget
+    if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "bin\hake-geodesk.exe"))) {
+        $sub = Get-ChildItem -LiteralPath $portableTarget -Directory | Select-Object -First 1
+        if ($sub -and (Test-Path -LiteralPath (Join-Path $sub.FullName "bin\hake-geodesk.exe"))) {
+            $portableRoot = $sub.FullName
+        }
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "bin\hake-geodesk.exe"))) {
+        throw "Portable package extraction did not yield bin\hake-geodesk.exe"
+    }
+
+    Write-Host "Portable package root verified at $portableRoot"
+    Invoke-Smoke -InstallRoot $portableRoot -Label "portable-smoke"
+    Write-Host "Portable package smoke PASSED"
+}
+
 # ---- main ----
 Write-Host "BuildDir=$BuildDir"
 Write-Host "RepoRoot=$RepoRoot"
@@ -461,6 +506,10 @@ if ($Mode -in @("All", "Smoke", "Runtime")) {
 
 if ($Mode -in @("All", "Process", "Runtime")) {
     Invoke-ProcessPolygonize -InstallRoot $installRoot
+}
+
+if ($Mode -in @("All", "Portable", "Runtime")) {
+    Test-PortableZip
 }
 
 Write-Section "All requested modes completed successfully"

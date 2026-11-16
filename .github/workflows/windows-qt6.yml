@@ -320,7 +320,7 @@ jobs:
             -RepoRoot "${{ github.workspace }}" `
             -Mode AssertZip
 
-      - name: Install NSIS artifact and run PROJ/GDAL smoke tests
+      - name: Install NSIS artifact, test portable ZIP, and run self-contained runtime smoke tests
         shell: pwsh
         run: |
           & "${{ github.workspace }}\scripts\ci\windows_runtime_smoke.ps1" `
