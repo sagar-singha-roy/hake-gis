@@ -128,9 +128,9 @@ The launcher invokes Windows API `SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_D
 
 ---
 
-## 4. Root Cause Analysis & Fix for PyQt6.QtMultimedia
+## 4. Why the Previously Working Build Started Failing (Root Cause Analysis)
 
-### Previous Error
+### The Failing Error
 ```text
 RuntimeError: the PyQt6.QtMultimedia module failed to register with the sip module
 ```
@@ -139,62 +139,71 @@ Or:
 ModuleNotFoundError: No module named 'PyQt6.QtMultimedia'
 ```
 
-### Root Cause
-1. **Missing Feature in `vcpkg/vcpkg.json`:** The `py-pyqt6` dependency in `vcpkg/vcpkg.json` declared features `[ "qt3d", "qt5compat", "qtcharts", "qtdeclarative", "qtpositioning", "qtserialport" ]`—**`qtmultimedia` was absent**. Consequently, vcpkg never compiled `QtMultimedia.pyd` or `Qt6Multimedia.dll` for Windows.
-2. **Incompatible Python Mocking:** Earlier workarounds injected fake Python `types.ModuleType` objects into `sys.modules['PyQt6.QtMultimedia']`. SIP requires compiled C extension structs (`sipExportedModule_...`); pure Python mock modules lack these binary headers, causing SIP to reject the module with a registration failure when `qgis.gui` imported it.
+### Deep Root Cause Investigation
+1. **Initial Missing Feature in `vcpkg/vcpkg.json`:**
+   When the project was initially configured, `py-pyqt6` in `vcpkg/vcpkg.json` declared features `[ "qt3d", "qt5compat", "qtcharts", "qtdeclarative", "qtpositioning", "qtserialport" ]`. Although C++ `qtmultimedia` was listed under root dependencies, **`qtmultimedia` was omitted from `py-pyqt6`**. Consequently, vcpkg never compiled `QtMultimedia.pyd` or `QtMultimediaWidgets.pyd` for Windows.
 
-### Permanent Resolution
-1. **Enabled `qtmultimedia` Feature in vcpkg:**
-   In [`vcpkg/vcpkg.json`](file:///vcpkg/vcpkg.json):
-   ```json
-   {
-     "name": "py-pyqt6",
-     "features": [
-       "qt3d",
-       "qt5compat",
-       "qtcharts",
-       "qtdeclarative",
-       "qtmultimedia",
-       "qtpositioning",
-       "qtserialport"
-     ]
-   }
-   ```
-   This ensures vcpkg compiles genuine binary modules `QtMultimedia.pyd` and `QtMultimediaWidgets.pyd`, and links against `Qt6Multimedia.dll`.
+2. **Why Earlier Builds Appeared to Pass:**
+   In earlier Windows CI runs, `windows_runtime_smoke.py` only validated `gdal_polygonize.bat` via CLI and tested basic coordinate transforms in `osgeo`. It **never imported `qgis.core` or `qgis.gui`**, and never imported PyQt6 modules in CI. Because `hake-geodesk-process.exe` operates without initializing the GUI Python runtime, the CI reported green even though `QtMultimedia.pyd` was completely missing from the package.
 
-2. **Suppressed Spurious Error Dialogs:**
-   Updated [`src/python/qgspythonutilsimpl.cpp`](file:///src/python/qgspythonutilsimpl.cpp) to verify required PyQt6 binary modules safely, suppressing raw Python code popups and returning platform-specific actionable diagnostic messages if any component is missing.
+3. **The Incompatible Mock Injection:**
+   When Linux testing surfaced `ModuleNotFoundError: No module named 'PyQt6.QtMultimedia'`, an attempt was made to stub the module using `_fake_mm = types.ModuleType('PyQt6.QtMultimedia')` in `python/PyQt6/core/__init__.py.in`, `gui/__init__.py.in`, and `src/python/qgspythonutilsimpl.cpp`.
+   However, SIP (`sipbuild`) generates C extension code (`sipExportedModule_...`) that expects imported Qt modules to be compiled C++ SIP modules with registered type tables. When `qgis._gui` or `qgis._core` imported the pure-Python mock `types.ModuleType`, SIP failed type registration and threw:
+   `RuntimeError: the PyQt6.QtMultimedia module failed to register with the sip module`.
+   Additionally, in `src/app/qgisapp.cpp`, when Python initialization failed, the application attempted to execute Python commands on an uninitialized/partially-unwound interpreter, leading to:
+   `SystemError: globals must be a real dict`.
 
-3. **Bundling in `VcpkgInstallDeps.cmake`:**
-   `cmake/VcpkgInstallDeps.cmake` automatically bundles:
-   * All `${VCPKG_BASE_DIR}/bin/*.dll` into `bin/`.
-   * All `${VCPKG_BASE_DIR}/Qt6/plugins/` (including `multimedia/` and `platforms/`) into `bin/Qt6/plugins/`.
-   * All `${VCPKG_BASE_DIR}/tools/python3/` (including `Lib/site-packages/PyQt6/`) into `bin/`.
+4. **CI Artifact Upload Gap:**
+   In `.github/workflows/windows-qt6.yml`, the artifact upload steps used `if: always()`, which uploaded broken installers and portable ZIPs even when tests or smoke verifications failed.
 
 ---
 
-## 5. CI/CD & Automated Smoke Tests
+## 5. Permanent Architecture & Prevention of Future Regressions
 
-The Windows GitHub Actions workflow [`.github/workflows/windows-qt6.yml`](file:///.github/workflows/windows-qt6.yml) builds and validates both distributables on a clean Microsoft Windows runner:
+To ensure this issue and similar dependency gaps can never recur silently, the deployment architecture is now protected by a multi-layered gate system:
 
-1. **`AssertZip`:** Inspects the generated CPack ZIP archive without extraction, verifying presence of:
-   * `bin/hake-geodesk.exe` and `bin/hake-geodesk.env`
-   * `bin/python.exe` and `bin/Lib/site-packages/PyQt6/`
-   * `bin/Qt6Multimedia.dll` and `bin/Lib/site-packages/PyQt6/QtMultimedia*.pyd`
-   * `bin/Lib/site-packages/PyQt6/QtPositioning*.pyd`
-   * `bin/Qt6/plugins/platforms/qwindows.dll`
-   * `share/proj/proj.db` and `share/gdal/*`
-   * `python/qgis/core/__init__.py` and `python/qgis/gui/__init__.py`
-2. **`Runtime` Smoke Test:** Silently installs the NSIS installer into `C:\Hake GeoDesk` and executes [`scripts/ci/windows_runtime_smoke.py`](file:///scripts/ci/windows_runtime_smoke.py):
-   * Validates `PyQt6` imports: `QtCore`, `QtGui`, `QtWidgets`, `QtMultimedia`, `QtMultimediaWidgets`, `QtPositioning`, `QtSvg`, `QtXml`.
-   * Verifies SIP module loading and registration.
-   * Initializes `QgsApplication` in headless mode (`initQgis` / `exitQgis`).
-   * Validates CRS transformations (`EPSG:4326` to `EPSG:3857`) using bundled `proj.db`.
-   * Verifies built-in data providers (`ogr`, `gdal`).
-   * Verifies loaded DLLs originate exclusively from `bin/` and `System32`.
-   * Runs `gdal_polygonize.bat` to produce and validate an output GeoPackage.
-3. **`Portable` Smoke Test:** Extracts the portable ZIP to a clean directory and executes the complete smoke test suite against the unpacked portable tree.
-4. **`Process` CLI Test:** Invokes `bin/hake-geodesk-process.exe` to run a headless polygonize workflow.
+### Layer 1: Manifest Definition in `vcpkg/vcpkg.json`
+`vcpkg/vcpkg.json` explicitly pins all required PyQt6 features:
+```json
+{
+  "name": "py-pyqt6",
+  "features": [
+    "qt3d",
+    "qt5compat",
+    "qtcharts",
+    "qtdeclarative",
+    "qtmultimedia",
+    "qtpositioning",
+    "qtserialport"
+  ]
+}
+```
+
+### Layer 2: Pre-Packaging Audit Gate (`scripts/ci/windows_prepackage_audit.py`)
+Runs on the runner **before** `cmake --build build --target bundle`. It verifies:
+- `vcpkg.json` contains `qtmultimedia`, `qtpositioning`, `qtserialport`, `qtdeclarative`, `qt5compat`, `qtcharts`, `qt3d`.
+- `vcpkg_installed/x64-windows/tools/python3/Lib/site-packages/PyQt6/` contains `QtMultimedia*.pyd`, `QtPositioning*.pyd`, `QtCore*.pyd`, `QtGui*.pyd`, `QtWidgets*.pyd`, `sip*.pyd`.
+- `vcpkg_installed/x64-windows/bin/` contains `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Widgets.dll`, `Qt6Multimedia.dll`, `Qt6Positioning.dll`.
+- If any component is missing, the build **fails immediately with an explicit error**, preventing CPack from packaging an incomplete bundle.
+
+### Layer 3: Package Structure & ZIP Assertions (`scripts/ci/windows_runtime_smoke.ps1`)
+Inspects the generated CPack ZIP archive directly without extraction:
+- Asserts all required Qt6 DLLs, QGIS DLLs, and executables (`hake-geodesk.exe`, `hake-geodesk-process.exe`).
+- Asserts all required `.pyd` extensions (`QtCore`, `QtGui`, `QtWidgets`, `QtMultimedia`, `QtPositioning`, `sip`, `_core`, `_gui`).
+- Asserts Qt platform plugins (`qwindows.dll`) and multimedia plugins.
+- Asserts `proj.db`, GDAL data, and `hake-geodesk.env`.
+
+### Layer 4: Clean-Machine Isolated Runtime Smoke Test (`scripts/ci/windows_runtime_smoke.py`)
+Tests both the silent NSIS install (`C:\Hake GeoDesk`) and the extracted portable ZIP:
+- **Executable Version Invocations:** Runs `hake-geodesk.exe --version` and `hake-geodesk-process.exe --version` to prove dynamic linking and runtime DLL loading succeed without Windows DLL load errors.
+- **Isolated Environment:** Purges machine `PATH`, unsets host `PROJ_DATA`/`PROJ_LIB`/`GDAL_DATA`, and forces the bundled `python.exe` to resolve everything relative to `bin\`.
+- **PyQt6 & SIP Validation:** Imports `PyQt6.QtCore`, `QtGui`, `QtWidgets`, `QtMultimedia`, `QtMultimediaWidgets`, `QtPositioning`, `QtSerialPort`, `QtSvg`, `QtXml`, and `sip`.
+- **UI Lifecycle:** Creates a `QMainWindow` and central widgets to ensure Qt desktop widgets initialize cleanly.
+- **QGIS Runtime Initialization:** Initializes `QgsApplication` in headless mode, tests coordinate transforms (`EPSG:4326 -> EPSG:3857`), verifies providers (`ogr`, `gdal`, `memory`), and creates in-memory vector layers with geometry.
+- **Processing Validation:** Validates `import processing` and runs `hake-geodesk-process.exe run gdal:polygonize`.
+
+### Layer 5: Release Gating (`if: success()`)
+In `.github/workflows/windows-qt6.yml`, artifact uploads and release asset publishing are strictly gated on `if: success()`. If any audit or smoke test step fails, the workflow uploads runtime smoke diagnostics for debugging, but **no installer or ZIP is published**.
 
 ---
 

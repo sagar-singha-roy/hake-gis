@@ -228,20 +228,25 @@ jobs:
         run: |
           cmake --build "${{ github.workspace }}/build" --config Release
 
-#      - uses: m-kuhn/action-tmate@patch-1
-#        if: failure()
+      # The disk cleanup step removes the runner's Python toolcache; restore one only
+      # after the build so it is not on PATH while vcpkg/CMake run.
+      - name: Setup Python for packaging and audit checks
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 🔍 Pre-packaging dependency & feature audit
+        shell: bash
+        run: |
+          python "${{ github.workspace }}/scripts/ci/windows_prepackage_audit.py" \
+            --repo-root "${{ github.workspace }}" \
+            --build-dir "${{ github.workspace }}/build" \
+            --json "${{ github.workspace }}/build/dist/prepackage_audit.json"
 
       - name: 📦 Package
         shell: bash
         run: |
           cmake --build "${{ github.workspace }}/build" --target bundle --config Release
-
-      # The disk cleanup step removes the runner's Python toolcache; restore one only
-      # after the build so it is not on PATH while vcpkg/CMake run.
-      - name: Setup Python for packaging checks
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
 
       - name: Verify packaged GdalUtils decoder
         shell: pwsh
@@ -382,7 +387,7 @@ jobs:
           commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: 📤 Upload EXE installer
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v7
         id: artifact-win64-installer
         with:
@@ -400,7 +405,7 @@ jobs:
             build/*.zip
 
       - name: 📤 Upload ZIP bundle
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v7
         id: artifact-win64-qt6
         with:

@@ -303,11 +303,14 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
         "PyQt6.QtCore",
         "PyQt6.QtGui",
         "PyQt6.QtWidgets",
+        "PyQt6.QtNetwork",
         "PyQt6.QtMultimedia",
         "PyQt6.QtMultimediaWidgets",
         "PyQt6.QtPositioning",
+        "PyQt6.QtSerialPort",
         "PyQt6.QtSvg",
         "PyQt6.QtXml",
+        "PyQt6.sip",
     ]
     for mod in pyqt_modules:
         try:
@@ -328,6 +331,18 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
     except Exception as exc:  # noqa: BLE001
         _fail(f"Failed to import SIP module: {exc}")
 
+    # Check PyQt6 widget creation lifecycle
+    try:
+        from PyQt6.QtWidgets import QMainWindow, QLabel
+        win = QMainWindow()
+        win.setWindowTitle("Hake GeoDesk Smoke Test")
+        lbl = QLabel("Smoke Test", win)
+        win.setCentralWidget(lbl)
+        win.resize(300, 200)
+        _log("  PyQt6 QMainWindow creation verified.")
+    except Exception as exc:  # noqa: BLE001
+        _fail(f"PyQt6 QMainWindow creation failed: {exc}")
+
     # Check QGIS Python bindings and QgsApplication
     REPORT["qgis_runtime"] = {}
     try:
@@ -335,9 +350,12 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
             QgsApplication,
             QgsCoordinateReferenceSystem,
             QgsCoordinateTransform,
+            QgsFeature,
+            QgsGeometry,
             QgsPointXY,
             QgsProject,
             QgsProviderRegistry,
+            QgsVectorLayer,
         )
         import qgis.gui
         import qgis.analysis
@@ -378,6 +396,29 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
             _fail("'ogr' provider missing from QgsProviderRegistry")
         if "gdal" not in providers:
             _fail("'gdal' provider missing from QgsProviderRegistry")
+        if "memory" not in providers:
+            _fail("'memory' provider missing from QgsProviderRegistry")
+
+        # Test memory vector layer creation and spatial geometry
+        vlayer = QgsVectorLayer("Point?crs=EPSG:4326&field=id:integer&field=name:string", "smoke_test_layer", "memory")
+        if not vlayer.isValid():
+            _fail("Memory vector layer creation failed in QgsApplication")
+        else:
+            feat = QgsFeature(vlayer.fields())
+            feat.setAttribute("id", 1)
+            feat.setAttribute("name", "Test Point")
+            feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(12.0, 55.0)))
+            vlayer.startEditing()
+            vlayer.addFeature(feat)
+            vlayer.commitChanges()
+            _log(f"Memory layer created successfully with {vlayer.featureCount()} feature(s).")
+
+        # Check processing plugin availability
+        try:
+            import processing  # noqa: F401
+            _log("Processing module imported successfully.")
+        except Exception as exc:  # noqa: BLE001
+            _log(f"Note: processing import returned: {exc}")
 
         app.exitQgis()
         REPORT["qgis_runtime"]["ok"] = True
