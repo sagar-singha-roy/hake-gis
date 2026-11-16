@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <memory>
+#include "qgis_app.h"
 
 namespace Ui
 {
@@ -20,7 +21,7 @@ namespace Ui
  * - 16-character Crockford Base32 license activation with live auto-formatting
  * - Interactive License & Account Dashboard
  */
-class HakeActivationDialog : public QDialog
+class APP_EXPORT HakeActivationDialog : public QDialog
 {
   Q_OBJECT
 

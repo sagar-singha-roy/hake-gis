@@ -269,7 +269,7 @@ bool HakeLicenseManager::loadCachedToken()
   QString rawStored;
   if ( QgsApplication::authManager() )
   {
-    rawStored = QgsApplication::authManager()->authSetting( QString::fromLatin1( AUTH_SETTING_TOKEN_KEY ) );
+    rawStored = QgsApplication::authManager()->authSetting( QString::fromLatin1( AUTH_SETTING_TOKEN_KEY ) ).toString();
   }
 
   if ( rawStored.isEmpty() )
@@ -489,6 +489,7 @@ void HakeLicenseManager::registerAccount(
 
   sendPostRequest( QStringLiteral( "/api/auth/register" ), payload,
     [callback]( int statusCode, const QJsonObject &json, const QString &errorMsg ) {
+      Q_UNUSED( json );
       if ( statusCode == 200 || statusCode == 201 )
       {
         callback( true, tr( "Account created successfully!" ) );

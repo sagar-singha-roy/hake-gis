@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <functional>
+#include "qgis_app.h"
 
 /**
  * \brief Client-side licensing and subscription manager for Hake GeoDesk Desktop GIS.
@@ -13,7 +14,7 @@
  * Enforces offline signature verification, hardware binding, clock integrity checks,
  * encrypted token storage via QgsAuthManager, and asynchronous activation calls.
  */
-class HakeLicenseManager : public QObject
+class APP_EXPORT HakeLicenseManager : public QObject
 {
   Q_OBJECT
 

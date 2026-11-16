@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsactionlocatorfilter.h"
+#include "qgsfeedback.h"
 #include "qgsappribbon.h"
 #include "qgshakeicons.h"
 #include "qgsstringutils.h"

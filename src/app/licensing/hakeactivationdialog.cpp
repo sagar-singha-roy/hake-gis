@@ -294,6 +294,7 @@ void HakeActivationDialog::onSubmitLogin()
 
   HakeLicenseManager::instance()->loginAccount( email, password,
     [this, email]( bool success, const QString &message, const QJsonObject &data ) {
+      Q_UNUSED( data );
       setButtonsBusy( false );
       if ( success )
       {
