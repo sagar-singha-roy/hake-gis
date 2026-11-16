@@ -631,6 +631,8 @@ target_include_directories(qgis_app SYSTEM BEFORE PUBLIC
 
 add_dependencies(qgis_gui ui)
 
+find_package(OpenSSL REQUIRED)
+
 target_link_libraries(qgis_app
   PUBLIC
   ${QWT_LIBRARY}
@@ -644,6 +646,7 @@ target_link_libraries(qgis_app
   qgis_analysis
   qgis_native
   libdxfrw
+  OpenSSL::Crypto
 )
 
 target_compile_definitions(qgis_app PRIVATE "-DQT_NO_FOREACH")

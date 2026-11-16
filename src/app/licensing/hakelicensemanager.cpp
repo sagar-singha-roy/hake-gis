@@ -416,6 +416,11 @@ void HakeLicenseManager::startTrial(
           callback( true, tr( "7-day free trial successfully activated!" ) );
           return;
         }
+        else
+        {
+          callback( false, tr( "Digital signature verification failed. Please verify server public key." ) );
+          return;
+        }
       }
       QString err = errorMsg.isEmpty() ? tr( "Could not activate free trial (Code %1)." ).arg( statusCode ) : errorMsg;
       callback( false, err );
@@ -443,6 +448,11 @@ void HakeLicenseManager::activateCode(
         if ( saveLicenseToken( json ) )
         {
           callback( true, tr( "Hake GeoDesk activated successfully!" ) );
+          return;
+        }
+        else
+        {
+          callback( false, tr( "Digital signature verification failed. Please verify server public key." ) );
           return;
         }
       }
