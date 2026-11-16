@@ -134,7 +134,9 @@ jobs:
                 -D NUGET_READ_USERNAME=Subhankar-hub \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }} || true
 
-                fdupes -q -r -1 build/vcpkg_installed/${{ matrix.triplet }}/lib | grep -E '\.(so|dylib)' | while read line; do master=""; for file in ${line[*]}; do if  [[ "x${master}" == "x" ]]; then master=$file; else rm "${file}"; ln -s $(basename "${master}") "${file}"; fi; done; done
+                if [ -d "build/vcpkg_installed/${{ matrix.triplet }}/lib" ]; then
+                  fdupes -q -r -1 build/vcpkg_installed/${{ matrix.triplet }}/lib | grep -E '\.(so|dylib)' | while read line; do master=""; for file in ${line[*]}; do if  [[ "x${master}" == "x" ]]; then master=$file; else rm "${file}"; ln -s $(basename "${master}") "${file}"; fi; done; done || true
+                fi
 
                 cmake -D VCPKG_INSTALL_OPTIONS="" -D ENABLE_UNITY_BUILDS=ON -D HAKE_GIT_REVISION=${{ github.sha }} build
 
@@ -144,6 +146,10 @@ jobs:
         with:
           name: build-logs-${{ matrix.triplet }}
           path: |
+            build/vcpkg-manifest-install.log
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeFiles/CMakeError.log
             ${{ env.VCPKG_ROOT }}/buildtrees/**/*.log
 
       - name: 📦 Create SDK

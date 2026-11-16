@@ -373,6 +373,10 @@ jobs:
           name: build-logs-x64-windows
           path: |
             C:/src/**/*.log
+            ${{ github.workspace }}/build/vcpkg-manifest-install.log
+            ${{ github.workspace }}/build/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log
+            ${{ github.workspace }}/build/CMakeFiles/CMakeError.log
 
       - name: 🧮 Report vcpkg build failures
         if: failure() && github.event_name == 'pull_request'

@@ -19,7 +19,6 @@ from pathlib import Path
 
 
 REQUIRED_PYQT6_FEATURES = [
-    "qtmultimedia",
     "qtpositioning",
     "qtserialport",
     "qtdeclarative",

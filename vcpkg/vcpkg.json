@@ -209,7 +209,6 @@
             "qt5compat",
             "qtcharts",
             "qtdeclarative",
-            "qtmultimedia",
             "qtpositioning",
             "qtserialport"
           ]
