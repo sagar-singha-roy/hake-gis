@@ -64,6 +64,15 @@ def handle_api_request(
             return 200, {"Content-Type": "text/html; charset=utf-8"}, html
         return 404, {"error": "Admin UI not found"}, None
 
+    # Hosted Customer Checkout Portal (Stripe / Razorpay Simulator)
+    CHECKOUT_HTML = os.path.join(os.path.dirname(__file__), "checkout.html")
+    if method == "GET" and (path == "/checkout" or path.startswith("/checkout")):
+        if os.path.exists(CHECKOUT_HTML):
+            with open(CHECKOUT_HTML, "r", encoding="utf-8") as f:
+                html = f.read()
+            return 200, {"Content-Type": "text/html; charset=utf-8"}, html
+        return 404, {"error": "Checkout UI not found"}, None
+
     # Account registration
     if method == "POST" and path == "/api/auth/register":
         try:

@@ -547,80 +547,38 @@ void HakeActivationDialog::onDeactivateWorkstationClicked()
 
 void HakeActivationDialog::onBuyAnnualClicked()
 {
-  bool ok = false;
-  QString email = QInputDialog::getText(
-    this,
-    tr( "Purchase Annual Pro License" ),
-    tr( "Enter the email address for license delivery:" ),
-    QLineEdit::Normal,
-    mUi->txtTrialEmail->text(),
-    &ok
-  );
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
 
-  if ( !ok || email.isEmpty() || !email.contains( '@' ) )
-    return;
+  QString email = mUi->txtLoginEmail->text().trimmed();
+  if ( email.isEmpty() )
+    email = HakeLicenseManager::instance()->currentLicense().customerEmail;
 
-  HakeLicenseManager::instance()->purchasePlanOnline(
-    QStringLiteral( "annual" ),
-    email.trimmed(),
-    email.split( '@' ).first(),
-    [this, email]( bool success, const QString &message, const QString &code ) {
-      if ( success && !code.isEmpty() )
-      {
-        QMessageBox::information(
-          this,
-          tr( "Order Completed" ),
-          tr( "Thank you! Your Annual Pro license has been provisioned.\n\nActivation Code: %1\n\nA confirmation email has been dispatched." ).arg( code )
-        );
-        mUi->txtActivationCode->setText( code );
-        mUi->txtActivateEmail->setText( email );
-        setPage( PageActivate );
-      }
-      else
-      {
-        QMessageBox::warning( this, tr( "Checkout Issue" ), message );
-      }
-    }
-  );
+  QString urlStr = QStringLiteral( "%1/checkout?plan=annual" ).arg( serverUrl );
+  if ( !email.isEmpty() )
+    urlStr += QStringLiteral( "&email=" ) + QString::fromLatin1( QUrl::toPercentEncoding( email ) );
+
+  QDesktopServices::openUrl( QUrl( urlStr ) );
+  setPage( PageActivate );
 }
 
 void HakeActivationDialog::onBuyBusinessClicked()
 {
-  bool ok = false;
-  QString email = QInputDialog::getText(
-    this,
-    tr( "Purchase Business Team License" ),
-    tr( "Enter the organization email for license delivery (5 seats):" ),
-    QLineEdit::Normal,
-    mUi->txtTrialEmail->text(),
-    &ok
-  );
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
 
-  if ( !ok || email.isEmpty() || !email.contains( '@' ) )
-    return;
+  QString email = mUi->txtLoginEmail->text().trimmed();
+  if ( email.isEmpty() )
+    email = HakeLicenseManager::instance()->currentLicense().customerEmail;
 
-  HakeLicenseManager::instance()->purchasePlanOnline(
-    QStringLiteral( "business" ),
-    email.trimmed(),
-    email.split( '@' ).first(),
-    [this, email]( bool success, const QString &message, const QString &code ) {
-      if ( success && !code.isEmpty() )
-      {
-        QMessageBox::information(
-          this,
-          tr( "Team Order Provisioned" ),
-          tr( "Your Business Team License (5 Workstation Seats) is ready!\n\nActivation Code: %1\n\nDelivery email sent to %2." ).arg( code, email )
-        );
-        mUi->txtActivationCode->setText( code );
-        mUi->txtActivateEmail->setText( email );
-        setPage( PageActivate );
-      }
-      else
-      {
-        QMessageBox::warning( this, tr( "Checkout Issue" ), message );
-      }
-    }
-  );
+  QString urlStr = QStringLiteral( "%1/checkout?plan=business" ).arg( serverUrl );
+  if ( !email.isEmpty() )
+    urlStr += QStringLiteral( "&email=" ) + QString::fromLatin1( QUrl::toPercentEncoding( email ) );
+
+  QDesktopServices::openUrl( QUrl( urlStr ) );
+  setPage( PageActivate );
 }
 
 void HakeActivationDialog::onLaunchApp()
