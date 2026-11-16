@@ -104,7 +104,17 @@ jobs:
             qt6-serialport-dev \
             qt6-5compat-dev \
             qt6-base-private-dev \
-            libsfcgal-dev
+            libsfcgal-dev \
+            desktop-file-utils \
+            patchelf \
+            rsync \
+            file \
+            python3-requests \
+            python3-yaml \
+            python3-jinja2 \
+            python3-pyproj \
+            python3-psycopg2 \
+            python3-packaging
 
       - name: 🛍️ Setup ccache
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
@@ -149,6 +159,29 @@ jobs:
         run: |
           cmake --build build --target bundle --config Release
 
+      - name: 📦 Build Self-Contained AppImage & Portable Distributable
+        run: |
+          bash scripts/package_linux_appimage.sh \
+            --build-dir build \
+            --output-dir build/dist \
+            --arch x86_64
+
+      - name: 🧪 Validate Self-Contained Distributable in Clean Environment
+        run: |
+          # 1. Test AppRun launcher version check
+          ./build/Hake-GeoDesk.AppDir/AppRun --version
+
+          # 2. Run runtime smoke test inside the bundled Python/Qt6/PROJ environment
+          env -i HOME="$HOME" USER="$USER" \
+            LD_LIBRARY_PATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/hake-gis:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/hake-gis/plugins" \
+            PYTHONPATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/hake-gis/python:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/python3/dist-packages" \
+            QGIS_PREFIX_PATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr" \
+            PROJ_DATA="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/proj" \
+            GDAL_DATA="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/gdal" \
+            python3 scripts/ci/linux_runtime_smoke.py \
+              --prefix "$(pwd)/build/Hake-GeoDesk.AppDir/usr" \
+              --json build/dist/smoke_report.json
+
       - name: Verify packaged Hake Night theme
         run: |
           shopt -s nullglob
@@ -181,6 +214,9 @@ jobs:
         with:
           name: hake-geodesk-installer-linux-${{ matrix.suffix }}
           path: |
+            build/dist/*.AppImage
+            build/dist/*.tar.gz
+            build/dist/*.json
             build/*.deb
             build/*.tar.gz
             build/*.zip
@@ -190,6 +226,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            build/dist/*.AppImage
+            build/dist/*.tar.gz
             build/*.deb
             build/*.tar.gz
             build/*.zip
