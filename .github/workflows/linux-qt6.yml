@@ -88,6 +88,7 @@ jobs:
             qtkeychain-qt6-dev \
             python3-all-dev \
             python3-pyqt6 \
+            python3-pyqt6.qtmultimedia \
             python3-pyqt6.qsci \
             python3-pyqt6.qtpositioning \
             python3-pyqt6.qtserialport \

@@ -240,32 +240,18 @@ _ssr = StartupScriptRunner()
     return false;
   }
 
-  // Ensure optional PyQt6 modules imported by SIP (e.g. QtMultimedia, QtPositioning)
-  // have safe stubs if the system did not install python3-pyqt6.qtmultimedia
+  // Verify that required binary PyQt6 modules imported by SIP bindings are installed
   runString(
     QStringLiteral(
-      "try:\n"
-      "    import PyQt6.QtMultimedia\n"
-      "except ImportError:\n"
-      "    import sys, types\n"
+      "import importlib.util\n"
+      "_missing = []\n"
+      "for _mod, _pkg in [('PyQt6.QtMultimedia', 'python3-pyqt6.qtmultimedia'), ('PyQt6.QtPositioning', 'python3-pyqt6.qtpositioning')]:\n"
       "    try:\n"
-      "        import PyQt6\n"
-      "        _fake_mm = types.ModuleType('PyQt6.QtMultimedia')\n"
-      "        sys.modules['PyQt6.QtMultimedia'] = _fake_mm\n"
-      "        setattr(PyQt6, 'QtMultimedia', _fake_mm)\n"
-      "    except Exception:\n"
-      "        pass\n"
-      "try:\n"
-      "    import PyQt6.QtPositioning\n"
-      "except ImportError:\n"
-      "    import sys, types\n"
-      "    try:\n"
-      "        import PyQt6\n"
-      "        _fake_pos = types.ModuleType('PyQt6.QtPositioning')\n"
-      "        sys.modules['PyQt6.QtPositioning'] = _fake_pos\n"
-      "        setattr(PyQt6, 'QtPositioning', _fake_pos)\n"
-      "    except Exception:\n"
-      "        pass\n"
+      "        __import__(_mod)\n"
+      "    except ImportError:\n"
+      "        _missing.append(_pkg)\n"
+      "if _missing:\n"
+      "    raise ImportError('Required PyQt6 module(s) missing: ' + ', '.join(_missing) + '. Please install them via: sudo apt install ' + ' '.join(_missing))\n"
     )
   );
 
