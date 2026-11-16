@@ -56,8 +56,8 @@ def handle_api_request(
     if method == "GET" and path == "/api/public-key":
         return 200, {"public_key": get_public_key_hex()}, None
 
-    # Admin Panel Web UI
-    if method == "GET" and (path == "/admin" or path == "/admin/"):
+    # Admin Panel Web UI (serve on / as well as /admin)
+    if method == "GET" and (path == "/" or path == "/admin" or path == "/admin/"):
         if os.path.exists(ADMIN_UI_HTML):
             with open(ADMIN_UI_HTML, "r", encoding="utf-8") as f:
                 html = f.read()
