@@ -420,7 +420,7 @@ jobs:
           commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: 📤 Upload EXE installer
-        if: !cancelled()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-installer
         with:
@@ -438,7 +438,7 @@ jobs:
             build/*.zip
 
       - name: 📤 Upload ZIP bundle
-        if: !cancelled()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-qt6
         with:
