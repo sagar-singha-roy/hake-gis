@@ -312,6 +312,7 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
         "PyQt6.QtXml",
         "PyQt6.sip",
     ]
+    optional_pyqt_modules = {"PyQt6.QtMultimedia", "PyQt6.QtMultimediaWidgets"}
     for mod in pyqt_modules:
         try:
             m = __import__(mod, fromlist=["*"])
@@ -322,7 +323,10 @@ def _check_pyqt_and_qgis(install_root: Path) -> None:
             _log(f"  Loaded {mod} from {getattr(m, '__file__', 'built-in')}")
         except Exception as exc:  # noqa: BLE001
             REPORT["pyqt_modules"][mod] = {"ok": False, "error": str(exc)}
-            _fail(f"Failed to import {mod}: {exc}")
+            if mod in optional_pyqt_modules:
+                _log(f"  Note: optional module {mod} not available: {exc}")
+            else:
+                _fail(f"Failed to import {mod}: {exc}")
 
     # Check SIP registration
     try:

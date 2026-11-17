@@ -77,10 +77,14 @@ jobs:
 
       - name: 🔨 Prepare build env
         run: |
-          brew install automake bison flex gnu-sed autoconf-archive nasm libtool fdupes || true
+          brew install automake bison flex gnu-sed autoconf-archive nasm libtool fdupes swig || true
           echo $(brew --prefix bison)/bin >> $GITHUB_PATH
           echo $(brew --prefix flex)/bin >> $GITHUB_PATH
           echo $(brew --prefix libtool)/bin >> $GITHUB_PATH
+          SWIG_BIN="$(brew --prefix swig 2>/dev/null)/bin"
+          if [ -d "$SWIG_BIN" ]; then
+            echo "${SWIG_BIN}" >> "$GITHUB_PATH"
+          fi
 
       - name: Symlink gfortran (macOS)
         run: |
@@ -90,18 +94,6 @@ jobs:
           sudo ln -fs /opt/homebrew/bin/gfortran-${GCC_VERSION} /usr/local/bin/gfortran
           sudo mkdir -p /usr/local/gfortran
           sudo ln -sf /opt/homebrew/Cellar/gcc@${GCC_VERSION}/*/lib/gcc/${GCC_VERSION} /usr/local/gfortran/lib
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-
-      - name: 🐍 Install compatible SWIG via pip
-        run: |
-          # GDAL 3.12.x typemaps still use PyInt_*; SWIG 4.5+ removed those compat macros.
-          # Installing SWIG < 4.5 via pip provides a precompiled native binary that bypasses Homebrew tap issues.
-          python3 -m pip install "swig<4.5"
-          which swig
-          swig -version
 
       - name: 🍭 Setup XCode
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
@@ -158,6 +150,16 @@ jobs:
                 fi
 
                 cmake -D VCPKG_INSTALL_OPTIONS="" -D ENABLE_UNITY_BUILDS=ON -D HAKE_GIT_REVISION=${{ github.sha }} build
+
+      - name: 📋 Print vcpkg / CMake failure diagnostics
+        if: failure()
+        run: |
+          echo "=== vcpkg-manifest-install.log ==="
+          tail -n 100 build/vcpkg-manifest-install.log 2>/dev/null || true
+          echo "=== CMakeError.log ==="
+          tail -n 100 build/CMakeFiles/CMakeError.log 2>/dev/null || true
+          echo "=== failing port logs ==="
+          find ${{ env.VCPKG_ROOT }}/buildtrees -name "*.log" -exec echo "--- {} ---" \; -exec tail -n 50 {} \; 2>/dev/null || true
 
       - name: 📑 Upload vcpkg build logs
         uses: actions/upload-artifact@v7

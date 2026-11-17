@@ -175,6 +175,7 @@ jobs:
           & $perl -v
 
       - name: 🌱 Install dependencies and generate project files
+        id: configure
         shell: bash
         env:
           X_VCPKG_ASSET_SOURCES: x-azurl,https://assetcache.open-vcpkg.org/assetcache,,read
@@ -407,19 +408,19 @@ jobs:
           if-no-files-found: ignore
 
       - name: 🧮 Report vcpkg build failures
-        if: failure() && github.event_name == 'pull_request'
+        if: failure() && steps.configure.outcome == 'failure' && github.event_name == 'pull_request'
         uses: ./.github/actions/vcpkg_build_failures_report
         with:
           buildtrees-dir: C:/src
           triplet: x64-windows
           pr: ${{ github.event.number }}
           artifact-url: ${{ steps.upload-build-logs.outputs.artifact-url }}
-          build-status: ${{ job.status }}
+          build-status: ${{ steps.configure.outcome }}
           manifest-install-log: ${{ github.workspace }}/build/vcpkg-manifest-install.log
           commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: 📤 Upload EXE installer
-        if: success()
+        if: !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-installer
         with:
@@ -437,7 +438,7 @@ jobs:
             build/*.zip
 
       - name: 📤 Upload ZIP bundle
-        if: success()
+        if: !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-qt6
         with:

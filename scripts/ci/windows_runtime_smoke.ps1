@@ -121,7 +121,7 @@ function Assert-ZipContents {
         if (-not $pyqtCore) { $missing += "bin/Lib/site-packages/PyQt6/QtCore*.pyd" }
         if (-not $pyqtGui) { $missing += "bin/Lib/site-packages/PyQt6/QtGui*.pyd" }
         if (-not $pyqtWidgets) { $missing += "bin/Lib/site-packages/PyQt6/QtWidgets*.pyd" }
-        if (-not $pyqtMultimedia) { $missing += "bin/Lib/site-packages/PyQt6/QtMultimedia*.pyd" }
+        # Note: PyQt6.QtMultimedia is an optional module in vcpkg py-pyqt6; do not fail if omitted
         if (-not $pyqtPositioning) { $missing += "bin/Lib/site-packages/PyQt6/QtPositioning*.pyd" }
         if (-not $qgisCore) { $missing += "python/qgis/core/__init__.py" }
         if (-not $qgisGui) { $missing += "python/qgis/gui/__init__.py" }

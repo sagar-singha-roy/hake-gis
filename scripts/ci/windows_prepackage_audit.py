@@ -42,7 +42,6 @@ REQUIRED_VCPKG_PYDS = [
     "QtGui",
     "QtWidgets",
     "QtNetwork",
-    "QtMultimedia",
     "QtPositioning",
     "sip",
 ]
@@ -191,7 +190,11 @@ def main() -> int:
     # 2. Installed vcpkg binaries audit
     vcpkg_installed = args.vcpkg_root
     if not vcpkg_installed and args.build_dir:
-        vcpkg_installed = args.build_dir / "vcpkg_installed" / "x64-windows"
+        for triplet in ("x64-windows-release", "x64-windows"):
+            cand = args.build_dir / "vcpkg_installed" / triplet
+            if cand.is_dir():
+                vcpkg_installed = cand
+                break
 
     if vcpkg_installed:
         vcpkg_errors = audit_vcpkg_installed(vcpkg_installed.resolve())
