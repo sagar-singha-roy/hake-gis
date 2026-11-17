@@ -1810,7 +1810,10 @@ int main( int argc, char *argv[] )
     mypSplash->hide();
   }
 
+  std::cout << "Hake GeoDesk licensing gate: Please sign in or activate in the application window." << std::endl;
   HakeActivationDialog licenseDialog( nullptr, /*requireStartupLogin=*/true );
+  licenseDialog.raise();
+  licenseDialog.activateWindow();
   if ( licenseDialog.exec() != QDialog::Accepted || !HakeLicenseManager::instance()->isLicenseValidOffline() )
   {
     // Clean exit if user closes dialog without signing in or activating

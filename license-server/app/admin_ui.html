@@ -78,6 +78,7 @@
       <button onclick="openModal('createModal')">+ Create License</button>
       <button class="secondary" onclick="openModal('batchModal')">Batch Generator</button>
       <button class="success" onclick="openModal('simStripeModal')">💳 Simulate Stripe Buy</button>
+      <button style="background: #475569;" onclick="resetTrialsDev()">🔄 Reset Trials</button>
       <button class="secondary" onclick="refreshData()">↻ Refresh</button>
     </div>
   </div>
@@ -317,11 +318,33 @@
       refreshData();
     }
 
+    async function resetTrialsDev() {
+      if (!confirm("Reset all 7-day trial limits so this workstation can activate another free trial?")) return;
+      const res = await apiFetch("/api/admin/reset-trials", { method: "POST" });
+      if (res.ok) {
+        alert("Workstation trial limits have been reset! You can now activate a new 7-day trial on this workstation.");
+        refreshData();
+      } else {
+        alert("Failed to reset trials");
+      }
+    }
+
     async function resetDevice(id) {
       if (!confirm("Reset workstation binding? The customer can then activate GeoDesk on a new machine.")) return;
       await apiFetch(`/api/admin/licenses/${id}/reset-device`, {method: "POST"});
       alert("Workstation bindings reset successfully.");
       refreshData();
+    }
+
+    async function resetTrialsDev() {
+      if (!confirm("Reset all 7-day trial limits so this workstation can activate another free trial?")) return;
+      const res = await apiFetch("/api/admin/reset-trials", { method: "POST" });
+      if (res.ok) {
+        alert("Workstation trial limits have been reset! You can now activate a new 7-day trial on this workstation.");
+        refreshData();
+      } else {
+        alert("Failed to reset trials");
+      }
     }
 
     async function revokeLicense(id) {
@@ -331,6 +354,17 @@
         body: JSON.stringify({reason: "Staff administrator revocation"})
       });
       refreshData();
+    }
+
+    async function resetTrialsDev() {
+      if (!confirm("Reset all 7-day trial limits so this workstation can activate another free trial?")) return;
+      const res = await apiFetch("/api/admin/reset-trials", { method: "POST" });
+      if (res.ok) {
+        alert("Workstation trial limits have been reset! You can now activate a new 7-day trial on this workstation.");
+        refreshData();
+      } else {
+        alert("Failed to reset trials");
+      }
     }
 
     async function submitCreateLicense() {
@@ -363,6 +397,17 @@
       div.style.display = "block";
       div.innerHTML = list.map(item => `<div>${item.customer_email}: <strong>${item.activation_code}</strong></div>`).join("");
       refreshData();
+    }
+
+    async function resetTrialsDev() {
+      if (!confirm("Reset all 7-day trial limits so this workstation can activate another free trial?")) return;
+      const res = await apiFetch("/api/admin/reset-trials", { method: "POST" });
+      if (res.ok) {
+        alert("Workstation trial limits have been reset! You can now activate a new 7-day trial on this workstation.");
+        refreshData();
+      } else {
+        alert("Failed to reset trials");
+      }
     }
 
     async function switchTab(tab) {
@@ -426,6 +471,17 @@
         </div>
       `;
       refreshData();
+    }
+
+    async function resetTrialsDev() {
+      if (!confirm("Reset all 7-day trial limits so this workstation can activate another free trial?")) return;
+      const res = await apiFetch("/api/admin/reset-trials", { method: "POST" });
+      if (res.ok) {
+        alert("Workstation trial limits have been reset! You can now activate a new 7-day trial on this workstation.");
+        refreshData();
+      } else {
+        alert("Failed to reset trials");
+      }
     }
 
     async function loadAuditLogs() {

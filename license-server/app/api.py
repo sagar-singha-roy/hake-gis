@@ -9,7 +9,7 @@ import re
 import time
 from typing import Dict, Any, Tuple, Optional
 
-from app.database import init_db
+from app.database import get_db, init_db
 from app.crypto import get_public_key_hex, init_keys
 from app.auth import (
     authenticate_admin,
@@ -30,6 +30,7 @@ from app.licensing_service import (
     admin_revoke_license,
     admin_list_licenses,
     admin_get_audit_logs,
+    log_audit,
 )
 from app.webhook_service import handle_stripe_webhook, handle_razorpay_webhook
 from app.email_service import list_spooled_emails
@@ -269,6 +270,14 @@ def handle_api_request(
 
         if method == "GET" and path == "/api/admin/emails":
             return 200, list_spooled_emails(), None
+
+        if method == "POST" and path == "/api/admin/reset-trials":
+            with get_db() as conn:
+                conn.execute("DELETE FROM activations WHERE license_id IN (SELECT license_id FROM licenses WHERE plan_tier = 'trial')")
+                conn.execute("DELETE FROM licenses WHERE plan_tier = 'trial'")
+                conn.execute("UPDATE users SET trial_used = 0")
+            log_audit(None, "admin_reset_trials", "Reset all trial limits for device testing", client_ip)
+            return 200, {"success": True, "message": "All trial locks reset successfully"}, None
 
         if method == "POST" and path == "/api/admin/simulate-checkout":
             res = process_payment_webhook(
