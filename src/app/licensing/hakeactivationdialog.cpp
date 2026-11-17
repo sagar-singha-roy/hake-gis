@@ -132,7 +132,7 @@ void HakeActivationDialog::setupConnections()
   connect( mUi->btnBackFromTrial, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
   connect( mUi->btnBackFromLogin, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
   connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoLoginClicked );
-  connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
+  connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackFromPricingClicked );
   connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
 
   // Navigation: Inter-page shortcuts
@@ -166,11 +166,24 @@ void HakeActivationDialog::setupConnections()
 
 void HakeActivationDialog::onStartTrialClicked()
 {
+  if ( !mCurrentAuthenticatedEmail.isEmpty() )
+  {
+    mUi->txtTrialEmail->setText( mCurrentAuthenticatedEmail );
+    mUi->txtTrialName->setText( mCurrentAuthenticatedName );
+    if ( !mCurrentAuthenticatedPassword.isEmpty() )
+    {
+      mUi->txtTrialPassword->setText( mCurrentAuthenticatedPassword );
+    }
+  }
   setPage( PageTrial );
 }
 
 void HakeActivationDialog::onGoActivateClicked()
 {
+  if ( !mCurrentAuthenticatedEmail.isEmpty() )
+  {
+    mUi->txtActivateEmail->setText( mCurrentAuthenticatedEmail );
+  }
   setPage( PageActivate );
 }
 
@@ -191,6 +204,19 @@ void HakeActivationDialog::onGoPricingClicked()
 
 void HakeActivationDialog::onBackToWelcomeClicked()
 {
+  if ( !mCurrentAuthenticatedEmail.isEmpty() )
+  {
+    setPage( PagePricing );
+    return;
+  }
+  setPage( PageWelcome );
+}
+
+void HakeActivationDialog::onBackFromPricingClicked()
+{
+  mCurrentAuthenticatedEmail.clear();
+  mCurrentAuthenticatedName.clear();
+  mCurrentAuthenticatedPassword.clear();
   setPage( PageWelcome );
 }
 
@@ -363,21 +389,39 @@ void HakeActivationDialog::onSubmitLogin()
   hideErrors();
 
   HakeLicenseManager::instance()->loginAccount( email, password,
-    [this, email]( bool success, const QString &message, const QJsonObject &data ) {
-      Q_UNUSED( data );
+    [this, email, password]( bool success, const QString &message, const QJsonObject &data ) {
       setButtonsBusy( false );
       if ( success )
       {
+        mCurrentAuthenticatedEmail = email;
+        mCurrentAuthenticatedPassword = password;
+        QString fullName = data.value( QStringLiteral( "full_name" ) ).toString();
+        mCurrentAuthenticatedName = fullName.isEmpty() ? email : fullName;
+
         mUi->txtActivateEmail->setText( email );
-        if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
+        mUi->txtTrialEmail->setText( email );
+        mUi->txtTrialPassword->setText( password );
+        mUi->txtTrialName->setText( mCurrentAuthenticatedName );
+
+        // Strict License Ownership Check:
+        // Does the active workstation license token actually match THIS authenticated user?
+        QString licenseEmail = HakeLicenseManager::instance()->currentLicense().customerEmail.trimmed().toLower();
+        bool hasValidLicenseForUser = HakeLicenseManager::instance()->isLicenseValidOffline()
+            && ( !licenseEmail.isEmpty() && licenseEmail == email.trimmed().toLower() );
+
+        if ( hasValidLicenseForUser )
         {
-          // Valid workstation license confirmed: directly launch GeoDesk!
+          // Valid workstation license confirmed for this user: directly launch GeoDesk!
           accept();
         }
         else
         {
-          // User account authenticated, proceed to activation code entry
-          setPage( PageActivate );
+          // User authenticated, but no active license exists for this account on this device!
+          // Must choose a plan before GeoDesk can open:
+          mUi->lblPricingHeader->setText( tr( "Choose Your Subscription Plan" ) );
+          mUi->lblPricingDesc->setText( tr( "Welcome back, %1! Please choose a subscription plan or activate a code to unlock Hake GeoDesk." )
+                                        .arg( mCurrentAuthenticatedName ) );
+          setPage( PagePricing );
         }
       }
       else
@@ -429,12 +473,22 @@ void HakeActivationDialog::onSubmitSignUp()
       setButtonsBusy( false );
       if ( success )
       {
+        mCurrentAuthenticatedEmail = email;
+        mCurrentAuthenticatedName = name;
+        mCurrentAuthenticatedPassword = pass;
+
         mUi->txtTrialName->setText( name );
         mUi->txtTrialEmail->setText( email );
         mUi->txtTrialPassword->setText( pass );
         mUi->txtActivateEmail->setText( email );
         mUi->txtLoginEmail->setText( email );
-        setPage( PageLogin );
+        mUi->txtLoginPassword->setText( pass );
+
+        // Direct newly registered user immediately to "Choose Your Plan" screen
+        mUi->lblPricingHeader->setText( tr( "Choose Your Subscription Plan" ) );
+        mUi->lblPricingDesc->setText( tr( "Welcome, %1! Your account is created. Please choose a subscription plan or start your 7-day free trial to unlock Hake GeoDesk." )
+                                      .arg( name ) );
+        setPage( PagePricing );
       }
       else
       {
@@ -551,7 +605,11 @@ void HakeActivationDialog::onBuyAnnualClicked()
   while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
     serverUrl.chop( 1 );
 
-  QString email = mUi->txtLoginEmail->text().trimmed();
+  QString email = mCurrentAuthenticatedEmail;
+  if ( email.isEmpty() )
+    email = mUi->txtActivateEmail->text().trimmed();
+  if ( email.isEmpty() )
+    email = mUi->txtLoginEmail->text().trimmed();
   if ( email.isEmpty() )
     email = HakeLicenseManager::instance()->currentLicense().customerEmail;
 
@@ -569,7 +627,11 @@ void HakeActivationDialog::onBuyBusinessClicked()
   while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
     serverUrl.chop( 1 );
 
-  QString email = mUi->txtLoginEmail->text().trimmed();
+  QString email = mCurrentAuthenticatedEmail;
+  if ( email.isEmpty() )
+    email = mUi->txtActivateEmail->text().trimmed();
+  if ( email.isEmpty() )
+    email = mUi->txtLoginEmail->text().trimmed();
   if ( email.isEmpty() )
     email = HakeLicenseManager::instance()->currentLicense().customerEmail;
 

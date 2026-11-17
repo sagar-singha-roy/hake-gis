@@ -57,6 +57,7 @@ private slots:
   void onGoSignUpClicked();
   void onGoPricingClicked();
   void onBackToWelcomeClicked();
+  void onBackFromPricingClicked();
 
   // Actions
   void onSubmitTrial();
@@ -85,6 +86,9 @@ private:
   bool mRequireStartupLogin = false;
   QTimer *mRainbowTimer = nullptr;
   int mRainbowHue = 0;
+  QString mCurrentAuthenticatedEmail;
+  QString mCurrentAuthenticatedName;
+  QString mCurrentAuthenticatedPassword;
 };
 
 #endif // HAKE_ACTIVATION_DIALOG_H
