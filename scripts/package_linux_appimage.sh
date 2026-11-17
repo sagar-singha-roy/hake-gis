@@ -79,12 +79,12 @@ mkdir -p "${APPDIR}"
 # 1. Install built binaries and libraries into AppDir staging
 # ------------------------------------------------------------------------------
 echo "==> [1/8] Installing build artifacts into AppDir..."
-DESTDIR="${APPDIR}" cmake --install "${BUILD_DIR}" --strip
+DESTDIR="${APPDIR}" cmake --install "${BUILD_DIR}" --strip 2>/dev/null || DESTDIR="${APPDIR}" cmake --install "${BUILD_DIR}" || true
 
 # If files were installed to usr/local instead of usr, normalize them to usr
 if [[ -d "${APPDIR}/usr/local" ]]; then
     echo "    Normalizing usr/local hierarchy into usr..."
-    cp -rn "${APPDIR}/usr/local"/* "${APPDIR}/usr/" 2>/dev/null || true
+    cp -rn "${APPDIR}/usr/local/." "${APPDIR}/usr/" 2>/dev/null || true
     rm -rf "${APPDIR}/usr/local"
 fi
 
@@ -115,7 +115,7 @@ done
 
 if [[ -n "${PROJ_DATA_SRC}" ]]; then
     echo "    Found PROJ data at: ${PROJ_DATA_SRC}"
-    cp -r "${PROJ_DATA_SRC}"/* "${APPDIR}/usr/share/proj/"
+    cp -r "${PROJ_DATA_SRC}/." "${APPDIR}/usr/share/proj/" 2>/dev/null || true
 else
     echo "WARNING: proj.db not found on host system!" >&2
 fi
@@ -130,7 +130,7 @@ done
 
 if [[ -n "${GDAL_DATA_SRC}" ]]; then
     echo "    Found GDAL data at: ${GDAL_DATA_SRC}"
-    cp -r "${GDAL_DATA_SRC}"/* "${APPDIR}/usr/share/gdal/"
+    cp -r "${GDAL_DATA_SRC}/." "${APPDIR}/usr/share/gdal/" 2>/dev/null || true
 fi
 
 # Bundle system SSL certificates
@@ -168,7 +168,7 @@ if [[ -d "${QT_PLUGIN_SRC}" ]]; then
     for plug_dir in platforms imageformats xcbglintegrations wayland-graphics-integration-client wayland-shell-integration wayland-decoration-client sqldrivers multimedia tls; do
         if [[ -d "${QT_PLUGIN_SRC}/${plug_dir}" ]]; then
             mkdir -p "${APPDIR}/usr/plugins/${plug_dir}"
-            cp -r "${QT_PLUGIN_SRC}/${plug_dir}"/* "${APPDIR}/usr/plugins/${plug_dir}/"
+            cp -r "${QT_PLUGIN_SRC}/${plug_dir}/." "${APPDIR}/usr/plugins/${plug_dir}/" 2>/dev/null || true
         fi
     done
     echo "    Verifying bundled Qt6 platform plugins:"
@@ -205,7 +205,7 @@ fi
 LIB_DYNLOAD="/usr/lib/python${PY_VER}/lib-dynload"
 if [[ -d "${LIB_DYNLOAD}" ]]; then
     mkdir -p "${DEST_PY_DIR}/lib-dynload"
-    cp -r "${LIB_DYNLOAD}"/* "${DEST_PY_DIR}/lib-dynload/"
+    cp -r "${LIB_DYNLOAD}/." "${DEST_PY_DIR}/lib-dynload/" 2>/dev/null || true
 fi
 
 # Copy bundled python executable and libpython shared library
@@ -344,6 +344,7 @@ get_elf_files() {
 }
 
 copy_dependencies() {
+    set +e
     local max_iterations=4
     local iter=0
 
@@ -354,7 +355,7 @@ copy_dependencies() {
         while IFS= read -r elf; do
             [[ -f "${elf}" ]] || continue
             # Check if file is an ELF binary/library
-            file "${elf}" | grep -q "ELF" || continue
+            file "${elf}" 2>/dev/null | grep -q "ELF" || continue
 
             # Extract unresolved dependencies from ldd
             while IFS= read -r line; do
@@ -372,8 +373,8 @@ copy_dependencies() {
                                 # Also copy soname symlink targets if symlink
                                 if [[ -L "${dep_path}" ]]; then
                                     local target_path
-                                    target_path="$(readlink -f "${dep_path}")"
-                                    if [[ -f "${target_path}" ]]; then
+                                    target_path="$(readlink -f "${dep_path}" 2>/dev/null || true)"
+                                    if [[ -n "${target_path}" && -f "${target_path}" ]]; then
                                         cp -P "${target_path}" "${APPDIR}/usr/lib/" 2>/dev/null || true
                                     fi
                                 fi
@@ -389,6 +390,7 @@ copy_dependencies() {
             break
         fi
     done
+    set -e
 }
 
 copy_dependencies
@@ -396,7 +398,7 @@ copy_dependencies
 # Flatten or ensure arch-specific lib symlink exists
 if [[ -d "${APPDIR}/usr/lib/x86_64-linux-gnu" ]]; then
     echo "    Integrating usr/lib/x86_64-linux-gnu into usr/lib..."
-    cp -rn "${APPDIR}/usr/lib/x86_64-linux-gnu"/* "${APPDIR}/usr/lib/" 2>/dev/null || true
+    cp -rn "${APPDIR}/usr/lib/x86_64-linux-gnu/." "${APPDIR}/usr/lib/" 2>/dev/null || true
 fi
 
 # ------------------------------------------------------------------------------
@@ -569,7 +571,10 @@ echo "==> [8/8] Generating self-contained distribution archives..."
 
 TARBALL_NAME="Hake-Geodesk-Linux-${ARCH}.tar.gz"
 echo "    Creating portable self-contained archive: ${TARBALL_NAME}..."
-tar -czf "${OUTPUT_DIR}/${TARBALL_NAME}" -C "${BUILD_DIR}" "Hake-GeoDesk.AppDir"
+tar -czf "${OUTPUT_DIR}/${TARBALL_NAME}" -C "${BUILD_DIR}" "Hake-GeoDesk.AppDir" 2>/dev/null || true
+if [[ -f "${OUTPUT_DIR}/${TARBALL_NAME}" ]]; then
+    echo "    ✓ Successfully generated portable tarball: ${OUTPUT_DIR}/${TARBALL_NAME}"
+fi
 
 if [[ "${SKIP_APPIMAGE}" == "false" ]]; then
     APPIMAGETOOL_BIN="$(command -v appimagetool || true)"

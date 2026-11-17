@@ -29,7 +29,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   packages: write
@@ -198,13 +198,9 @@ jobs:
           fi
           CMAKE_BIN=$(dirname "$(command -v cmake)")
           NINJA_BIN="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja"
-          GIT_BINDIR=$(dirname "$(command -v git.exe || command -v git || echo '/c/Program Files/Git/cmd')")
-          CCACHE_BINDIR=$(dirname "$(command -v ccache.exe || command -v ccache || echo '/usr/bin')")
-          POWERSHELL_BINDIR="/c/Windows/System32/WindowsPowerShell/v1.0"
-          export PATH="${CL_BINDIR}:${RC_BINDIR}:${GIT_BINDIR}:${CCACHE_BINDIR}:/c/Strawberry/perl/bin:/c/.vcpkg:${CMAKE_BIN}:${NINJA_BIN}:${POWERSHELL_BINDIR}:/c/Windows/system32:/c/Windows"
+          export PATH="${CL_BINDIR}:${RC_BINDIR}:/c/Strawberry/perl/bin:/c/.vcpkg:${CMAKE_BIN}:${NINJA_BIN}:/c/Windows/system32:/c/Windows"
           echo "Using MSVC from ${CL_BINDIR}"
           echo "Using Windows SDK rc from ${RC_BINDIR}"
-          echo "Using Git from ${GIT_BINDIR}"
           echo "PATH length: ${#PATH}"
 
           BUILD_DIR=$( "/c/Program Files/Git/usr/bin/cygpath" "${{ github.workspace }}/build" )

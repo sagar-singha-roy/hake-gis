@@ -316,4 +316,3 @@ runs:
         marker: vcpkg-failures-${{ inputs.triplet }}
         body: ${{ steps.render.outputs.body }}
         pr: ${{ inputs.pr }}
-        key: vcpkg-failures-${{ inputs.triplet }}
