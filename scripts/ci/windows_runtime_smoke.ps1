@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Package assertions + NSIS install + PROJ/GDAL runtime smoke for Hake GeoDesk Windows CI.
@@ -71,9 +71,9 @@ function Assert-ZipContents {
         $qtNetworkDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Network\.dll$' })
         $qtMultimediaDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Multimedia\.dll$' })
         $qtPositioningDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Positioning\.dll$' })
-        $qgisCoreDll = @($names | Where-Object { $_ -match '(^|/)bin/qgis_core\.dll$' })
-        $qgisGuiDll = @($names | Where-Object { $_ -match '(^|/)bin/qgis_gui\.dll$' })
-        $qgisAppDll = @($names | Where-Object { $_ -match '(^|/)bin/qgis_app\.dll$' })
+        $qgisCoreDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_core\.dll$' })
+        $qgisGuiDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_gui\.dll$' })
+        $qgisAppDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_app\.dll$' })
         $appExe = @($names | Where-Object { $_ -match '(^|/)bin/hake-geodesk\.exe$' })
         $pyqtCore = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtCore[^/]*\.pyd$' })
         $pyqtGui = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtGui[^/]*\.pyd$' })
@@ -94,6 +94,8 @@ function Assert-ZipContents {
         $qtPlatform | ForEach-Object { Write-Host "  $_" }
         Write-Host "Qt6 core/gui/widgets DLL entries:"
         Write-Host "  Qt6Core: $($qtCoreDll.Count), Qt6Gui: $($qtGuiDll.Count), Qt6Widgets: $($qtWidgetsDll.Count)"
+        Write-Host "Core/Gui/App DLL entries:"
+        Write-Host "  Core: $($qgisCoreDll.Count), Gui: $($qgisGuiDll.Count), App: $($qgisAppDll.Count)"
         Write-Host "PyQt6 multimedia entries:"
         $pyqtMultimedia | ForEach-Object { Write-Host "  $_" }
         Write-Host "PyQt6 positioning entries:"
@@ -114,9 +116,9 @@ function Assert-ZipContents {
         if (-not $qtWidgetsDll) { $missing += "bin/Qt6Widgets.dll" }
         if (-not $qtMultimediaDll) { $missing += "bin/Qt6Multimedia.dll" }
         if (-not $qtPositioningDll) { $missing += "bin/Qt6Positioning.dll" }
-        if (-not $qgisCoreDll) { $missing += "bin/qgis_core.dll" }
-        if (-not $qgisGuiDll) { $missing += "bin/qgis_gui.dll" }
-        if (-not $qgisAppDll) { $missing += "bin/qgis_app.dll" }
+        if (-not $qgisCoreDll) { $missing += "bin/(qgis|hakegis)_core.dll" }
+        if (-not $qgisGuiDll) { $missing += "bin/(qgis|hakegis)_gui.dll" }
+        if (-not $qgisAppDll) { $missing += "bin/(qgis|hakegis)_app.dll" }
         if (-not $qtPlatform) { $missing += "bin/Qt6/plugins/platforms/qwindows.dll" }
         if (-not $pyqtCore) { $missing += "bin/Lib/site-packages/PyQt6/QtCore*.pyd" }
         if (-not $pyqtGui) { $missing += "bin/Lib/site-packages/PyQt6/QtGui*.pyd" }
