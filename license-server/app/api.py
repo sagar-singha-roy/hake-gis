@@ -30,6 +30,7 @@ from app.licensing_service import (
     admin_revoke_license,
     admin_list_licenses,
     admin_get_audit_logs,
+    admin_list_payments,
     log_audit,
 )
 from app.webhook_service import handle_stripe_webhook, handle_razorpay_webhook
@@ -270,6 +271,9 @@ def handle_api_request(
 
         if method == "GET" and path == "/api/admin/emails":
             return 200, list_spooled_emails(), None
+
+        if method == "GET" and path == "/api/admin/payments":
+            return 200, admin_list_payments(), None
 
         if method == "POST" and path == "/api/admin/reset-trials":
             with get_db() as conn:

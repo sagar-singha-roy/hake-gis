@@ -464,6 +464,35 @@ def admin_get_audit_logs(limit: int = 100) -> List[Dict[str, Any]]:
         ).fetchall()
         return [dict(r) for r in rows]
 
+def admin_list_payments(limit: int = 100) -> List[Dict[str, Any]]:
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT l.license_id, l.customer_email, l.customer_account_ref as payment_id,
+                      l.plan_tier, l.created_at, l.status, l.code_last4,
+                      a.details
+               FROM licenses l
+               LEFT JOIN audit_log a ON a.license_id = l.license_id AND a.event_type = 'payment_license_created'
+               WHERE l.customer_account_ref IS NOT NULL AND l.customer_account_ref != ''
+               ORDER BY l.created_at DESC LIMIT ?""",
+            (limit,)
+        ).fetchall()
+
+        results = []
+        for r in rows:
+            amount = "$299.00" if r["plan_tier"] == "annual" else ("$899.00" if r["plan_tier"] == "business" else "$0.00")
+            results.append({
+                "license_id": r["license_id"],
+                "customer_email": r["customer_email"],
+                "payment_id": r["payment_id"],
+                "plan_tier": r["plan_tier"],
+                "amount": amount,
+                "status": r["status"],
+                "code_last4": r["code_last4"],
+                "details": r["details"] or "Direct Payment Checkout",
+                "created_at": r["created_at"]
+            })
+        return results
+
 # =========================================================================
 # Phase 3: Daily Refresh, Grace Check & Device Deactivation
 # =========================================================================
