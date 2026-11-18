@@ -319,25 +319,28 @@
            </layout>
           </item>
 
-          <!-- Hero Main Title (Classy, 34px IBM Plex Serif, centered in the middle of the globe image) -->
+          <!-- Hero Main Title (Classy IBM Plex Serif, centered in the middle of the globe image) -->
           <item>
            <widget class="QLabel" name="lblHeroTitle">
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
             <property name="font">
              <font>
               <family>IBM Plex Serif</family>
-              <pointsize>34</pointsize>
+              <pointsize>32</pointsize>
               <weight>63</weight>
               <bold>true</bold>
              </font>
             </property>
             <property name="styleSheet">
-             <string notr="true">color: #ffffff; font-weight: 600; font-size: 34px; line-height: 1.25; letter-spacing: -0.4px; font-family: "IBM Plex Serif", Georgia, serif; background: transparent;</string>
+             <string notr="true">color: #ffffff; font-weight: 600; font-size: 32px; line-height: 1.25; letter-spacing: -0.3px; font-family: "IBM Plex Serif", Georgia, serif; background: transparent;</string>
             </property>
             <property name="text">
-             <string>&lt;div align=&quot;center&quot; style=&quot;font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; font-size: 34px; color: #ffffff;&quot;&gt;Welcome to Hake GeoDesk&lt;br&gt;&lt;span style=&quot;font-family: 'Open Sans', -apple-system, sans-serif; font-weight: 600; font-size: 16px; color: #38bdf8; letter-spacing: 1.2px;&quot;&gt;(Desktop)&lt;/span&gt;&lt;/div&gt;</string>
+             <string>&lt;div align=&quot;center&quot; style=&quot;font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; color: #ffffff; line-height: 1.25;&quot;&gt;&lt;span style=&quot;font-size: 30px;&quot;&gt;Welcome to&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size: 36px;&quot;&gt;Hake GeoDesk&lt;/span&gt;&lt;/div&gt;</string>
             </property>
            </widget>
           </item>

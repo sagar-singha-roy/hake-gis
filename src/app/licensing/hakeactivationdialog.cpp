@@ -50,10 +50,20 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   mGlobeWidget = new HakeGlobeWidget( mUi->globeContainer );
   mUi->globeContainerLayout->addWidget( mGlobeWidget );
 
-  // Place "Welcome to Hake GeoDesk (Desktop)" in the middle of the globe image
+  // Place "Welcome to Hake GeoDesk" in the middle of the globe image (2 lines, no "(Desktop)")
   QVBoxLayout *globeCenterLayout = new QVBoxLayout( mGlobeWidget );
-  globeCenterLayout->setContentsMargins( 12, 12, 12, 12 );
+  globeCenterLayout->setContentsMargins( 8, 8, 8, 8 );
   globeCenterLayout->addWidget( mUi->lblHeroTitle, 0, Qt::AlignCenter );
+
+  mUi->lblHeroTitle->setWordWrap( true );
+  mUi->lblHeroTitle->setText(
+    QStringLiteral(
+      "<div align=\"center\" style=\"font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; color: #ffffff; line-height: 1.25;\">"
+      "<span style=\"font-size: 30px;\">Welcome to</span><br>"
+      "<span style=\"font-size: 36px;\">Hake GeoDesk</span>"
+      "</div>"
+    )
+  );
 
   // Classy cinematic Gaussian drop shadow behind the title
   auto *titleShadow = new QGraphicsDropShadowEffect( this );
