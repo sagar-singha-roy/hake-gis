@@ -73,7 +73,7 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   // Clear inputs - do not prefill anything; user will give input fresh
   mUi->txtLoginEmail->clear();
   mUi->txtLoginPassword->clear();
-  mUi->lblLoginSubtitle->setText( tr( "Sign in to your workstation to continue." ) );
+  mUi->lblLoginSubtitle->setText( tr( "Enter your credentials to access your workstation." ) );
 
   // Initialize selected plan styling
   selectPlan( 1 );
@@ -194,23 +194,23 @@ void HakeActivationDialog::selectPlan( int planIndex )
 
   const QString secondaryBtnStyle = QStringLiteral(
     "QPushButton {"
-    "  background-color: #f8fafc;"
-    "  color: #1e293b;"
-    "  font-weight: 600;"
+    "  background-color: #0f172a;"
+    "  color: #ffffff;"
+    "  font-weight: 700;"
     "  font-size: 13px;"
     "  border-radius: 8px;"
-    "  border: 1.5px solid #cbd5e1;"
-    "  border-bottom: 2.5px solid #94a3b8;"
+    "  border: 1px solid #0f172a;"
+    "  border-bottom: 2.5px solid #020617;"
     "  padding: 10px;"
     "}"
     "QPushButton:hover {"
-    "  background-color: #f1f5f9;"
-    "  border-color: #94a3b8;"
-    "  border-bottom: 2.5px solid #64748b;"
+    "  background-color: #1e293b;"
+    "  border-color: #1e293b;"
+    "  border-bottom: 2.5px solid #0f172a;"
     "}"
     "QPushButton:pressed {"
-    "  background-color: #e2e8f0;"
-    "  border-bottom: 1px solid #94a3b8;"
+    "  background-color: #020617;"
+    "  border-bottom: 1px solid #020617;"
     "  padding-top: 11px;"
     "  padding-bottom: 8px;"
     "}"
