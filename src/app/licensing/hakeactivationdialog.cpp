@@ -147,8 +147,8 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "QFrame#%1 {"
     "  background-color: #ffffff;"
     "  border: 1.5px solid #e2e8f0;"
-    "  border-radius: 14px;"
-    "  padding: 16px;"
+    "  border-radius: 16px;"
+    "  padding: 24px 20px;"
     "}"
     "QFrame#%1:hover {"
     "  border: 1.5px solid #94a3b8;"
@@ -160,8 +160,8 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "QFrame#%1 {"
     "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #eff6ff);"
     "  border: 2.5px solid #2563eb;"
-    "  border-radius: 14px;"
-    "  padding: 15px;"
+    "  border-radius: 16px;"
+    "  padding: 23px 19px;"
     "}"
   );
 
@@ -174,11 +174,11 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);"
     "  color: #ffffff;"
     "  font-weight: 700;"
-    "  font-size: 13px;"
-    "  border-radius: 8px;"
+    "  font-size: 13.5px;"
+    "  border-radius: 9px;"
     "  border: 1px solid #1e40af;"
     "  border-bottom: 3.5px solid #172554;"
-    "  padding: 10px;"
+    "  padding: 10px 16px;"
     "}"
     "QPushButton:hover {"
     "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);"
@@ -197,11 +197,11 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "  background-color: #0f172a;"
     "  color: #ffffff;"
     "  font-weight: 700;"
-    "  font-size: 13px;"
-    "  border-radius: 8px;"
+    "  font-size: 13.5px;"
+    "  border-radius: 9px;"
     "  border: 1px solid #0f172a;"
     "  border-bottom: 2.5px solid #020617;"
-    "  padding: 10px;"
+    "  padding: 10px 16px;"
     "}"
     "QPushButton:hover {"
     "  background-color: #1e293b;"
@@ -269,13 +269,16 @@ void HakeActivationDialog::setPage( Page page )
     page = PageWelcome;
   }
 
-  // On welcome split-screen, hide the top global header bar for an edge-to-edge modern look
-  if ( page == PageWelcome )
+  // On welcome split-screen and pricing page, hide the top global header bar for an edge-to-edge clean modern look
+  if ( page == PageWelcome || page == PagePricing )
   {
     mUi->headerBrandBar->hide();
     if ( mGlobeWidget )
     {
-      mGlobeWidget->startAnimation();
+      if ( page == PageWelcome )
+        mGlobeWidget->startAnimation();
+      else
+        mGlobeWidget->stopAnimation();
     }
   }
   else

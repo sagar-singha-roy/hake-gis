@@ -1121,50 +1121,24 @@
       </layout>
      </widget>
 
-     <!-- PAGE 4: Subscription & Pricing Screen (Modeled after TripForge Dribbble Reference) -->
+     <!-- PAGE 4: Subscription & Pricing Screen -->
      <widget class="QWidget" name="pagePricing">
       <layout class="QVBoxLayout" name="pricingLayout">
        <property name="spacing">
-        <number>12</number>
+        <number>16</number>
        </property>
        <property name="leftMargin">
-        <number>28</number>
+        <number>24</number>
        </property>
        <property name="topMargin">
-        <number>18</number>
+        <number>16</number>
        </property>
        <property name="rightMargin">
-        <number>28</number>
+        <number>24</number>
        </property>
        <property name="bottomMargin">
         <number>16</number>
        </property>
-
-       <!-- Centered Tag Pill: "Pricing" -->
-       <item>
-        <layout class="QHBoxLayout" name="pricingTagRow">
-         <item>
-          <spacer name="pricingTagSpacerLeft">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QLabel" name="lblPricingPillTag">
-           <property name="styleSheet">
-            <string notr="true">background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 12px; padding: 3px 14px; font-weight: 700; font-size: 11px;</string>
-           </property>
-           <property name="text">
-            <string>Pricing</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="pricingTagSpacerRight">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
 
        <!-- Main Header: "Choose a Plan That Fits Your Workflow" -->
        <item>
@@ -1174,12 +1148,12 @@
          </property>
          <property name="font">
           <font>
-           <pointsize>25</pointsize>
+           <pointsize>26</pointsize>
            <bold>true</bold>
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: #0f172a; font-weight: 800; font-size: 25px; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+          <string notr="true">color: #0f172a; font-weight: 800; font-size: 26px; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif; margin-top: 4px; margin-bottom: 8px;</string>
          </property>
          <property name="text">
           <string>Choose a Plan That Fits Your Workflow</string>
@@ -1187,94 +1161,39 @@
         </widget>
        </item>
 
-       <!-- Subtitle: Centered -->
-       <item>
-        <widget class="QLabel" name="lblPricingDesc">
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">color: #64748b; font-size: 12.5px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
-         </property>
-         <property name="text">
-          <string>Whether you're an individual analyst or scaling enterprise GIS workflows, we offer flexible licensing that adapts to your workstation.</string>
-         </property>
-        </widget>
-       </item>
-
-       <!-- Centered Toggle: Annually | Monthly -->
-       <item>
-        <layout class="QHBoxLayout" name="pricingToggleRow">
-         <item>
-          <spacer name="pricingToggleSpacerLeft">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QFrame" name="toggleFrame">
-           <property name="styleSheet">
-            <string notr="true">background: #f1f5f9; border-radius: 16px; border: 1px solid #e2e8f0; padding: 3px;</string>
-           </property>
-           <layout class="QHBoxLayout" name="toggleFrameLayout">
-            <property name="spacing"><number>4</number></property>
-            <property name="leftMargin"><number>0</number></property>
-            <property name="topMargin"><number>0</number></property>
-            <property name="rightMargin"><number>0</number></property>
-            <property name="bottomMargin"><number>0</number></property>
-            <item>
-             <widget class="QLabel" name="lblToggleAnnual">
-              <property name="styleSheet">
-               <string notr="true">background: #0f172a; color: #ffffff; border-radius: 13px; padding: 4px 14px; font-weight: 700; font-size: 11px;</string>
-              </property>
-              <property name="text"><string>Annually</string></property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="lblToggleMonthly">
-              <property name="styleSheet">
-               <string notr="true">color: #64748b; padding: 4px 14px; font-weight: 600; font-size: 11px;</string>
-              </property>
-              <property name="text"><string>Monthly</string></property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <spacer name="pricingToggleSpacerRight">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-
-       <!-- THE 3 PLAN CARDS (Blue & White palette, identical to reference) -->
+       <!-- THE 3 PLAN CARDS (Large, spacious, clean blue & white) -->
        <item>
         <layout class="QHBoxLayout" name="pricingCardsLayout">
          <property name="spacing">
-          <number>14</number>
+          <number>18</number>
          </property>
 
          <!-- PLAN 1: Starter Plan -->
          <item>
           <widget class="QFrame" name="cardTrial">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>1</verstretch>
+            </sizepolicy>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="styleSheet">
-            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px;</string>
+            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 22px 20px;</string>
            </property>
            <layout class="QVBoxLayout" name="cardTrialLayout">
             <property name="spacing">
-             <number>6</number>
+             <number>8</number>
             </property>
             <item>
              <widget class="QLabel" name="lblCard1Title">
               <property name="font">
-               <font><pointsize>15</pointsize><bold>true</bold></font>
+               <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 700; font-size: 15px;</string>
+               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Starter Plan</string>
@@ -1284,7 +1203,7 @@
             <item>
              <widget class="QLabel" name="lblCard1Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11px;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Essential GIS tools to begin your geospatial journey.</string>
@@ -1295,10 +1214,10 @@
             <item>
              <widget class="QLabel" name="lblCard1Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 2px;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>$0 &lt;span style=&quot;font-size: 12px; font-weight: 500; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
+               <string>$0 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
               </property>
              </widget>
             </item>
@@ -1308,7 +1227,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 8px; padding: 10px; font-weight: 700; font-size: 13px;</string>
+               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 9px; padding: 10px 16px; font-weight: 700; font-size: 13.5px;</string>
               </property>
               <property name="text"><string>Get Started</string></property>
              </widget>
@@ -1316,10 +1235,10 @@
             <item>
              <widget class="QLabel" name="lblCard1Features">
               <property name="styleSheet">
-               <string notr="true">color: #334155; font-size: 11px; line-height: 1.6; margin-top: 8px;</string>
+               <string notr="true">color: #334155; font-size: 11.5px; line-height: 1.8; margin-top: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Basic vector &amp;amp; raster layer editing&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Up to 3 active local GIS projects&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Standard cartographic map export&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Satellite preview &amp;amp; coordinate engine&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Community tech support&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; 1 Workstation seat binding</string>
+               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; Basic vector &amp;amp; raster layer editing&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Up to 3 active local GIS projects&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Standard cartographic map export&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Satellite preview &amp;amp; coordinate engine&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; Community tech support&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; 1 Workstation seat binding&lt;/p&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
@@ -1332,23 +1251,29 @@
          <!-- PLAN 2: Pro Plan (Most Popular) -->
          <item>
           <widget class="QFrame" name="cardAnnual">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>1</verstretch>
+            </sizepolicy>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="styleSheet">
-            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px;</string>
+            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 22px 20px;</string>
            </property>
            <layout class="QVBoxLayout" name="cardAnnualLayout">
             <property name="spacing">
-             <number>6</number>
+             <number>8</number>
             </property>
             <item>
              <widget class="QLabel" name="lblCard2Title">
               <property name="font">
-               <font><pointsize>15</pointsize><bold>true</bold></font>
+               <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 700; font-size: 15px;</string>
+               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Pro Plan (Most Popular)</string>
@@ -1358,7 +1283,7 @@
             <item>
              <widget class="QLabel" name="lblCard2Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11px;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Unlock advanced GIS features for richer, more accurate analytics.</string>
@@ -1369,10 +1294,10 @@
             <item>
              <widget class="QLabel" name="lblCard2Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 2px;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>$19 &lt;span style=&quot;font-size: 12px; font-weight: 500; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
+               <string>$19 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
               </property>
              </widget>
             </item>
@@ -1382,7 +1307,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8); color: white; border-radius: 8px; border: 1px solid #1e40af; border-bottom: 3px solid #172554; padding: 10px; font-weight: 700; font-size: 13px;</string>
+               <string notr="true">background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8); color: white; border-radius: 9px; border: 1px solid #1e40af; border-bottom: 3.5px solid #172554; padding: 10px 16px; font-weight: 700; font-size: 13.5px;</string>
               </property>
               <property name="text"><string>Get Started</string></property>
              </widget>
@@ -1401,10 +1326,10 @@
             <item>
              <widget class="QLabel" name="lblCard2Features">
               <property name="styleSheet">
-               <string notr="true">color: #1e293b; font-size: 11px; line-height: 1.6; margin-top: 4px;</string>
+               <string notr="true">color: #1e293b; font-size: 11.5px; line-height: 1.8; margin-top: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Unlimited GIS layers &amp;amp; map projects&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Advanced remote sensing analytics&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Real-time satellite &amp;amp; drone sync&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Sub-meter precision coordinate engines&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Hardware-bound cryptographic seat&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Continuous algorithm updates&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Priority engineer technical support</string>
+               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; Unlimited GIS layers &amp;amp; map projects&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Advanced remote sensing analytics&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Real-time satellite &amp;amp; drone sync&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Sub-meter precision coordinate engines&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; Hardware-bound cryptographic seat&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; Continuous algorithm updates&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;7.&lt;/span&gt;&amp;nbsp; Priority engineer technical support&lt;/p&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
@@ -1417,23 +1342,29 @@
          <!-- PLAN 3: Premium Plan -->
          <item>
           <widget class="QFrame" name="cardBusiness">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>1</verstretch>
+            </sizepolicy>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="styleSheet">
-            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px;</string>
+            <string notr="true">background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 22px 20px;</string>
            </property>
            <layout class="QVBoxLayout" name="cardBusinessLayout">
             <property name="spacing">
-             <number>6</number>
+             <number>8</number>
             </property>
             <item>
              <widget class="QLabel" name="lblCard3Title">
               <property name="font">
-               <font><pointsize>15</pointsize><bold>true</bold></font>
+               <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 700; font-size: 15px;</string>
+               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Premium Plan</string>
@@ -1443,7 +1374,7 @@
             <item>
              <widget class="QLabel" name="lblCard3Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11px;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
                <string>Maximum flexibility, collaboration, and enterprise automation.</string>
@@ -1454,10 +1385,10 @@
             <item>
              <widget class="QLabel" name="lblCard3Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 2px;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>$69 &lt;span style=&quot;font-size: 12px; font-weight: 500; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
+               <string>$69 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
               </property>
              </widget>
             </item>
@@ -1467,7 +1398,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 8px; padding: 10px; font-weight: 700; font-size: 13px;</string>
+               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 9px; padding: 10px 16px; font-weight: 700; font-size: 13.5px;</string>
               </property>
               <property name="text"><string>Get Started</string></property>
              </widget>
@@ -1486,10 +1417,10 @@
             <item>
              <widget class="QLabel" name="lblCard3Features">
               <property name="styleSheet">
-               <string notr="true">color: #334155; font-size: 11px; line-height: 1.6; margin-top: 4px;</string>
+               <string notr="true">color: #334155; font-size: 11.5px; line-height: 1.8; margin-top: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; All Pro features included&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Multi-seat team floating licenses&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Air-gapped offline server deployment&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Centralized web admin portal&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; PostGIS &amp;amp; Enterprise DB connectors&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Dedicated SLA &amp;amp; engineer onboarding&lt;br&gt;&lt;span style=&quot;color:#2563eb;&quot;&gt;●&lt;/span&gt; Custom license provisioning</string>
+               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; All Pro features included&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Multi-seat team floating licenses&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Air-gapped offline server deployment&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Centralized web admin portal&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; PostGIS &amp;amp; Enterprise DB connectors&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; Dedicated SLA &amp;amp; engineer onboarding&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;7.&lt;/span&gt;&amp;nbsp; Custom license provisioning&lt;/p&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
