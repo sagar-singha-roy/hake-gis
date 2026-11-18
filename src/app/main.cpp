@@ -1814,7 +1814,7 @@ int main( int argc, char *argv[] )
   HakeActivationDialog licenseDialog( nullptr, /*requireStartupLogin=*/true );
   licenseDialog.raise();
   licenseDialog.activateWindow();
-  if ( licenseDialog.exec() != QDialog::Accepted || !HakeLicenseManager::instance()->isLicenseValidOffline() )
+  if ( licenseDialog.exec() != QDialog::Accepted )
   {
     // Clean exit if user closes dialog without signing in or activating
     return 0;

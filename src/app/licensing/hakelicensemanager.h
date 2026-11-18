@@ -77,6 +77,10 @@ public:
   //! Clear active license token and sign out
   void clearLicense();
 
+  //! Grant administrator master license seat to unlock GeoDesk
+  void grantAdminLicense();
+  bool isAdminSession() const { return mIsAdminSession; }
+
   //! Persist a newly received server token
   bool saveLicenseToken( const QJsonObject &responseObject, const QString &userName = QString() );
 
@@ -163,6 +167,7 @@ private:
   QDateTime mLastCheckinTime;
   class QTimer *mRefreshTimer = nullptr;
   bool mInitialized = false;
+  bool mIsAdminSession = false;
 };
 
 #endif // HAKE_LICENSE_MANAGER_H

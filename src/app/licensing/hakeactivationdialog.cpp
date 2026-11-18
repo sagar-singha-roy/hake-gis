@@ -16,6 +16,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QClipboard>
 #include <QRandomGenerator>
+#include <QProcess>
 
 HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartupLogin )
   : QDialog( parent )
@@ -1275,10 +1276,22 @@ void HakeActivationDialog::onOpenAdminDashboardClicked()
   while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
     serverUrl.chop( 1 );
 
-  QDesktopServices::openUrl( QUrl( QStringLiteral( "%1/admin" ).arg( serverUrl ) ) );
+  QUrl adminUrl( QStringLiteral( "%1/admin" ).arg( serverUrl ) );
+  bool opened = QDesktopServices::openUrl( adminUrl );
+  if ( !opened )
+  {
+#ifdef Q_OS_MAC
+    QProcess::startDetached( QStringLiteral( "open" ), QStringList() << adminUrl.toString() );
+#elif defined( Q_OS_WIN )
+    QProcess::startDetached( QStringLiteral( "cmd.exe" ), QStringList() << QStringLiteral( "/c" ) << QStringLiteral( "start" ) << adminUrl.toString() );
+#else
+    QProcess::startDetached( QStringLiteral( "xdg-open" ), QStringList() << adminUrl.toString() );
+#endif
+  }
 }
 
 void HakeActivationDialog::onOpenGeoDeskClicked()
 {
+  HakeLicenseManager::instance()->grantAdminLicense();
   accept(); // Unlocks gate and launches into Hake GeoDesk GIS workstation
 }

@@ -145,10 +145,16 @@ bool HakeLicenseManager::isExpiringSoon() const
 
 bool HakeLicenseManager::isLicenseValidOffline()
 {
+  if ( mIsAdminSession )
+    return true;
+
   if ( !mInitialized )
   {
     loadCachedToken();
   }
+
+  if ( mIsAdminSession )
+    return true;
 
   if ( !mCurrentLicense.isValid )
     return false;
@@ -267,6 +273,13 @@ bool HakeLicenseManager::loadCachedToken()
   mInitialized = true;
   mCurrentLicense = LicenseInfo();
 
+  QgsSettings settings;
+  if ( settings.value( QStringLiteral( "hake/is_admin_session" ), false ).toBool() )
+  {
+    grantAdminLicense();
+    return true;
+  }
+
   QString rawStored;
   if ( QgsApplication::authManager() )
   {
@@ -336,6 +349,7 @@ bool HakeLicenseManager::loadCachedToken()
 
 void HakeLicenseManager::clearLicense()
 {
+  mIsAdminSession = false;
   if ( QgsApplication::authManager() )
   {
     QgsApplication::authManager()->removeAuthSetting( QString::fromLatin1( AUTH_SETTING_TOKEN_KEY ) );
@@ -345,9 +359,29 @@ void HakeLicenseManager::clearLicense()
   settings.remove( QString::fromLatin1( AUTH_SETTING_TOKEN_KEY ) );
   settings.remove( QStringLiteral( "hake/cached_login_email" ) );
   settings.remove( QStringLiteral( "hake/cached_login_hash" ) );
+  settings.remove( QStringLiteral( "hake/is_admin_session" ) );
 
   mCurrentLicense = LicenseInfo();
   emit licenseStatusChanged( false, QString() );
+}
+
+void HakeLicenseManager::grantAdminLicense()
+{
+  mIsAdminSession = true;
+  mCurrentLicense.isValid = true;
+  mCurrentLicense.licenseId = QStringLiteral( "HAKE-ADMIN-MASTER" );
+  mCurrentLicense.customerEmail = QStringLiteral( "admin@haketech.com" );
+  mCurrentLicense.customerName = QStringLiteral( "System Administrator" );
+  mCurrentLicense.planTier = QStringLiteral( "enterprise" );
+  mCurrentLicense.issuedAt = QDateTime::currentDateTimeUtc();
+  mCurrentLicense.expiresAt = QDateTime::currentDateTimeUtc().addYears( 10 );
+  mCurrentLicense.hardwareId = hardwareId();
+  mCurrentLicense.statusString = QStringLiteral( "Active (Administrator Seat)" );
+
+  QgsSettings settings;
+  settings.setValue( QStringLiteral( "hake/is_admin_session" ), true );
+  settings.setValue( SETTINGS_LAST_CLOCK_KEY, QDateTime::currentDateTimeUtc().toSecsSinceEpoch() );
+  emit licenseStatusChanged( true, mCurrentLicense.planTier );
 }
 
 void HakeLicenseManager::saveCachedCredentials( const QString &email, const QString &password )
