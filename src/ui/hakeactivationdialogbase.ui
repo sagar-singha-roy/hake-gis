@@ -319,7 +319,7 @@
            </layout>
           </item>
 
-          <!-- Hero Main Title (ABOVE the globe, centered, larger bold italic font) -->
+          <!-- Hero Main Title (ABOVE the globe, centered, IBM Plex Serif SemiBold 600) -->
           <item>
            <widget class="QLabel" name="lblHeroTitle">
             <property name="alignment">
@@ -327,16 +327,17 @@
             </property>
             <property name="font">
              <font>
+              <family>IBM Plex Serif</family>
               <pointsize>28</pointsize>
+              <weight>63</weight>
               <bold>true</bold>
-              <italic>true</italic>
              </font>
             </property>
             <property name="styleSheet">
-             <string notr="true">color: #ffffff; font-weight: 800; font-style: italic; font-size: 28px; line-height: 1.2; letter-spacing: -0.4px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; margin-top: 6px; margin-bottom: 2px;</string>
+             <string notr="true">color: #ffffff; font-weight: 600; font-size: 28px; line-height: 1.25; letter-spacing: -0.3px; font-family: "IBM Plex Serif", Georgia, serif; margin-top: 6px; margin-bottom: 2px;</string>
             </property>
             <property name="text">
-             <string>&lt;div align=&quot;center&quot;&gt;&lt;i&gt;&lt;b&gt;Welcome to Hake GeoDesk&lt;/b&gt;&lt;/i&gt;&lt;br&gt;&lt;span style=&quot;font-size: 16px; color: #38bdf8; font-weight: 700; font-style: normal; letter-spacing: 0.5px;&quot;&gt;(Desktop)&lt;/span&gt;&lt;/div&gt;</string>
+             <string>&lt;div align=&quot;center&quot; style=&quot;font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; font-size: 28px; color: #ffffff;&quot;&gt;Welcome to Hake GeoDesk&lt;br&gt;&lt;span style=&quot;font-family: 'Open Sans', -apple-system, sans-serif; font-weight: 400; font-size: 15px; color: #38bdf8; letter-spacing: 0.5px;&quot;&gt;(Desktop)&lt;/span&gt;&lt;/div&gt;</string>
             </property>
            </widget>
           </item>
@@ -403,7 +404,7 @@
           <item>
            <widget class="QLabel" name="lblHeroCopyright">
             <property name="styleSheet">
-             <string notr="true">color: #64748b; font-size: 10.5px;</string>
+             <string notr="true">color: #64748b; font-size: 10.5px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="text">
              <string>© 2026 Hake Technologies, Inc. All rights reserved.</string>
@@ -446,6 +447,7 @@
            <widget class="QLabel" name="lblLoginTitle">
             <property name="font">
              <font>
+              <family>Open Sans</family>
               <pointsize>22</pointsize>
               <bold>true</bold>
              </font>
@@ -454,7 +456,7 @@
              <set>Qt::AlignCenter</set>
             </property>
             <property name="styleSheet">
-             <string notr="true">color: #0f172a; font-weight: 800; font-size: 23px; letter-spacing: -0.3px;</string>
+             <string notr="true">color: #0f172a; font-weight: 700; font-size: 23px; letter-spacing: -0.3px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="text">
              <string>Welcome Back</string>
@@ -469,7 +471,7 @@
              <set>Qt::AlignCenter</set>
             </property>
             <property name="styleSheet">
-             <string notr="true">color: #64748b; font-size: 13px; margin-bottom: 2px;</string>
+             <string notr="true">color: #64748b; font-size: 13px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif; margin-bottom: 2px;</string>
             </property>
             <property name="text">
              <string>Enter your credentials to access your workstation.</string>
@@ -502,7 +504,7 @@
           <item>
            <widget class="QLabel" name="lblLoginEmail">
             <property name="styleSheet">
-             <string notr="true">font-weight: 600; font-size: 12px; color: #1e293b;</string>
+             <string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="text">
              <string>Login ID</string>
@@ -512,7 +514,7 @@
           <item>
            <widget class="QLineEdit" name="txtLoginEmail">
             <property name="styleSheet">
-             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #0f172a;</string>
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #0f172a; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="placeholderText">
              <string>Enter your Login ID or email</string>
@@ -524,7 +526,7 @@
           <item>
            <widget class="QLabel" name="lblLoginPassword">
             <property name="styleSheet">
-             <string notr="true">font-weight: 600; font-size: 12px; color: #1e293b;</string>
+             <string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="text">
              <string>Password</string>
@@ -537,7 +539,7 @@
              <enum>QLineEdit::Password</enum>
             </property>
             <property name="styleSheet">
-             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #0f172a;</string>
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #0f172a; font-family: 'Open Sans', -apple-system, sans-serif;</string>
             </property>
             <property name="placeholderText">
              <string>Enter your password</string>
@@ -551,7 +553,7 @@
             <item>
              <widget class="QCheckBox" name="chkRememberMe">
               <property name="styleSheet">
-               <string notr="true">color: #475569; font-size: 12px;</string>
+               <string notr="true">color: #475569; font-size: 12px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Remember me</string>
@@ -574,7 +576,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background: transparent; color: #2563eb; font-weight: 600; font-size: 12px; border: none; padding: 2px;</string>
+               <string notr="true">background: transparent; color: #2563eb; font-weight: 600; font-size: 12px; border: none; padding: 2px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Forgot Password?</string>
@@ -595,6 +597,7 @@
               QPushButton#btnSubmitLogin {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);
                 color: #ffffff;
+                font-family: 'Open Sans', -apple-system, sans-serif;
                 font-weight: 700;
                 font-size: 14px;
                 border-radius: 8px;
@@ -643,7 +646,7 @@
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
-              <property name="styleSheet"><string notr="true">color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;</string></property>
+              <property name="styleSheet"><string notr="true">color: #94a3b8; font-size: 11px; font-weight: 600; letter-spacing: 1.5px; font-family: 'Open Sans', -apple-system, sans-serif;</string></property>
               <property name="text"><string>— OR —</string></property>
              </widget>
             </item>
@@ -676,7 +679,7 @@
             <item>
              <widget class="QLabel" name="lblNoAccountPrompt">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 13px;</string>
+               <string notr="true">color: #64748b; font-size: 13px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Don't have an account?</string>
@@ -689,7 +692,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background: transparent; color: #2563eb; font-weight: 700; font-size: 13px; border: none; padding: 2px;</string>
+               <string notr="true">background: transparent; color: #2563eb; font-weight: 700; font-size: 13px; border: none; padding: 2px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Create account</string>
@@ -720,6 +723,7 @@
                 QPushButton#btnGoActivate {
                   background-color: #f8fafc;
                   color: #1e293b;
+                  font-family: 'Open Sans', -apple-system, sans-serif;
                   border: 1.5px solid #cbd5e1;
                   border-bottom: 2.5px solid #94a3b8;
                   border-radius: 8px;
@@ -755,6 +759,7 @@
                 QPushButton#btnGoPricing {
                   background-color: #f8fafc;
                   color: #1e293b;
+                  font-family: 'Open Sans', -apple-system, sans-serif;
                   border: 1.5px solid #cbd5e1;
                   border-bottom: 2.5px solid #94a3b8;
                   border-radius: 8px;
@@ -803,7 +808,7 @@
             <item>
              <widget class="QPushButton" name="btnTerms">
               <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; border: none; padding: 0;</string></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; font-family: 'Open Sans', -apple-system, sans-serif; border: none; padding: 0;</string></property>
               <property name="text"><string>Terms</string></property>
              </widget>
             </item>
@@ -816,7 +821,7 @@
             <item>
              <widget class="QPushButton" name="btnPrivacy">
               <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; border: none; padding: 0;</string></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; font-family: 'Open Sans', -apple-system, sans-serif; border: none; padding: 0;</string></property>
               <property name="text"><string>Privacy Policy</string></property>
              </widget>
             </item>
@@ -829,7 +834,7 @@
             <item>
              <widget class="QPushButton" name="btnSupport">
               <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; border: none; padding: 0;</string></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #94a3b8; font-size: 11px; font-family: 'Open Sans', -apple-system, sans-serif; border: none; padding: 0;</string></property>
               <property name="text"><string>Support</string></property>
              </widget>
             </item>
@@ -1148,15 +1153,31 @@
          </property>
          <property name="font">
           <font>
+           <family>Open Sans</family>
            <pointsize>26</pointsize>
            <bold>true</bold>
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: #0f172a; font-weight: 800; font-size: 26px; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif; margin-top: 4px; margin-bottom: 8px;</string>
+          <string notr="true">color: #0f172a; font-weight: 700; font-size: 26px; letter-spacing: -0.4px; font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin-top: 2px; margin-bottom: 2px;</string>
          </property>
          <property name="text">
           <string>Choose a Plan That Fits Your Workflow</string>
+         </property>
+        </widget>
+       </item>
+
+       <!-- Centered Description -->
+       <item>
+        <widget class="QLabel" name="lblPricingDesc">
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: #475569; font-size: 13px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif; margin-top: 2px; margin-bottom: 8px;</string>
+         </property>
+         <property name="text">
+          <string>Flexible workstation licensing designed to scale with your geospatial workflows and team requirements.</string>
          </property>
         </widget>
        </item>
@@ -1193,7 +1214,7 @@
                <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #0f172a; font-weight: 700; font-size: 17px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Starter Plan</string>
@@ -1203,7 +1224,7 @@
             <item>
              <widget class="QLabel" name="lblCard1Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Essential GIS tools to begin your geospatial journey.</string>
@@ -1214,7 +1235,7 @@
             <item>
              <widget class="QLabel" name="lblCard1Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>$0 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
@@ -1227,18 +1248,27 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 9px; padding: 10px 16px; font-weight: 700; font-size: 13.5px;</string>
+               <string notr="true">background-color: #0f172a; color: #ffffff; border-radius: 9px; padding: 10px 16px; font-weight: 700; font-size: 13.5px; font-family: 'Open Sans', sans-serif;</string>
               </property>
               <property name="text"><string>Get Started</string></property>
              </widget>
             </item>
             <item>
+             <widget class="QLabel" name="lblCard1TierNote">
+              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="styleSheet">
+               <string notr="true">color: #64748b; font-size: 11.5px; font-weight: 500; padding: 3px; border: none; font-family: 'Open Sans', sans-serif;</string>
+              </property>
+              <property name="text"><string>Free forever for individuals</string></property>
+             </widget>
+            </item>
+            <item>
              <widget class="QLabel" name="lblCard1Features">
               <property name="styleSheet">
-               <string notr="true">color: #334155; font-size: 11.5px; line-height: 1.8; margin-top: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #334155; font-size: 11.5px; margin-top: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; Basic vector &amp;amp; raster layer editing&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Up to 3 active local GIS projects&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Standard cartographic map export&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Satellite preview &amp;amp; coordinate engine&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; Community tech support&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; 1 Workstation seat binding&lt;/p&gt;</string>
+               <string>&lt;table border=&quot;0&quot; cellspacing=&quot;0&quot; cellpadding=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;1.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Basic vector &amp;amp; raster layer editing&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;2.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Up to 3 active local GIS projects&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;3.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Standard cartographic map export&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;4.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Satellite preview &amp;amp; coordinate engine&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;5.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Community technical support&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;6.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;1 Workstation seat binding&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
@@ -1273,7 +1303,7 @@
                <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #0f172a; font-weight: 700; font-size: 17px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Pro Plan (Most Popular)</string>
@@ -1283,7 +1313,7 @@
             <item>
              <widget class="QLabel" name="lblCard2Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Unlock advanced GIS features for richer, more accurate analytics.</string>
@@ -1294,7 +1324,7 @@
             <item>
              <widget class="QLabel" name="lblCard2Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>$19 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
@@ -1318,7 +1348,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background: transparent; color: #2563eb; padding: 2px; font-size: 11.5px; font-weight: 600; border: none;</string>
+               <string notr="true">background: transparent; color: #2563eb; padding: 3px; font-size: 11.5px; font-weight: 600; border: none; font-family: 'Open Sans', sans-serif;</string>
               </property>
               <property name="text"><string>Buy Annual License ($249) →</string></property>
              </widget>
@@ -1326,10 +1356,10 @@
             <item>
              <widget class="QLabel" name="lblCard2Features">
               <property name="styleSheet">
-               <string notr="true">color: #1e293b; font-size: 11.5px; line-height: 1.8; margin-top: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #1e293b; font-size: 11.5px; margin-top: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; Unlimited GIS layers &amp;amp; map projects&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Advanced remote sensing analytics&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Real-time satellite &amp;amp; drone sync&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Sub-meter precision coordinate engines&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; Hardware-bound cryptographic seat&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; Continuous algorithm updates&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;7.&lt;/span&gt;&amp;nbsp; Priority engineer technical support&lt;/p&gt;</string>
+               <string>&lt;table border=&quot;0&quot; cellspacing=&quot;0&quot; cellpadding=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;1.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Unlimited GIS layers &amp;amp; map projects&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;2.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Advanced remote sensing analytics&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;3.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Real-time satellite &amp;amp; drone sync&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;4.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Sub-meter precision coordinate engines&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;5.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Hardware-bound cryptographic seat&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;6.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Continuous algorithm updates&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;7.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #1e293b; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Priority engineer technical support&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
@@ -1364,7 +1394,7 @@
                <font><pointsize>17</pointsize><bold>true</bold></font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: #0f172a; font-weight: 800; font-size: 17px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #0f172a; font-weight: 700; font-size: 17px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Premium Plan</string>
@@ -1374,7 +1404,7 @@
             <item>
              <widget class="QLabel" name="lblCard3Desc">
               <property name="styleSheet">
-               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #64748b; font-size: 11.5px; line-height: 1.4; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>Maximum flexibility, collaboration, and enterprise automation.</string>
@@ -1385,7 +1415,7 @@
             <item>
              <widget class="QLabel" name="lblCard3Price">
               <property name="styleSheet">
-               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; margin-bottom: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
                <string>$69 &lt;span style=&quot;font-size: 13px; font-weight: 600; color: #64748b;&quot;&gt;/ Month&lt;/span&gt;</string>
@@ -1409,7 +1439,7 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="styleSheet">
-               <string notr="true">background: transparent; color: #2563eb; padding: 2px; font-size: 11.5px; font-weight: 600; border: none;</string>
+               <string notr="true">background: transparent; color: #2563eb; padding: 3px; font-size: 11.5px; font-weight: 600; border: none; font-family: 'Open Sans', sans-serif;</string>
               </property>
               <property name="text"><string>Buy Team Seats ($799) →</string></property>
              </widget>
@@ -1417,10 +1447,10 @@
             <item>
              <widget class="QLabel" name="lblCard3Features">
               <property name="styleSheet">
-               <string notr="true">color: #334155; font-size: 11.5px; line-height: 1.8; margin-top: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</string>
+               <string notr="true">color: #334155; font-size: 11.5px; margin-top: 6px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
               </property>
               <property name="text">
-               <string>&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;1.&lt;/span&gt;&amp;nbsp; All Pro features included&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;2.&lt;/span&gt;&amp;nbsp; Multi-seat team floating licenses&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;3.&lt;/span&gt;&amp;nbsp; Air-gapped offline server deployment&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;4.&lt;/span&gt;&amp;nbsp; Centralized web admin portal&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;5.&lt;/span&gt;&amp;nbsp; PostGIS &amp;amp; Enterprise DB connectors&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;6.&lt;/span&gt;&amp;nbsp; Dedicated SLA &amp;amp; engineer onboarding&lt;/p&gt;&lt;p style=&quot;margin: 6px 0;&quot;&gt;&lt;span style=&quot;color:#2563eb; font-weight:800;&quot;&gt;7.&lt;/span&gt;&amp;nbsp; Custom license provisioning&lt;/p&gt;</string>
+               <string>&lt;table border=&quot;0&quot; cellspacing=&quot;0&quot; cellpadding=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;1.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;All Pro features included&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;2.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Multi-seat team floating licenses&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;3.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Air-gapped offline server deployment&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;4.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Centralized web admin portal&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;5.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;PostGIS &amp;amp; Enterprise DB connectors&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;6.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Dedicated SLA &amp;amp; engineer onboarding&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign=&quot;top&quot; style=&quot;font-weight: 700; color: #0f172a; font-size: 11.5px; width: 22px; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;7.&lt;/td&gt;&lt;td valign=&quot;top&quot; style=&quot;color: #334155; font-size: 11.5px; font-weight: 400; line-height: 1.4; padding: 4px 0; font-family: 'Open Sans', sans-serif;&quot;&gt;Custom license provisioning&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</string>
               </property>
               <property name="wordWrap"><bool>true</bool></property>
              </widget>
@@ -1439,7 +1469,7 @@
           <cursorShape>PointingHandCursor</cursorShape>
          </property>
          <property name="styleSheet">
-          <string notr="true">QPushButton#btnBackFromPricing { background: transparent; color: #64748b; font-weight: 600; font-size: 13px; padding: 6px; border: none; } QPushButton#btnBackFromPricing:hover { color: #2563eb; }</string>
+          <string notr="true">QPushButton#btnBackFromPricing { background: transparent; color: #64748b; font-weight: 600; font-size: 13px; padding: 6px; border: none; font-family: 'Open Sans', sans-serif; } QPushButton#btnBackFromPricing:hover { color: #2563eb; }</string>
          </property>
          <property name="text">
           <string>← Return to Workstation Login</string>

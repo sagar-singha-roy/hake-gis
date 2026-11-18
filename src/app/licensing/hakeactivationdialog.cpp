@@ -10,12 +10,38 @@
 #include <QInputDialog>
 #include <QTimer>
 #include <QColor>
+#include <QFontDatabase>
+#include <QDir>
+#include <QFile>
 
 HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartupLogin )
   : QDialog( parent )
   , mUi( std::make_unique<Ui::HakeActivationDialogBase>() )
   , mRequireStartupLogin( requireStartupLogin )
 {
+  // Register Google Fonts: IBM Plex Serif (SemiBold 600) and Open Sans (Regular 400, SemiBold 600, Bold 700)
+  const QStringList fontSearchPaths = {
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/IBMPlexSerif-SemiBold.ttf" ),
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/IBMPlexSerif-Regular.ttf" ),
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/IBMPlexSerif-Bold.ttf" ),
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/OpenSans-Regular.ttf" ),
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/OpenSans-SemiBold.ttf" ),
+    QDir::homePath() + QStringLiteral( "/Library/Fonts/OpenSans-Bold.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/IBMPlexSerif-SemiBold.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/IBMPlexSerif-Regular.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/IBMPlexSerif-Bold.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/OpenSans-Regular.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/OpenSans-SemiBold.ttf" ),
+    QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/src/app/licensing/fonts/OpenSans-Bold.ttf" )
+  };
+  for ( const QString &fontFile : fontSearchPaths )
+  {
+    if ( QFile::exists( fontFile ) )
+    {
+      QFontDatabase::addApplicationFont( fontFile );
+    }
+  }
+
   mUi->setupUi( this );
   setModal( true );
 
@@ -173,6 +199,7 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "QPushButton {"
     "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);"
     "  color: #ffffff;"
+    "  font-family: 'Open Sans', -apple-system, sans-serif;"
     "  font-weight: 700;"
     "  font-size: 13.5px;"
     "  border-radius: 9px;"
@@ -196,6 +223,7 @@ void HakeActivationDialog::selectPlan( int planIndex )
     "QPushButton {"
     "  background-color: #0f172a;"
     "  color: #ffffff;"
+    "  font-family: 'Open Sans', -apple-system, sans-serif;"
     "  font-weight: 700;"
     "  font-size: 13.5px;"
     "  border-radius: 9px;"
