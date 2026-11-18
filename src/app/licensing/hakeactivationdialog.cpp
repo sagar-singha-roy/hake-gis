@@ -977,14 +977,34 @@ void HakeActivationDialog::onGoPaymentClicked( int planIndex )
 
   QString email = mCurrentAuthenticatedEmail;
   if ( email.isEmpty() )
+    email = mUi->txtSignUpEmail->text().trimmed();
+  if ( email.isEmpty() )
     email = mUi->txtActivateEmail->text().trimmed();
   if ( email.isEmpty() )
     email = mUi->txtLoginEmail->text().trimmed();
   if ( !email.isEmpty() )
     mUi->txtPayEmail->setText( email );
 
-  if ( !mCurrentAuthenticatedName.isEmpty() )
-    mUi->txtPayName->setText( mCurrentAuthenticatedName );
+  QString name = mCurrentAuthenticatedName;
+  if ( name.isEmpty() )
+    name = mUi->txtSignUpName->text().trimmed();
+  if ( !name.isEmpty() )
+    mUi->txtPayName->setText( name );
+
+  bool isFree = ( planIndex == 0 );
+
+  // Adjust UI for Free vs Paid plans: card details are NOT required for Free plan
+  mUi->lblPayFormTitle->setText( isFree ? tr( "Community License Activation" ) : tr( "Payment Details" ) );
+  mUi->lblPayFormSubtitle->setText( isFree ? tr( "Free tier license for single analyst workflow. No credit card required." )
+                                           : tr( "Complete your payment to instantly generate your 16-character license key." ) );
+  mUi->lblPayNameLabel->setText( isFree ? tr( "Licensed Full Name" ) : tr( "Name on Card" ) );
+  mUi->lblPayCardLabel->setVisible( !isFree );
+  mUi->txtPayCardNumber->setVisible( !isFree );
+  mUi->lblPayExp->setVisible( !isFree );
+  mUi->txtPayExpiry->setVisible( !isFree );
+  mUi->lblPayCvc->setVisible( !isFree );
+  mUi->txtPayCvc->setVisible( !isFree );
+  mUi->btnSubmitPayment->setText( isFree ? tr( "Generate License Code →" ) : tr( "Generate Code" ) );
 
   // Reset payment field styles and error state
   QString normalStyle = QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" );
@@ -995,6 +1015,43 @@ void HakeActivationDialog::onGoPaymentClicked( int planIndex )
   mUi->txtPayExpiry->setStyleSheet( normalStyle );
   mUi->txtPayCvc->setStyleSheet( normalStyle );
   mUi->lblPayError->hide();
+
+  // If selecting Free Plan and email is known, directly generate and present the 16-digit code!
+  if ( isFree && !email.isEmpty() )
+  {
+    setPage( PagePayment );
+    mUi->stackPayment->setCurrentIndex( 1 );
+    mUi->lblSuccessBadge->setText( tr( "✓ Free Community License Issued • Instant Access" ) );
+    mUi->lblSuccessBadge->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; border-radius: 20px; padding: 6px 16px; font-weight: 700; font-size: 12.5px;" ) );
+    mUi->lblSuccessInstruction->setText( tr( "Your 16-character Community activation code is ready to unlock Hake GeoDesk:" ) );
+    mUi->lblGeneratedCodeDisplay->setText( tr( "Generating..." ) );
+
+    HakeLicenseManager::instance()->purchasePlanOnline(
+      QStringLiteral( "starter" ), email, name.isEmpty() ? email.split( QLatin1Char( '@' ) ).value( 0 ) : name,
+      [this]( bool success, const QString &message, const QString &activationCode ) {
+        Q_UNUSED( success );
+        Q_UNUSED( message );
+        QString code = activationCode;
+        if ( code.isEmpty() )
+        {
+          static const char sChars[] = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
+          QString raw;
+          for ( int i = 0; i < 16; ++i )
+          {
+            raw += sChars[QRandomGenerator::global()->bounded( 30 )];
+          }
+          code = QStringLiteral( "%1-%2-%3-%4" )
+                   .arg( raw.mid( 0, 4 ) )
+                   .arg( raw.mid( 4, 4 ) )
+                   .arg( raw.mid( 8, 4 ) )
+                   .arg( raw.mid( 12, 4 ) );
+        }
+        mGeneratedPaymentCode = code;
+        mUi->lblGeneratedCodeDisplay->setText( code );
+      }
+    );
+    return;
+  }
 
   mUi->stackPayment->setCurrentIndex( 0 ); // Show checkout form
   setPage( PagePayment );
@@ -1082,9 +1139,11 @@ void HakeActivationDialog::onSubmitPayment()
   mUi->txtPayCvc->setStyleSheet( normalStyle );
   mUi->lblPayError->hide();
 
-  // 1. Mandatory Name Validation
+  bool isFreePlan = ( mSelectedPlanIndex == 0 );
+
+  // 1. Mandatory Name Validation (for paid plans; optional fallback for free)
   QString name = mUi->txtPayName->text().trimmed();
-  if ( name.isEmpty() )
+  if ( name.isEmpty() && !isFreePlan )
   {
     mUi->txtPayName->setStyleSheet( errorStyle );
     mUi->txtPayName->setFocus();
@@ -1104,55 +1163,58 @@ void HakeActivationDialog::onSubmitPayment()
     return;
   }
 
-  // 3. Mandatory 16-Digit Card Number Validation
-  QString cardRaw = mUi->txtPayCardNumber->text();
-  QString cardDigits;
-  for ( const QChar &ch : cardRaw )
+  // 3. Card Number, Expiry, and CVC Validation ONLY FOR PAID PLANS:
+  if ( !isFreePlan )
   {
-    if ( ch.isDigit() )
-      cardDigits.append( ch );
-  }
-
-  if ( cardDigits.length() != 16 )
-  {
-    mUi->txtPayCardNumber->setStyleSheet( errorCardStyle );
-    mUi->txtPayCardNumber->setFocus();
-    if ( cardDigits.isEmpty() )
+    QString cardRaw = mUi->txtPayCardNumber->text();
+    QString cardDigits;
+    for ( const QChar &ch : cardRaw )
     {
-      mUi->lblPayError->setText( tr( "⚠️ Mandatory: Please enter a 16-digit card number to generate the code." ) );
+      if ( ch.isDigit() )
+        cardDigits.append( ch );
     }
-    else
+
+    if ( cardDigits.length() != 16 )
     {
-      mUi->lblPayError->setText( tr( "⚠️ Card number must be exactly 16 digits (currently entered %1 of 16)." ).arg( cardDigits.length() ) );
+      mUi->txtPayCardNumber->setStyleSheet( errorCardStyle );
+      mUi->txtPayCardNumber->setFocus();
+      if ( cardDigits.isEmpty() )
+      {
+        mUi->lblPayError->setText( tr( "⚠️ Mandatory: Please enter a 16-digit card number to generate the code." ) );
+      }
+      else
+      {
+        mUi->lblPayError->setText( tr( "⚠️ Card number must be exactly 16 digits (currently entered %1 of 16)." ).arg( cardDigits.length() ) );
+      }
+      mUi->lblPayError->show();
+      return;
     }
-    mUi->lblPayError->show();
-    return;
-  }
 
-  // 4. Mandatory Expiry Date Validation (MM/YY)
-  QString expiry = mUi->txtPayExpiry->text().trimmed();
-  QRegularExpression expRegex( QStringLiteral( "^(0[1-9]|1[0-2])\\/([0-9]{2})$" ) );
-  QRegularExpressionMatch expMatch = expRegex.match( expiry );
-  if ( !expMatch.hasMatch() )
-  {
-    mUi->txtPayExpiry->setStyleSheet( errorStyle );
-    mUi->txtPayExpiry->setFocus();
-    mUi->lblPayError->setText( tr( "⚠️ Please enter a valid expiration date (MM/YY) with month between 01-12." ) );
-    mUi->lblPayError->show();
-    return;
-  }
+    // Mandatory Expiry Date Validation (MM/YY)
+    QString expiry = mUi->txtPayExpiry->text().trimmed();
+    QRegularExpression expRegex( QStringLiteral( "^(0[1-9]|1[0-2])\\/([0-9]{2})$" ) );
+    QRegularExpressionMatch expMatch = expRegex.match( expiry );
+    if ( !expMatch.hasMatch() )
+    {
+      mUi->txtPayExpiry->setStyleSheet( errorStyle );
+      mUi->txtPayExpiry->setFocus();
+      mUi->lblPayError->setText( tr( "⚠️ Please enter a valid expiration date (MM/YY) with month between 01-12." ) );
+      mUi->lblPayError->show();
+      return;
+    }
 
-  // 5. Mandatory CVC Validation (3 or 4 digits)
-  QString cvc = mUi->txtPayCvc->text().trimmed();
-  bool isCvcNumeric = false;
-  cvc.toInt( &isCvcNumeric );
-  if ( !isCvcNumeric || ( cvc.length() != 3 && cvc.length() != 4 ) )
-  {
-    mUi->txtPayCvc->setStyleSheet( errorStyle );
-    mUi->txtPayCvc->setFocus();
-    mUi->lblPayError->setText( tr( "⚠️ Please enter a valid 3 or 4-digit CVC code." ) );
-    mUi->lblPayError->show();
-    return;
+    // Mandatory CVC Validation (3 or 4 digits)
+    QString cvc = mUi->txtPayCvc->text().trimmed();
+    bool isCvcNumeric = false;
+    cvc.toInt( &isCvcNumeric );
+    if ( !isCvcNumeric || ( cvc.length() != 3 && cvc.length() != 4 ) )
+    {
+      mUi->txtPayCvc->setStyleSheet( errorStyle );
+      mUi->txtPayCvc->setFocus();
+      mUi->lblPayError->setText( tr( "⚠️ Please enter a valid 3 or 4-digit CVC code." ) );
+      mUi->lblPayError->show();
+      return;
+    }
   }
 
   // ALL MANDATORY CHECKS PASSED -> GENERATE 16-DIGIT CODE
@@ -1163,8 +1225,8 @@ void HakeActivationDialog::onSubmitPayment()
   setButtonsBusy( true );
 
   HakeLicenseManager::instance()->purchasePlanOnline(
-    planTier, email, name,
-    [this]( bool success, const QString &message, const QString &activationCode ) {
+    planTier, email, name.isEmpty() ? email.split( QLatin1Char( '@' ) ).value( 0 ) : name,
+    [this, isFreePlan]( bool success, const QString &message, const QString &activationCode ) {
       Q_UNUSED( success );
       Q_UNUSED( message );
       setButtonsBusy( false );
@@ -1185,6 +1247,20 @@ void HakeActivationDialog::onSubmitPayment()
       }
       mGeneratedPaymentCode = code;
       mUi->lblGeneratedCodeDisplay->setText( code );
+
+      if ( isFreePlan )
+      {
+        mUi->lblSuccessBadge->setText( tr( "✓ Free Community License Issued • Instant Access" ) );
+        mUi->lblSuccessBadge->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; border-radius: 20px; padding: 6px 16px; font-weight: 700; font-size: 12.5px;" ) );
+        mUi->lblSuccessInstruction->setText( tr( "Your 16-character Community activation code is ready to unlock Hake GeoDesk:" ) );
+      }
+      else
+      {
+        mUi->lblSuccessBadge->setText( tr( "✓ Payment Successful • Order Confirmed" ) );
+        mUi->lblSuccessBadge->setStyleSheet( QStringLiteral( "background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; border-radius: 20px; padding: 6px 16px; font-weight: 700; font-size: 12.5px;" ) );
+        mUi->lblSuccessInstruction->setText( tr( "Use this cryptographic activation code to activate your workstation seat:" ) );
+      }
+
       mUi->stackPayment->setCurrentIndex( 1 ); // Show success code view
     }
   );
