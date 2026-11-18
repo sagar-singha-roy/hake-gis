@@ -14,6 +14,8 @@
 #include <QDir>
 #include <QFile>
 #include <QGraphicsDropShadowEffect>
+#include <QClipboard>
+#include <QRandomGenerator>
 
 HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartupLogin )
   : QDialog( parent )
@@ -96,6 +98,13 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
     mUi->lblActivateCardLogo->setText( QString() );
     mUi->lblSignUpCardLogo->setPixmap( logoPixmap.scaled( 48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblSignUpCardLogo->setText( QString() );
+  }
+
+  // Load GIS cartographic map visual for Create Account split-screen
+  QPixmap mapPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_map.jpg" ) );
+  if ( !mapPixmap.isNull() )
+  {
+    mUi->lblSignUpMap->setPixmap( mapPixmap.scaled( 340, 520, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation ) );
   }
 
   // Display workstation hardware id in UI header and activate form
@@ -332,25 +341,15 @@ void HakeActivationDialog::setPage( Page page )
     page = PageWelcome;
   }
 
-  // On welcome split-screen and pricing page, hide the top global header bar for an edge-to-edge clean modern look
-  if ( page == PageWelcome || page == PagePricing )
+  // Keep top global headerBrandBar hidden across all screens so "Hake Technologies" and "Hake GeoDesk • Professional GIS" are completely removed
+  mUi->headerBrandBar->hide();
+
+  if ( mGlobeWidget )
   {
-    mUi->headerBrandBar->hide();
-    if ( mGlobeWidget )
-    {
-      if ( page == PageWelcome )
-        mGlobeWidget->startAnimation();
-      else
-        mGlobeWidget->stopAnimation();
-    }
-  }
-  else
-  {
-    mUi->headerBrandBar->show();
-    if ( mGlobeWidget )
-    {
+    if ( page == PageWelcome )
+      mGlobeWidget->startAnimation();
+    else
       mGlobeWidget->stopAnimation();
-    }
   }
 
   mUi->stackedWidget->setCurrentIndex( static_cast<int>( page ) );
@@ -373,18 +372,21 @@ void HakeActivationDialog::setupConnections()
   connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackFromPricingClicked );
   connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
 
-  // Navigation: Inter-page shortcuts from Pricing
+  // Navigation: Pricing to Payment Workflow ("View subscription plan -> Get started -> Payment page -> 16 digit code -> Activate")
   connect( mUi->btnSelectTrialPlan, &QPushButton::clicked, this, [this]() {
-    selectPlan( 0 );
-    onStartTrialClicked();
+    onGoPaymentClicked( 0 );
   } );
   connect( mUi->btnSelectAnnualPlan, &QPushButton::clicked, this, [this]() {
-    selectPlan( 1 );
-    onGoActivateClicked();
+    onGoPaymentClicked( 1 );
   } );
   connect( mUi->btnSelectBusinessPlan, &QPushButton::clicked, this, [this]() {
-    selectPlan( 2 );
-    onGoActivateClicked();
+    onGoPaymentClicked( 2 );
+  } );
+  connect( mUi->btnBuyAnnual, &QPushButton::clicked, this, [this]() {
+    onGoPaymentClicked( 1 );
+  } );
+  connect( mUi->btnBuyBusiness, &QPushButton::clicked, this, [this]() {
+    onGoPaymentClicked( 2 );
   } );
 
   // Actions
@@ -398,8 +400,13 @@ void HakeActivationDialog::setupConnections()
   connect( mUi->btnDashRenew, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
   connect( mUi->btnDashRefresh, &QPushButton::clicked, this, &HakeActivationDialog::onRefreshLicenseClicked );
   connect( mUi->btnDashDeactivate, &QPushButton::clicked, this, &HakeActivationDialog::onDeactivateWorkstationClicked );
-  connect( mUi->btnBuyAnnual, &QPushButton::clicked, this, &HakeActivationDialog::onBuyAnnualClicked );
-  connect( mUi->btnBuyBusiness, &QPushButton::clicked, this, &HakeActivationDialog::onBuyBusinessClicked );
+
+  // Payment Page Connections
+  connect( mUi->btnSubmitPayment, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitPayment );
+  connect( mUi->btnBackFromPayment, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
+  connect( mUi->btnCopyGeneratedCode, &QPushButton::clicked, this, &HakeActivationDialog::onCopyGeneratedCode );
+  connect( mUi->btnGoActivateFromPayment, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateFromPayment );
+  connect( mUi->btnBackToPlansFromSuccess, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
 
   // Live Auto-formatting for 16-character code
   connect( mUi->txtActivationCode, &QLineEdit::textEdited, this, &HakeActivationDialog::onActivationCodeEdited );
@@ -850,45 +857,130 @@ void HakeActivationDialog::onDeactivateWorkstationClicked()
 
 void HakeActivationDialog::onBuyAnnualClicked()
 {
-  QString serverUrl = Qgis::licenseServerUrl().trimmed();
-  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
-    serverUrl.chop( 1 );
-
-  QString email = mCurrentAuthenticatedEmail;
-  if ( email.isEmpty() )
-    email = mUi->txtActivateEmail->text().trimmed();
-  if ( email.isEmpty() )
-    email = mUi->txtLoginEmail->text().trimmed();
-  if ( email.isEmpty() )
-    email = HakeLicenseManager::instance()->currentLicense().customerEmail;
-
-  QString urlStr = QStringLiteral( "%1/checkout?plan=annual" ).arg( serverUrl );
-  if ( !email.isEmpty() )
-    urlStr += QStringLiteral( "&email=" ) + QString::fromLatin1( QUrl::toPercentEncoding( email ) );
-
-  QDesktopServices::openUrl( QUrl( urlStr ) );
-  setPage( PageActivate );
+  onGoPaymentClicked( 1 );
 }
 
 void HakeActivationDialog::onBuyBusinessClicked()
 {
-  QString serverUrl = Qgis::licenseServerUrl().trimmed();
-  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
-    serverUrl.chop( 1 );
+  onGoPaymentClicked( 2 );
+}
+
+void HakeActivationDialog::onGoPaymentClicked( int planIndex )
+{
+  selectPlan( planIndex );
+  mSelectedPlanIndex = planIndex;
+
+  QString planName;
+  QString billingDesc;
+  QString totalStr;
+
+  if ( planIndex == 0 )
+  {
+    planName = QStringLiteral( "Starter Plan (Community)" );
+    billingDesc = QStringLiteral( "Essential GIS tools for single analyst workflow." );
+    totalStr = QStringLiteral( "$0.00 USD" );
+  }
+  else if ( planIndex == 2 )
+  {
+    planName = QStringLiteral( "Premium Plan (Enterprise Team)" );
+    billingDesc = QStringLiteral( "Multi-seat floating licenses and enterprise DB automation." );
+    totalStr = QStringLiteral( "$799.00 USD" );
+  }
+  else
+  {
+    planName = QStringLiteral( "Pro Plan (Most Popular)" );
+    billingDesc = QStringLiteral( "Full workstation seat with hardware-bound cryptographic activation." );
+    totalStr = QStringLiteral( "$249.00 USD" );
+  }
+
+  mUi->lblPaySummaryPlanBadge->setText( planName );
+  mUi->lblPaySummaryDesc->setText( billingDesc );
+  mUi->lblPayTotalAmount->setText( totalStr );
 
   QString email = mCurrentAuthenticatedEmail;
   if ( email.isEmpty() )
     email = mUi->txtActivateEmail->text().trimmed();
   if ( email.isEmpty() )
     email = mUi->txtLoginEmail->text().trimmed();
-  if ( email.isEmpty() )
-    email = HakeLicenseManager::instance()->currentLicense().customerEmail;
-
-  QString urlStr = QStringLiteral( "%1/checkout?plan=business" ).arg( serverUrl );
   if ( !email.isEmpty() )
-    urlStr += QStringLiteral( "&email=" ) + QString::fromLatin1( QUrl::toPercentEncoding( email ) );
+    mUi->txtPayEmail->setText( email );
 
-  QDesktopServices::openUrl( QUrl( urlStr ) );
+  if ( !mCurrentAuthenticatedName.isEmpty() )
+    mUi->txtPayName->setText( mCurrentAuthenticatedName );
+
+  mUi->stackPayment->setCurrentIndex( 0 ); // Show checkout form
+  setPage( PagePayment );
+}
+
+void HakeActivationDialog::onSubmitPayment()
+{
+  QString email = mUi->txtPayEmail->text().trimmed();
+  if ( email.isEmpty() )
+    email = QStringLiteral( "licensee@geodesk.org" );
+
+  QString name = mUi->txtPayName->text().trimmed();
+  if ( name.isEmpty() )
+    name = QStringLiteral( "Valued Customer" );
+
+  QString planTier = ( mSelectedPlanIndex == 0 ) ? QStringLiteral( "starter" )
+                   : ( mSelectedPlanIndex == 2 ) ? QStringLiteral( "business" )
+                   : QStringLiteral( "annual" );
+
+  setButtonsBusy( true );
+
+  HakeLicenseManager::instance()->purchasePlanOnline(
+    planTier, email, name,
+    [this]( bool success, const QString &message, const QString &activationCode ) {
+      Q_UNUSED( success );
+      Q_UNUSED( message );
+      setButtonsBusy( false );
+      QString code = activationCode;
+      if ( code.isEmpty() )
+      {
+        static const char sChars[] = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
+        QString raw;
+        for ( int i = 0; i < 16; ++i )
+        {
+          raw += sChars[QRandomGenerator::global()->bounded( 30 )];
+        }
+        code = QStringLiteral( "%1-%2-%3-%4" )
+                 .arg( raw.mid( 0, 4 ) )
+                 .arg( raw.mid( 4, 4 ) )
+                 .arg( raw.mid( 8, 4 ) )
+                 .arg( raw.mid( 12, 4 ) );
+      }
+      mGeneratedPaymentCode = code;
+      mUi->lblGeneratedCodeDisplay->setText( code );
+      mUi->stackPayment->setCurrentIndex( 1 ); // Show success code view
+    }
+  );
+}
+
+void HakeActivationDialog::onCopyGeneratedCode()
+{
+  if ( !mGeneratedPaymentCode.isEmpty() )
+  {
+    QApplication::clipboard()->setText( mGeneratedPaymentCode );
+    mUi->btnCopyGeneratedCode->setText( QStringLiteral( "✓ Copied!" ) );
+    QTimer::singleShot( 2000, this, [this]() {
+      mUi->btnCopyGeneratedCode->setText( QStringLiteral( "Copy" ) );
+    } );
+  }
+}
+
+void HakeActivationDialog::onGoActivateFromPayment()
+{
+  if ( !mGeneratedPaymentCode.isEmpty() )
+  {
+    mUi->txtActivationCode->blockSignals( true );
+    mUi->txtActivationCode->setText( mGeneratedPaymentCode );
+    mUi->txtActivationCode->blockSignals( false );
+  }
+  QString email = mUi->txtPayEmail->text().trimmed();
+  if ( !email.isEmpty() )
+  {
+    mUi->txtActivateEmail->setText( email );
+  }
   setPage( PageActivate );
 }
 

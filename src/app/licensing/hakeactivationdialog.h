@@ -38,7 +38,8 @@ public:
     PageSignUp = 3,
     PagePricing = 4,
     PageActivate = 5,
-    PageDashboard = 6
+    PageDashboard = 6,
+    PagePayment = 7
   };
 
   explicit HakeActivationDialog( QWidget *parent = nullptr, bool requireStartupLogin = false );
@@ -76,6 +77,12 @@ private slots:
   void onPrivacyClicked();
   void onSupportClicked();
 
+  // Payment & Code Issuance Workflow
+  void onGoPaymentClicked( int planIndex = 1 );
+  void onSubmitPayment();
+  void onCopyGeneratedCode();
+  void onGoActivateFromPayment();
+
   // Formatting & Animation
   void onActivationCodeEdited( const QString &text );
   void onRainbowTimerTick();
@@ -94,6 +101,7 @@ private:
   int mRainbowHue = 0;
   HakeGlobeWidget *mGlobeWidget = nullptr;
   int mSelectedPlanIndex = 1;
+  QString mGeneratedPaymentCode;
   QString mCurrentAuthenticatedEmail;
   QString mCurrentAuthenticatedName;
   QString mCurrentAuthenticatedPassword;
