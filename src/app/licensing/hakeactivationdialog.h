@@ -39,7 +39,8 @@ public:
     PagePricing = 4,
     PageActivate = 5,
     PageDashboard = 6,
-    PagePayment = 7
+    PagePayment = 7,
+    PageAdminChoice = 8
   };
 
   explicit HakeActivationDialog( QWidget *parent = nullptr, bool requireStartupLogin = false );
@@ -82,6 +83,10 @@ private slots:
   void onSubmitPayment();
   void onCopyGeneratedCode();
   void onGoActivateFromPayment();
+
+  // Administrator Workspace Choice
+  void onOpenAdminDashboardClicked();
+  void onOpenGeoDeskClicked();
 
   // Formatting & Animation
   void onActivationCodeEdited( const QString &text );

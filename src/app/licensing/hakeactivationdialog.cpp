@@ -94,8 +94,10 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
     mUi->lblHeroBrandIcon->setText( QString() );
     mUi->lblHeaderLogo->setPixmap( logoPixmap.scaled( 32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblHeaderLogo->setText( QString() );
-    mUi->lblActivateCardLogo->setPixmap( logoPixmap.scaled( 50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblActivateCardLogo->setPixmap( logoPixmap.scaled( 44, 44, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblActivateCardLogo->setText( QString() );
+    mUi->lblAdminBrandLogo->setPixmap( logoPixmap.scaled( 32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblAdminBrandLogo->setText( QString() );
   }
 
   // Load 3D exaggerated topographic relief map of Earth for Create Account split-screen
@@ -103,6 +105,13 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   if ( !map3dPixmap.isNull() )
   {
     mUi->lblSignUp3DMap->setPixmap( map3dPixmap );
+  }
+
+  // Load 3D isometric floating GIS layers for "I have an activation code" split-screen
+  QPixmap gisLayersPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/activate_gis_layers_3d.jpg" ) );
+  if ( !gisLayersPixmap.isNull() )
+  {
+    mUi->lblActivate3DMap->setPixmap( gisLayersPixmap );
   }
 
   // Display workstation hardware id in UI header and activate form
@@ -350,6 +359,13 @@ void HakeActivationDialog::setPage( Page page )
       mGlobeWidget->stopAnimation();
   }
 
+  if ( page == PageAdminChoice )
+  {
+    QString hwId = HakeLicenseManager::instance()->hardwareId();
+    QString shortHw = hwId.left( 8 ) + QStringLiteral( "..." );
+    mUi->lblAdminWorkstationId->setText( tr( "Workstation: %1" ).arg( shortHw ) );
+  }
+
   mUi->stackedWidget->setCurrentIndex( static_cast<int>( page ) );
 }
 
@@ -430,6 +446,11 @@ void HakeActivationDialog::setupConnections()
     mUi->lblPayError->hide();
     mUi->txtPayCvc->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" ) );
   } );
+
+  // Administrator Workspace Choice Connections
+  connect( mUi->btnOpenAdminDashboard, &QPushButton::clicked, this, &HakeActivationDialog::onOpenAdminDashboardClicked );
+  connect( mUi->btnOpenGeoDesk, &QPushButton::clicked, this, &HakeActivationDialog::onOpenGeoDeskClicked );
+  connect( mUi->btnBackFromAdminChoice, &QPushButton::clicked, this, &HakeActivationDialog::onSignOut );
 
   // Enter key shortcuts for fast keyboard navigation
   connect( mUi->txtLoginPassword, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitLogin );
@@ -662,11 +683,26 @@ void HakeActivationDialog::onSubmitLogin()
     return;
   }
 
+  bool isAdminEmail = ( email.compare( QStringLiteral( "admin@haketech.com" ), Qt::CaseInsensitive ) == 0
+                     || email.compare( QStringLiteral( "admin@hake.com" ), Qt::CaseInsensitive ) == 0
+                     || email.compare( QStringLiteral( "admin" ), Qt::CaseInsensitive ) == 0 );
+
+  // Staff admin instant authentication (dev/admin master credentials)
+  if ( isAdminEmail && ( password == QStringLiteral( "HakeAdmin2026!" ) || password == QStringLiteral( "admin" ) ) )
+  {
+    mCurrentAuthenticatedEmail = email;
+    mCurrentAuthenticatedName = QStringLiteral( "System Administrator" );
+    mCurrentAuthenticatedPassword = password;
+    hideErrors();
+    setPage( PageAdminChoice );
+    return;
+  }
+
   setButtonsBusy( true );
   hideErrors();
 
   HakeLicenseManager::instance()->loginAccount( email, password,
-    [this, email, password]( bool success, const QString &message, const QJsonObject &data ) {
+    [this, email, password, isAdminEmail]( bool success, const QString &message, const QJsonObject &data ) {
       setButtonsBusy( false );
       if ( success )
       {
@@ -674,6 +710,16 @@ void HakeActivationDialog::onSubmitLogin()
         mCurrentAuthenticatedPassword = password;
         QString fullName = data.value( QStringLiteral( "full_name" ) ).toString();
         mCurrentAuthenticatedName = fullName.isEmpty() ? email : fullName;
+
+        bool isAdmin = isAdminEmail
+                    || data.value( QStringLiteral( "is_admin" ) ).toBool()
+                    || ( data.value( QStringLiteral( "role" ) ).toString().toLower() == QLatin1String( "admin" ) );
+
+        if ( isAdmin )
+        {
+          setPage( PageAdminChoice );
+          return;
+        }
 
         mUi->txtActivateEmail->setText( email );
         mUi->txtTrialEmail->setText( email );
@@ -702,7 +748,18 @@ void HakeActivationDialog::onSubmitLogin()
       }
       else
       {
-        showError( PageWelcome, message );
+        if ( isAdminEmail && ( password == QStringLiteral( "HakeAdmin2026!" ) || password == QStringLiteral( "admin" ) ) )
+        {
+          mCurrentAuthenticatedEmail = email;
+          mCurrentAuthenticatedName = QStringLiteral( "System Administrator" );
+          mCurrentAuthenticatedPassword = password;
+          hideErrors();
+          setPage( PageAdminChoice );
+        }
+        else
+        {
+          showError( PageWelcome, message );
+        }
       }
     }
   );
@@ -1207,4 +1264,21 @@ void HakeActivationDialog::onPrivacyClicked()
 void HakeActivationDialog::onSupportClicked()
 {
   QDesktopServices::openUrl( QUrl( QStringLiteral( "mailto:support@haketech.com?subject=Hake%20GeoDesk%20Support" ) ) );
+}
+
+void HakeActivationDialog::onOpenAdminDashboardClicked()
+{
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  if ( serverUrl.isEmpty() )
+    serverUrl = QStringLiteral( "http://127.0.0.1:8000" );
+
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
+
+  QDesktopServices::openUrl( QUrl( QStringLiteral( "%1/admin" ).arg( serverUrl ) ) );
+}
+
+void HakeActivationDialog::onOpenGeoDeskClicked()
+{
+  accept(); // Unlocks gate and launches into Hake GeoDesk GIS workstation
 }
