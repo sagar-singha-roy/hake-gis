@@ -263,35 +263,7 @@ void HakeGlobeWidget::paintEvent( QPaintEvent * )
 
   p.restore(); // Back to screen coordinates
 
-  // 5. Orbital Satellite Track & Satellite Beacon
-  p.save();
-  p.translate( cx, cy );
-  p.rotate( 32.0 ); // Orbital inclination
-
-  double orbRx = R * 1.34;
-  double orbRy = R * 0.44;
-
-  p.setPen( QPen( QColor( 56, 189, 248, 55 ), 1.0, Qt::DashLine ) );
-  p.setBrush( Qt::NoBrush );
-  p.drawEllipse( QRectF( -orbRx, -orbRy, 2 * orbRx, 2 * orbRy ) );
-
-  // Satellite position
-  double satRad = mSatelliteAngle * PI / 180.0;
-  double sx = orbRx * std::cos( satRad );
-  double sy = orbRy * std::sin( satRad );
-
-  // Satellite beacon pulse
-  double satPulse = 4.0 + 3.0 * std::sin( mPulsePhase * 2.0 );
-  p.setPen( Qt::NoPen );
-  p.setBrush( QColor( 56, 189, 248, 70 ) );
-  p.drawEllipse( QPointF( sx, sy ), satPulse, satPulse );
-
-  p.setBrush( QColor( 255, 255, 255, 240 ) );
-  p.drawEllipse( QPointF( sx, sy ), 2.2, 2.2 );
-
-  p.restore();
-
-  // 6. Atmospheric Rim Crescent Glow (Upper-Left Limb)
+  // 5. Atmospheric Rim Crescent Glow (Upper-Left Limb)
   QRadialGradient limb( cx - 0.28 * R, cy - 0.28 * R, R );
   limb.setColorAt( 0.78, QColor( 186, 230, 253, 0 ) );
   limb.setColorAt( 0.95, QColor( 186, 230, 253, 110 ) );

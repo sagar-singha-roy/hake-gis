@@ -23,6 +23,18 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   mGlobeWidget = new HakeGlobeWidget( mUi->globeContainer );
   mUi->globeContainerLayout->addWidget( mGlobeWidget );
 
+  // Load and display official Hake Technologies logo on welcome header
+  QPixmap logoPixmap( QStringLiteral( ":/images/icons/hake_logo.png" ) );
+  if ( logoPixmap.isNull() )
+  {
+    logoPixmap.load( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/icons/hake_logo.png" ) );
+  }
+  if ( !logoPixmap.isNull() )
+  {
+    mUi->lblHeroBrandIcon->setPixmap( logoPixmap.scaled( 28, 28, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblHeroBrandIcon->setText( QString() );
+  }
+
   // Display workstation hardware id in UI header and activate form
   QString hwId = HakeLicenseManager::instance()->hardwareId();
   QString shortHw = hwId.left( 8 ) + QStringLiteral( "..." );
@@ -39,19 +51,15 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
 
   setupConnections();
 
+  // Clear inputs - do not prefill anything; user will give input fresh
+  mUi->txtLoginEmail->clear();
+  mUi->txtLoginPassword->clear();
+  mUi->lblLoginSubtitle->setText( tr( "Sign in to your workstation to continue." ) );
+
   // Navigation logic:
-  // If launching from app startup (requireStartupLogin=true), always require credentials
+  // If launching from app startup (requireStartupLogin=true), start on Welcome split screen
   if ( mRequireStartupLogin )
   {
-    if ( HakeLicenseManager::instance()->isLicenseValidOffline() )
-    {
-      // Pre-fill email of active license and prompt for password
-      QString activeEmail = HakeLicenseManager::instance()->currentLicense().customerEmail;
-      mUi->txtLoginEmail->setText( activeEmail );
-      mUi->txtLoginPassword->clear();
-      mUi->txtLoginPassword->setFocus();
-      mUi->lblLoginSubtitle->setText( tr( "Workstation License Active • Enter your password to unlock Hake GeoDesk." ) );
-    }
     setPage( PageWelcome );
   }
   else
@@ -402,9 +410,9 @@ void HakeActivationDialog::onSubmitLogin()
   QString email = mUi->txtLoginEmail->text().trimmed();
   QString password = mUi->txtLoginPassword->text();
 
-  if ( email.isEmpty() || !email.contains( '@' ) )
+  if ( email.isEmpty() )
   {
-    showError( PageWelcome, tr( "Please enter your registered email address." ) );
+    showError( PageWelcome, tr( "Please enter your Login ID." ) );
     return;
   }
   if ( password.isEmpty() )
