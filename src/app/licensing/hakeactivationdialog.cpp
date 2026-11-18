@@ -459,7 +459,7 @@ void HakeActivationDialog::showError( Page page, const QString &errorText )
       break;
     case PageActivate:
       target = mUi->lblActivateError;
-      mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+      mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500; font-family: 'Open Sans', -apple-system, sans-serif;" ) );
       break;
     default:
       break;
@@ -634,7 +634,7 @@ void HakeActivationDialog::onSubmitLogin()
           // First-time or unlicensed user on this workstation: must activate with code first!
           setPage( PageActivate );
           mUi->lblActivateError->setText( tr( "First-time workstation setup: Please enter your 16-character activation code to unlock Hake GeoDesk." ) );
-          mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+          mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500; font-family: 'Open Sans', -apple-system, sans-serif;" ) );
           mUi->lblActivateError->show();
         }
       }
@@ -701,7 +701,7 @@ void HakeActivationDialog::onSubmitSignUp()
         // Direct newly registered first-time user immediately to Activation Code screen
         setPage( PageActivate );
         mUi->lblActivateError->setText( tr( "Account created successfully! As a first-time user, please enter your 16-character activation code to unlock Hake GeoDesk." ) );
-        mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+        mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500; font-family: 'Open Sans', -apple-system, sans-serif;" ) );
         mUi->lblActivateError->show();
       }
       else
