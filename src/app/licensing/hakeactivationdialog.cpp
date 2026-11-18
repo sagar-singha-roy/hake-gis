@@ -98,8 +98,8 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
     mUi->lblActivateCardLogo->setText( QString() );
   }
 
-  // Load 3D perspective GIS India relief map for Create Account split-screen
-  QPixmap map3dPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_india_3d_map.jpg" ) );
+  // Load 3D exaggerated topographic relief map of Earth for Create Account split-screen
+  QPixmap map3dPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_world_3d_map.jpg" ) );
   if ( !map3dPixmap.isNull() )
   {
     mUi->lblSignUp3DMap->setPixmap( map3dPixmap );
