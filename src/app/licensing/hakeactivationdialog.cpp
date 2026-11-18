@@ -96,15 +96,15 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
     mUi->lblHeaderLogo->setText( QString() );
     mUi->lblActivateCardLogo->setPixmap( logoPixmap.scaled( 50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblActivateCardLogo->setText( QString() );
-    mUi->lblSignUpCardLogo->setPixmap( logoPixmap.scaled( 48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
-    mUi->lblSignUpCardLogo->setText( QString() );
+    mUi->lblSignUpHeroBrandIcon->setPixmap( logoPixmap.scaled( 34, 34, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblSignUpHeroBrandIcon->setText( QString() );
   }
 
-  // Load GIS cartographic map visual for Create Account split-screen
-  QPixmap mapPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_map.jpg" ) );
-  if ( !mapPixmap.isNull() )
+  // Load 3D perspective GIS digital elevation terrain map for Create Account split-screen
+  QPixmap map3dPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_3d_map.jpg" ) );
+  if ( !map3dPixmap.isNull() )
   {
-    mUi->lblSignUpMap->setPixmap( mapPixmap.scaled( 340, 520, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation ) );
+    mUi->lblSignUp3DMap->setPixmap( map3dPixmap.scaled( 370, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
   }
 
   // Display workstation hardware id in UI header and activate form
@@ -365,6 +365,9 @@ void HakeActivationDialog::setupConnections()
   connect( mUi->btnTerms, &QPushButton::clicked, this, &HakeActivationDialog::onTermsClicked );
   connect( mUi->btnPrivacy, &QPushButton::clicked, this, &HakeActivationDialog::onPrivacyClicked );
   connect( mUi->btnSupport, &QPushButton::clicked, this, &HakeActivationDialog::onSupportClicked );
+  connect( mUi->btnTermsSU, &QPushButton::clicked, this, &HakeActivationDialog::onTermsClicked );
+  connect( mUi->btnPrivacySU, &QPushButton::clicked, this, &HakeActivationDialog::onPrivacyClicked );
+  connect( mUi->btnSupportSU, &QPushButton::clicked, this, &HakeActivationDialog::onSupportClicked );
 
   // Navigation: Back Buttons
   connect( mUi->btnBackFromTrial, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
@@ -740,11 +743,11 @@ void HakeActivationDialog::onSubmitSignUp()
         mUi->txtLoginEmail->setText( email );
         mUi->txtLoginPassword->setText( pass );
 
-        // Direct newly registered first-time user immediately to Activation Code screen
-        setPage( PageActivate );
-        mUi->lblActivateError->setText( tr( "Account created successfully! As a first-time user, please enter your 16-character activation code to unlock Hake GeoDesk." ) );
-        mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500; font-family: 'Open Sans', -apple-system, sans-serif;" ) );
-        mUi->lblActivateError->show();
+        mUi->txtPayEmail->setText( email );
+        mUi->txtPayName->setText( name );
+
+        // Redirect newly registered user to choose a Subscription Plan
+        setPage( PagePricing );
       }
       else
       {

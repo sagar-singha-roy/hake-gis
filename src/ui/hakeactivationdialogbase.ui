@@ -968,292 +968,486 @@
      <!-- PAGE 2: Login Screen (Handled by Split-Screen Welcome Page) -->
      <widget class="QWidget" name="pageLogin"/>
 
-     <!-- PAGE 3: Sign-Up Screen -->
+     <!-- PAGE 3: Sign-Up Screen (Edge-to-Edge Split-Screen matching Welcome Screen) -->
      <widget class="QWidget" name="pageSignUp">
-      <layout class="QVBoxLayout" name="signUpLayout">
+      <layout class="QHBoxLayout" name="signUpSplitLayout">
        <property name="spacing">
         <number>0</number>
        </property>
        <property name="leftMargin">
-        <number>20</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
-        <number>8</number>
+        <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>20</number>
+        <number>0</number>
        </property>
        <property name="bottomMargin">
-        <number>12</number>
+        <number>0</number>
        </property>
 
+       <!-- LEFT HAND HERO PANEL: Cosmic Deep Navy Gradient with 3D Map -->
        <item>
-        <spacer name="signUpTopSpacer">
-         <property name="orientation"><enum>Qt::Vertical</enum></property>
-        </spacer>
-       </item>
+        <widget class="QFrame" name="panelSignUpHero">
+         <property name="minimumSize">
+          <size>
+           <width>430</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>450</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">
+           QFrame#panelSignUpHero {
+             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #050b1a, stop:0.45 #0a1738, stop:1 #102454);
+             border-right: 1px solid rgba(255, 255, 255, 0.1);
+           }
+          </string>
+         </property>
+         <layout class="QVBoxLayout" name="signUpHeroLayout">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>28</number>
+          </property>
+          <property name="topMargin">
+           <number>24</number>
+          </property>
+          <property name="rightMargin">
+           <number>28</number>
+          </property>
+          <property name="bottomMargin">
+           <number>20</number>
+          </property>
 
-       <item>
-        <layout class="QHBoxLayout" name="signUpCenterRow">
-         <item>
-          <spacer name="signUpLeftSpacer">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-
-         <item>
-          <widget class="QFrame" name="cardSignUp">
-           <property name="minimumSize">
-            <size>
-             <width>820</width>
-             <height>520</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>860</width>
-             <height>540</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QFrame#cardSignUp { background-color: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 10px; }</string>
-           </property>
-           <layout class="QHBoxLayout" name="cardSignUpSplitLayout">
-            <property name="spacing">
-             <number>18</number>
-            </property>
-            <property name="leftMargin"><number>2</number></property>
-            <property name="topMargin"><number>2</number></property>
-            <property name="rightMargin"><number>12</number></property>
-            <property name="bottomMargin"><number>2</number></property>
-
-            <!-- LEFT SIDE: Geospatial Map Visual Frame -->
+          <!-- Top Brand Header (Hake Technologies) -->
+          <item>
+           <layout class="QHBoxLayout" name="signUpHeroBrandLayout">
             <item>
-             <widget class="QFrame" name="frameSignUpMap">
+             <widget class="QLabel" name="lblSignUpHeroBrandIcon">
               <property name="minimumSize">
                <size>
-                <width>330</width>
-                <height>0</height>
+                <width>34</width>
+                <height>34</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>350</width>
-                <height>16777215</height>
+                <width>34</width>
+                <height>34</height>
                </size>
               </property>
-              <property name="styleSheet">
-               <string notr="true">QFrame#frameSignUpMap { background-color: #0b1528; border-radius: 12px; border: 1px solid #1e293b; }</string>
+              <property name="scaledContents">
+               <bool>true</bool>
               </property>
-              <layout class="QVBoxLayout" name="mapFrameLayout">
-               <property name="leftMargin"><number>0</number></property>
-               <property name="topMargin"><number>0</number></property>
-               <property name="rightMargin"><number>0</number></property>
-               <property name="bottomMargin"><number>0</number></property>
-               <item>
-                <widget class="QLabel" name="lblSignUpMap">
-                 <property name="scaledContents">
-                  <bool>true</bool>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">border-radius: 12px;</string>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <property name="styleSheet">
+               <string notr="true">background: transparent;</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
              </widget>
             </item>
-
-            <!-- RIGHT SIDE: Sign Up Form -->
             <item>
-             <widget class="QWidget" name="frameSignUpForm">
-              <layout class="QVBoxLayout" name="signUpFormLayout">
-               <property name="spacing"><number>6</number></property>
-               <property name="leftMargin"><number>6</number></property>
-               <property name="topMargin"><number>6</number></property>
-               <property name="rightMargin"><number>6</number></property>
-               <property name="bottomMargin"><number>6</number></property>
-
-               <!-- Logo & Title -->
-               <item>
-                <layout class="QHBoxLayout" name="signUpTitleRow">
-                 <item>
-                  <widget class="QLabel" name="lblSignUpCardLogo">
-                   <property name="minimumSize"><size><width>36</width><height>36</height></size></property>
-                   <property name="maximumSize"><size><width>36</width><height>36</height></size></property>
-                   <property name="scaledContents"><bool>true</bool></property>
-                   <property name="styleSheet"><string notr="true">background: transparent;</string></property>
-                   <property name="text"><string/></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lblSignUpTitle">
-                   <property name="font">
-                    <font>
-                     <family>Open Sans</family>
-                     <pointsize>20</pointsize>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">color: #0f172a; font-weight: 700; font-size: 20px; font-family: 'Open Sans', -apple-system, sans-serif; letter-spacing: -0.3px;</string>
-                   </property>
-                   <property name="text">
-                    <string>Create Account</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="suTitleSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer>
-                 </item>
-                </layout>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpSubtitle">
-                 <property name="styleSheet">
-                  <string notr="true">color: #64748b; font-size: 12px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif; margin-bottom: 2px;</string>
-                 </property>
-                 <property name="text">
-                  <string>Join today to start your geospatial workstation projects.</string>
-                 </property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpError">
-                 <property name="styleSheet">
-                  <string notr="true">background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 500; font-family: 'Open Sans', sans-serif;</string>
-                 </property>
-                 <property name="text"><string>Registration error</string></property>
-                 <property name="visible"><bool>false</bool></property>
-                 <property name="wordWrap"><bool>true</bool></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpName">
-                 <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
-                 <property name="text"><string>Full Name</string></property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="txtSignUpName">
-                 <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 12.5px; color: #0f172a; padding: 7px 10px;</string></property>
-                 <property name="placeholderText"><string>e.g. Alex Morgan</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpEmail">
-                 <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
-                 <property name="text"><string>Email Address</string></property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="txtSignUpEmail">
-                 <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 12.5px; color: #0f172a; padding: 7px 10px;</string></property>
-                 <property name="placeholderText"><string>alex@geospatial.com</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpPassword">
-                 <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
-                 <property name="text"><string>Password (Minimum 8 characters)</string></property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="txtSignUpPassword">
-                 <property name="echoMode"><enum>QLineEdit::Password</enum></property>
-                 <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 12.5px; color: #0f172a; padding: 7px 10px;</string></property>
-                 <property name="placeholderText"><string>••••••••</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QLabel" name="lblSignUpConfirm">
-                 <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
-                 <property name="text"><string>Confirm Password</string></property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="txtSignUpConfirm">
-                 <property name="echoMode"><enum>QLineEdit::Password</enum></property>
-                 <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 12.5px; color: #0f172a; padding: 7px 10px;</string></property>
-                 <property name="placeholderText"><string>Re-enter password</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QCheckBox" name="chkAcceptTerms">
-                 <property name="styleSheet"><string notr="true">color: #475569; font-size: 11px; font-family: 'Open Sans', -apple-system, sans-serif;</string></property>
-                 <property name="text"><string>I accept the License Agreement and Privacy Policy</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QPushButton" name="btnSubmitSignUp">
-                 <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-                 <property name="styleSheet">
-                  <string notr="true">
-                   QPushButton#btnSubmitSignUp {
-                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);
-                     color: #ffffff;
-                     font-family: 'Open Sans', -apple-system, sans-serif;
-                     font-weight: 700;
-                     font-size: 13.5px;
-                     border-radius: 8px;
-                     border: 1px solid #1e40af;
-                     border-bottom: 3.5px solid #172554;
-                     padding: 9px 16px 11px 16px;
-                     margin-top: 2px;
-                   }
-                   QPushButton#btnSubmitSignUp:hover {
-                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);
-                     border-bottom: 3.5px solid #1e3a8a;
-                   }
-                   QPushButton#btnSubmitSignUp:pressed {
-                     background: #1d4ed8;
-                     border-bottom: 1px solid #172554;
-                     padding-top: 11px;
-                     padding-bottom: 9px;
-                   }
-                  </string>
-                 </property>
-                 <property name="text"><string>Create Account &amp; Continue</string></property>
-                </widget>
-               </item>
-
-               <item>
-                <widget class="QPushButton" name="btnBackFromSignUp">
-                 <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-                 <property name="styleSheet"><string notr="true">QPushButton#btnBackFromSignUp { background: transparent; color: #64748b; font-weight: 600; font-size: 12px; padding: 2px; border: none; font-family: 'Open Sans', sans-serif; } QPushButton#btnBackFromSignUp:hover { color: #2563eb; }</string></property>
-                 <property name="text"><string>← Back to Welcome Screen</string></property>
-                </widget>
-               </item>
-              </layout>
+             <widget class="QLabel" name="lblSignUpHeroBrandName">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;</string>
+              </property>
+              <property name="text">
+               <string>&lt;span style=&quot;color: #ffffff; font-weight: 800;&quot;&gt;Hake &lt;/span&gt;&lt;span style=&quot;color: #38bdf8; font-weight: 800;&quot;&gt;Technologies&lt;/span&gt;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="signUpHeroBrandSpacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblSignUpHeroVersionBadge">
+              <property name="styleSheet">
+               <string notr="true">background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 2px 8px; font-size: 10px; font-weight: 600;</string>
+              </property>
+              <property name="text">
+               <string>v2026.1</string>
+              </property>
              </widget>
             </item>
            </layout>
-          </widget>
-         </item>
+          </item>
 
-         <item>
-          <spacer name="signUpRightSpacer">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-          </spacer>
-         </item>
-        </layout>
+          <!-- Hero Main Title -->
+          <item>
+           <widget class="QLabel" name="lblSignUpHeroTitle">
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="font">
+             <font>
+              <family>IBM Plex Serif</family>
+              <pointsize>26</pointsize>
+              <weight>63</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #ffffff; font-weight: 600; font-size: 26px; line-height: 1.25; font-family: "IBM Plex Serif", Georgia, serif; background: transparent; margin-top: 4px; margin-bottom: 4px;</string>
+            </property>
+            <property name="text">
+             <string>&lt;div align=&quot;center&quot; style=&quot;font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; color: #ffffff;&quot;&gt;Welcome to&lt;br&gt;&lt;span style=&quot;font-size: 28px;&quot;&gt;Hake GeoDesk&lt;/span&gt;&lt;/div&gt;</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- 3D Map Container -->
+          <item>
+           <widget class="QFrame" name="frameSignUp3DMap">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>1</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>260</width>
+              <height>300</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: transparent; border: none;</string>
+            </property>
+            <layout class="QVBoxLayout" name="signUp3DMapLayout">
+             <property name="leftMargin"><number>0</number></property>
+             <property name="topMargin"><number>0</number></property>
+             <property name="rightMargin"><number>0</number></property>
+             <property name="bottomMargin"><number>0</number></property>
+             <item>
+              <widget class="QLabel" name="lblSignUp3DMap">
+               <property name="scaledContents">
+                <bool>true</bool>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border-radius: 14px; border: 1.5px solid rgba(56, 189, 248, 0.25);</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+
+          <!-- Hero Bottom Copyright -->
+          <item>
+           <widget class="QLabel" name="lblSignUpHeroCopyright">
+            <property name="styleSheet">
+             <string notr="true">color: #64748b; font-size: 10.5px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif;</string>
+            </property>
+            <property name="text">
+             <string>© 2026 Hake Technologies, Inc. All rights reserved.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
 
+       <!-- RIGHT HAND AUTH PANEL: Clean White Card with Create Account Form -->
        <item>
-        <spacer name="signUpBottomSpacer">
-         <property name="orientation"><enum>Qt::Vertical</enum></property>
-        </spacer>
+        <widget class="QFrame" name="panelSignUpAuth">
+         <property name="styleSheet">
+          <string notr="true">
+           QFrame#panelSignUpAuth {
+             background-color: #ffffff;
+           }
+          </string>
+         </property>
+         <layout class="QVBoxLayout" name="signUpAuthLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <property name="leftMargin">
+           <number>42</number>
+          </property>
+          <property name="topMargin">
+           <number>28</number>
+          </property>
+          <property name="rightMargin">
+           <number>42</number>
+          </property>
+          <property name="bottomMargin">
+           <number>18</number>
+          </property>
+
+          <!-- Auth Title -->
+          <item>
+           <widget class="QLabel" name="lblSignUpTitle">
+            <property name="font">
+             <font>
+              <family>Open Sans</family>
+              <pointsize>23</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #0f172a; font-weight: 700; font-size: 23px; letter-spacing: -0.3px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
+            </property>
+            <property name="text">
+             <string>Create Account</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Auth Subtitle -->
+          <item>
+           <widget class="QLabel" name="lblSignUpSubtitle">
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #64748b; font-size: 12.5px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif; margin-bottom: 2px;</string>
+            </property>
+            <property name="text">
+             <string>Enter your details to create your workstation account.</string>
+            </property>
+           </widget>
+          </item>
+
+          <item>
+           <widget class="QLabel" name="lblSignUpError">
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; font-weight: 500; font-family: 'Open Sans', sans-serif;</string>
+            </property>
+            <property name="text">
+             <string>Registration error</string>
+            </property>
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Full Name -->
+          <item>
+           <widget class="QLabel" name="lblSignUpName">
+            <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
+            <property name="text">
+             <string>Full Name</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="txtSignUpName">
+            <property name="styleSheet">
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 13px; color: #0f172a; padding: 8px 12px;</string>
+            </property>
+            <property name="placeholderText">
+             <string>e.g. Alex Morgan</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Email Address -->
+          <item>
+           <widget class="QLabel" name="lblSignUpEmail">
+            <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
+            <property name="text">
+             <string>Email Address</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="txtSignUpEmail">
+            <property name="styleSheet">
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 13px; color: #0f172a; padding: 8px 12px;</string>
+            </property>
+            <property name="placeholderText">
+             <string>alex@geospatial.com</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Password -->
+          <item>
+           <widget class="QLabel" name="lblSignUpPassword">
+            <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
+            <property name="text">
+             <string>Password (Minimum 8 characters)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="txtSignUpPassword">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 13px; color: #0f172a; padding: 8px 12px;</string>
+            </property>
+            <property name="placeholderText">
+             <string>••••••••</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Confirm Password -->
+          <item>
+           <widget class="QLabel" name="lblSignUpConfirm">
+            <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 12px; color: #1e293b; font-family: 'Open Sans', sans-serif;</string></property>
+            <property name="text">
+             <string>Confirm Password</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="txtSignUpConfirm">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Open Sans', -apple-system, sans-serif; font-size: 13px; color: #0f172a; padding: 8px 12px;</string>
+            </property>
+            <property name="placeholderText">
+             <string>Re-enter password</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Terms Checkbox -->
+          <item>
+           <widget class="QCheckBox" name="chkAcceptTerms">
+            <property name="styleSheet">
+             <string notr="true">color: #475569; font-size: 11.5px; font-family: 'Open Sans', -apple-system, sans-serif;</string>
+            </property>
+            <property name="text">
+             <string>I accept the Hake GeoDesk License Agreement and Privacy Policy</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Create Account Button (ONLY "Create Account") -->
+          <item>
+           <widget class="QPushButton" name="btnSubmitSignUp">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+              QPushButton#btnSubmitSignUp {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);
+                color: #ffffff;
+                font-family: 'Open Sans', -apple-system, sans-serif;
+                font-weight: 700;
+                font-size: 14px;
+                border-radius: 8px;
+                border: 1px solid #1e40af;
+                border-bottom: 3.5px solid #172554;
+                padding: 10px 18px 12px 18px;
+                margin-top: 4px;
+              }
+              QPushButton#btnSubmitSignUp:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);
+                border-bottom: 3.5px solid #1e3a8a;
+              }
+              QPushButton#btnSubmitSignUp:pressed {
+                background: #1d4ed8;
+                border-bottom: 1px solid #172554;
+                padding-top: 12px;
+                padding-bottom: 9px;
+              }
+             </string>
+            </property>
+            <property name="text">
+             <string>Create Account</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- Back Button -->
+          <item>
+           <widget class="QPushButton" name="btnBackFromSignUp">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton#btnBackFromSignUp { background: transparent; color: #64748b; font-weight: 600; font-size: 12.5px; padding: 4px; border: none; font-family: 'Open Sans', sans-serif; } QPushButton#btnBackFromSignUp:hover { color: #2563eb; }</string>
+            </property>
+            <property name="text">
+             <string>← Back to Welcome Screen</string>
+            </property>
+           </widget>
+          </item>
+
+          <item>
+           <spacer name="signUpAuthBottomSpacer">
+            <property name="orientation"><enum>Qt::Vertical</enum></property>
+           </spacer>
+          </item>
+
+          <!-- Footer Links -->
+          <item>
+           <layout class="QHBoxLayout" name="signUpFooterRow">
+            <item><spacer name="suFtSpacerL"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+            <item>
+             <widget class="QPushButton" name="btnTermsSU">
+              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #64748b; font-size: 11px; border: none;</string></property>
+              <property name="text"><string>Terms</string></property>
+             </widget>
+            </item>
+            <item><widget class="QLabel" name="dot1SU"><property name="styleSheet"><string notr="true">color: #94a3b8; font-size: 10px;</string></property><property name="text"><string>•</string></property></widget></item>
+            <item>
+             <widget class="QPushButton" name="btnPrivacySU">
+              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #64748b; font-size: 11px; border: none;</string></property>
+              <property name="text"><string>Privacy Policy</string></property>
+             </widget>
+            </item>
+            <item><widget class="QLabel" name="dot2SU"><property name="styleSheet"><string notr="true">color: #94a3b8; font-size: 10px;</string></property><property name="text"><string>•</string></property></widget></item>
+            <item>
+             <widget class="QPushButton" name="btnSupportSU">
+              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+              <property name="styleSheet"><string notr="true">background: transparent; color: #64748b; font-size: 11px; border: none;</string></property>
+              <property name="text"><string>Support</string></property>
+             </widget>
+            </item>
+            <item><spacer name="suFtSpacerR"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
