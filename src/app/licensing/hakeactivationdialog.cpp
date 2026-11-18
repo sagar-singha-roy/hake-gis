@@ -23,7 +23,7 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   mGlobeWidget = new HakeGlobeWidget( mUi->globeContainer );
   mUi->globeContainerLayout->addWidget( mGlobeWidget );
 
-  // Load and display official Hake Technologies logo on welcome header
+  // Load and display official Hake Technologies logo on welcome header and global top bar
   QPixmap logoPixmap( QStringLiteral( ":/images/icons/hake_logo.png" ) );
   if ( logoPixmap.isNull() )
   {
@@ -33,6 +33,8 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   {
     mUi->lblHeroBrandIcon->setPixmap( logoPixmap.scaled( 28, 28, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblHeroBrandIcon->setText( QString() );
+    mUi->lblHeaderLogo->setPixmap( logoPixmap.scaled( 26, 26, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblHeaderLogo->setText( QString() );
   }
 
   // Display workstation hardware id in UI header and activate form
@@ -41,13 +43,30 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   mUi->lblWorkstationId->setText( tr( "Workstation: %1" ).arg( shortHw ) );
   mUi->lblActivateHwId->setText( hwId );
 
-  // Setup interactive animated rainbow effect on brand label "Hake Technologies"
+  // Setup interactive animated blue-and-white luminous shimmer effect on brand label "Hake Technologies"
   mUi->lblBrandHakeTech->installEventFilter( this );
   mUi->lblBrandHakeTech->setMouseTracking( true );
   mRainbowTimer = new QTimer( this );
-  mRainbowTimer->setInterval( 35 ); // ~30 FPS smooth wave
+  mRainbowTimer->setInterval( 40 ); // Smooth wave animation
   connect( mRainbowTimer, &QTimer::timeout, this, &HakeActivationDialog::onRainbowTimerTick );
-  mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='color:#0f172a; font-weight:800; font-size:17px; letter-spacing:0.5px;'>Hake Technologies</span>" ) );
+  mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; font-size:17px; font-weight:800; letter-spacing:0.4px;'><span style='color:#0f2b66;'>Hake</span> <span style='color:#2563eb;'>Technologies</span></span>" ) );
+
+  // Card selection event filters on Pricing page (recursive on child labels so whole card is clickable)
+  auto makeCardClickable = [this]( QWidget *card ) {
+    card->installEventFilter( this );
+    const auto children = card->findChildren<QWidget *>();
+    for ( QWidget *child : children )
+    {
+      if ( !qobject_cast<QPushButton *>( child ) )
+      {
+        child->setAttribute( Qt::WA_TransparentForMouseEvents, true );
+      }
+    }
+  };
+
+  makeCardClickable( mUi->cardTrial );
+  makeCardClickable( mUi->cardAnnual );
+  makeCardClickable( mUi->cardBusiness );
 
   setupConnections();
 
@@ -55,6 +74,9 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
   mUi->txtLoginEmail->clear();
   mUi->txtLoginPassword->clear();
   mUi->lblLoginSubtitle->setText( tr( "Sign in to your workstation to continue." ) );
+
+  // Initialize selected plan styling
+  selectPlan( 1 );
 
   // Navigation logic:
   // If launching from app startup (requireStartupLogin=true), start on Welcome split screen
@@ -93,17 +115,133 @@ bool HakeActivationDialog::eventFilter( QObject *watched, QEvent *event )
     else if ( event->type() == QEvent::Leave )
     {
       mRainbowTimer->stop();
-      mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='color:#0f172a; font-weight:800; font-size:17px; letter-spacing:0.5px;'>Hake Technologies</span>" ) );
+      mUi->lblBrandHakeTech->setText( QStringLiteral( "<span style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; font-size:17px; font-weight:800; letter-spacing:0.4px;'><span style='color:#0f2b66;'>Hake</span> <span style='color:#2563eb;'>Technologies</span></span>" ) );
+    }
+  }
+  else if ( event->type() == QEvent::MouseButtonPress )
+  {
+    if ( watched == mUi->cardTrial )
+    {
+      selectPlan( 0 );
+      return true;
+    }
+    else if ( watched == mUi->cardAnnual )
+    {
+      selectPlan( 1 );
+      return true;
+    }
+    else if ( watched == mUi->cardBusiness )
+    {
+      selectPlan( 2 );
+      return true;
     }
   }
   return QDialog::eventFilter( watched, event );
 }
 
+void HakeActivationDialog::selectPlan( int planIndex )
+{
+  mSelectedPlanIndex = planIndex;
+
+  const QString unselectedCardStyle = QStringLiteral(
+    "QFrame#%1 {"
+    "  background-color: #ffffff;"
+    "  border: 1.5px solid #e2e8f0;"
+    "  border-radius: 14px;"
+    "  padding: 16px;"
+    "}"
+    "QFrame#%1:hover {"
+    "  border: 1.5px solid #94a3b8;"
+    "  background-color: #f8fafc;"
+    "}"
+  );
+
+  const QString selectedCardStyle = QStringLiteral(
+    "QFrame#%1 {"
+    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #eff6ff);"
+    "  border: 2.5px solid #2563eb;"
+    "  border-radius: 14px;"
+    "  padding: 15px;"
+    "}"
+  );
+
+  mUi->cardTrial->setStyleSheet( ( planIndex == 0 ? selectedCardStyle : unselectedCardStyle ).arg( QStringLiteral( "cardTrial" ) ) );
+  mUi->cardAnnual->setStyleSheet( ( planIndex == 1 ? selectedCardStyle : unselectedCardStyle ).arg( QStringLiteral( "cardAnnual" ) ) );
+  mUi->cardBusiness->setStyleSheet( ( planIndex == 2 ? selectedCardStyle : unselectedCardStyle ).arg( QStringLiteral( "cardBusiness" ) ) );
+
+  const QString primaryBtnStyle = QStringLiteral(
+    "QPushButton {"
+    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);"
+    "  color: #ffffff;"
+    "  font-weight: 700;"
+    "  font-size: 13px;"
+    "  border-radius: 8px;"
+    "  border: 1px solid #1e40af;"
+    "  border-bottom: 3.5px solid #172554;"
+    "  padding: 10px;"
+    "}"
+    "QPushButton:hover {"
+    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);"
+    "  border-bottom: 3.5px solid #1e3a8a;"
+    "}"
+    "QPushButton:pressed {"
+    "  background: #1d4ed8;"
+    "  border-bottom: 1px solid #172554;"
+    "  padding-top: 12px;"
+    "  padding-bottom: 8px;"
+    "}"
+  );
+
+  const QString secondaryBtnStyle = QStringLiteral(
+    "QPushButton {"
+    "  background-color: #f8fafc;"
+    "  color: #1e293b;"
+    "  font-weight: 600;"
+    "  font-size: 13px;"
+    "  border-radius: 8px;"
+    "  border: 1.5px solid #cbd5e1;"
+    "  border-bottom: 2.5px solid #94a3b8;"
+    "  padding: 10px;"
+    "}"
+    "QPushButton:hover {"
+    "  background-color: #f1f5f9;"
+    "  border-color: #94a3b8;"
+    "  border-bottom: 2.5px solid #64748b;"
+    "}"
+    "QPushButton:pressed {"
+    "  background-color: #e2e8f0;"
+    "  border-bottom: 1px solid #94a3b8;"
+    "  padding-top: 11px;"
+    "  padding-bottom: 8px;"
+    "}"
+  );
+
+  mUi->btnSelectTrialPlan->setStyleSheet( planIndex == 0 ? primaryBtnStyle : secondaryBtnStyle );
+  mUi->btnSelectAnnualPlan->setStyleSheet( planIndex == 1 ? primaryBtnStyle : secondaryBtnStyle );
+  mUi->btnSelectBusinessPlan->setStyleSheet( planIndex == 2 ? primaryBtnStyle : secondaryBtnStyle );
+}
+
 void HakeActivationDialog::onRainbowTimerTick()
 {
-  mRainbowHue = ( mRainbowHue + 7 ) % 360;
+  mRainbowHue = ( mRainbowHue + 1 ) % 60;
   const QString brand = QStringLiteral( "Hake Technologies" );
-  QString html = QStringLiteral( "<span style='font-size:17px; font-weight:800; letter-spacing:0.5px;'>" );
+  QString html = QStringLiteral( "<span style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; font-size:17px; font-weight:800; letter-spacing:0.4px;'>" );
+
+  // Curated blue-and-white luminous shimmer palette
+  static const QVector<QColor> blueWhitePalette = {
+    QColor( 15, 43, 102 ),   // Deep sapphire #0f2b66
+    QColor( 30, 64, 175 ),   // Royal blue #1e40af
+    QColor( 37, 99, 235 ),   // Vibrant blue #2563eb
+    QColor( 2, 132, 199 ),   // Sky blue #0284c7
+    QColor( 56, 189, 248 ),  // Light cyan #38bdf8
+    QColor( 186, 230, 253 ), // Ice white-blue #bae6fd
+    QColor( 255, 255, 255 ), // Pure white #ffffff
+    QColor( 186, 230, 253 ), // Ice white-blue #bae6fd
+    QColor( 56, 189, 248 ),  // Light cyan #38bdf8
+    QColor( 37, 99, 235 ),   // Vibrant blue #2563eb
+    QColor( 30, 64, 175 )    // Royal blue #1e40af
+  };
+
   for ( int i = 0; i < brand.length(); ++i )
   {
     QChar c = brand.at( i );
@@ -113,8 +251,8 @@ void HakeActivationDialog::onRainbowTimerTick()
     }
     else
     {
-      int hue = ( mRainbowHue + i * 22 ) % 360;
-      QColor col = QColor::fromHsv( hue, 235, 240 );
+      int colorIdx = ( ( mRainbowHue / 2 ) + i * 2 ) % blueWhitePalette.size();
+      QColor col = blueWhitePalette.at( colorIdx );
       html += QStringLiteral( "<span style='color:%1;'>%2</span>" ).arg( col.name(), c );
     }
   }
@@ -170,9 +308,18 @@ void HakeActivationDialog::setupConnections()
   connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
 
   // Navigation: Inter-page shortcuts from Pricing
-  connect( mUi->btnSelectTrialPlan, &QPushButton::clicked, this, &HakeActivationDialog::onStartTrialClicked );
-  connect( mUi->btnSelectAnnualPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
-  connect( mUi->btnSelectBusinessPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
+  connect( mUi->btnSelectTrialPlan, &QPushButton::clicked, this, [this]() {
+    selectPlan( 0 );
+    onStartTrialClicked();
+  } );
+  connect( mUi->btnSelectAnnualPlan, &QPushButton::clicked, this, [this]() {
+    selectPlan( 1 );
+    onGoActivateClicked();
+  } );
+  connect( mUi->btnSelectBusinessPlan, &QPushButton::clicked, this, [this]() {
+    selectPlan( 2 );
+    onGoActivateClicked();
+  } );
 
   // Actions
   connect( mUi->btnSubmitTrial, &QPushButton::clicked, this, &HakeActivationDialog::onSubmitTrial );
@@ -232,6 +379,7 @@ void HakeActivationDialog::onGoSignUpClicked()
 
 void HakeActivationDialog::onGoPricingClicked()
 {
+  selectPlan( mSelectedPlanIndex );
   setPage( PagePricing );
 }
 

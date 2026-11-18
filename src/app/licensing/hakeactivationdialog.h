@@ -86,12 +86,14 @@ private:
   void showError( Page page, const QString &errorText );
   void hideErrors();
   void setButtonsBusy( bool busy );
+  void selectPlan( int planIndex );
 
   std::unique_ptr<Ui::HakeActivationDialogBase> mUi;
   bool mRequireStartupLogin = false;
   QTimer *mRainbowTimer = nullptr;
   int mRainbowHue = 0;
   HakeGlobeWidget *mGlobeWidget = nullptr;
+  int mSelectedPlanIndex = 1;
   QString mCurrentAuthenticatedEmail;
   QString mCurrentAuthenticatedName;
   QString mCurrentAuthenticatedPassword;
