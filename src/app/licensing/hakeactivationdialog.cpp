@@ -1,6 +1,7 @@
 #include "hakeactivationdialog.h"
 #include "ui_hakeactivationdialogbase.h"
 #include "hakelicensemanager.h"
+#include "hakeglobewidget.h"
 
 #include <QDesktopServices>
 #include <QUrl>
@@ -17,6 +18,10 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
 {
   mUi->setupUi( this );
   setModal( true );
+
+  // Embed the animated 3D Earth vector widget inside the welcome hero panel
+  mGlobeWidget = new HakeGlobeWidget( mUi->globeContainer );
+  mUi->globeContainerLayout->addWidget( mGlobeWidget );
 
   // Display workstation hardware id in UI header and activate form
   QString hwId = HakeLicenseManager::instance()->hardwareId();
@@ -46,12 +51,8 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
       mUi->txtLoginPassword->clear();
       mUi->txtLoginPassword->setFocus();
       mUi->lblLoginSubtitle->setText( tr( "Workstation License Active • Enter your password to unlock Hake GeoDesk." ) );
-      setPage( PageLogin );
     }
-    else
-    {
-      setPage( PageWelcome );
-    }
+    setPage( PageWelcome );
   }
   else
   {
@@ -116,27 +117,51 @@ void HakeActivationDialog::onRainbowTimerTick()
 void HakeActivationDialog::setPage( Page page )
 {
   hideErrors();
+
+  if ( page == PageLogin )
+  {
+    page = PageWelcome;
+  }
+
+  // On welcome split-screen, hide the top global header bar for an edge-to-edge modern look
+  if ( page == PageWelcome )
+  {
+    mUi->headerBrandBar->hide();
+    if ( mGlobeWidget )
+    {
+      mGlobeWidget->startAnimation();
+    }
+  }
+  else
+  {
+    mUi->headerBrandBar->show();
+    if ( mGlobeWidget )
+    {
+      mGlobeWidget->stopAnimation();
+    }
+  }
+
   mUi->stackedWidget->setCurrentIndex( static_cast<int>( page ) );
 }
 
 void HakeActivationDialog::setupConnections()
 {
-  // Navigation: Welcome Page
-  connect( mUi->btnStartTrial, &QPushButton::clicked, this, &HakeActivationDialog::onStartTrialClicked );
+  // Navigation: Welcome Page (Split-screen)
+  connect( mUi->btnLoginGoSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoSignUpClicked );
   connect( mUi->btnGoActivate, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
-  connect( mUi->btnGoLogin, &QPushButton::clicked, this, &HakeActivationDialog::onGoLoginClicked );
-  connect( mUi->btnGoSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoSignUpClicked );
   connect( mUi->btnGoPricing, &QPushButton::clicked, this, &HakeActivationDialog::onGoPricingClicked );
+  connect( mUi->btnForgotPassword, &QPushButton::clicked, this, &HakeActivationDialog::onForgotPasswordClicked );
+  connect( mUi->btnTerms, &QPushButton::clicked, this, &HakeActivationDialog::onTermsClicked );
+  connect( mUi->btnPrivacy, &QPushButton::clicked, this, &HakeActivationDialog::onPrivacyClicked );
+  connect( mUi->btnSupport, &QPushButton::clicked, this, &HakeActivationDialog::onSupportClicked );
 
   // Navigation: Back Buttons
   connect( mUi->btnBackFromTrial, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
-  connect( mUi->btnBackFromLogin, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
-  connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoLoginClicked );
+  connect( mUi->btnBackFromSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
   connect( mUi->btnBackFromPricing, &QPushButton::clicked, this, &HakeActivationDialog::onBackFromPricingClicked );
   connect( mUi->btnBackFromActivate, &QPushButton::clicked, this, &HakeActivationDialog::onBackToWelcomeClicked );
 
-  // Navigation: Inter-page shortcuts
-  connect( mUi->btnLoginGoSignUp, &QPushButton::clicked, this, &HakeActivationDialog::onGoSignUpClicked );
+  // Navigation: Inter-page shortcuts from Pricing
   connect( mUi->btnSelectTrialPlan, &QPushButton::clicked, this, &HakeActivationDialog::onStartTrialClicked );
   connect( mUi->btnSelectAnnualPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
   connect( mUi->btnSelectBusinessPlan, &QPushButton::clicked, this, &HakeActivationDialog::onGoActivateClicked );
@@ -234,17 +259,20 @@ void HakeActivationDialog::showError( Page page, const QString &errorText )
   QLabel *target = nullptr;
   switch ( page )
   {
-    case PageTrial:
-      target = mUi->lblTrialError;
-      break;
+    case PageWelcome:
     case PageLogin:
       target = mUi->lblLoginError;
+      mUi->lblLoginError->setStyleSheet( QStringLiteral( "background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+      break;
+    case PageTrial:
+      target = mUi->lblTrialError;
       break;
     case PageSignUp:
       target = mUi->lblSignUpError;
       break;
     case PageActivate:
       target = mUi->lblActivateError;
+      mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
       break;
     default:
       break;
@@ -376,12 +404,12 @@ void HakeActivationDialog::onSubmitLogin()
 
   if ( email.isEmpty() || !email.contains( '@' ) )
   {
-    showError( PageLogin, tr( "Please enter your registered email address." ) );
+    showError( PageWelcome, tr( "Please enter your registered email address." ) );
     return;
   }
   if ( password.isEmpty() )
   {
-    showError( PageLogin, tr( "Please enter your password." ) );
+    showError( PageWelcome, tr( "Please enter your password." ) );
     return;
   }
 
@@ -416,17 +444,16 @@ void HakeActivationDialog::onSubmitLogin()
         }
         else
         {
-          // User authenticated, but no active license exists for this account on this device!
-          // Must choose a plan before GeoDesk can open:
-          mUi->lblPricingHeader->setText( tr( "Choose Your Subscription Plan" ) );
-          mUi->lblPricingDesc->setText( tr( "Welcome back, %1! Please choose a subscription plan or activate a code to unlock Hake GeoDesk." )
-                                        .arg( mCurrentAuthenticatedName ) );
-          setPage( PagePricing );
+          // First-time or unlicensed user on this workstation: must activate with code first!
+          setPage( PageActivate );
+          mUi->lblActivateError->setText( tr( "First-time workstation setup: Please enter your 16-character activation code to unlock Hake GeoDesk." ) );
+          mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+          mUi->lblActivateError->show();
         }
       }
       else
       {
-        showError( PageLogin, message );
+        showError( PageWelcome, message );
       }
     }
   );
@@ -484,11 +511,11 @@ void HakeActivationDialog::onSubmitSignUp()
         mUi->txtLoginEmail->setText( email );
         mUi->txtLoginPassword->setText( pass );
 
-        // Direct newly registered user immediately to "Choose Your Plan" screen
-        mUi->lblPricingHeader->setText( tr( "Choose Your Subscription Plan" ) );
-        mUi->lblPricingDesc->setText( tr( "Welcome, %1! Your account is created. Please choose a subscription plan or start your 7-day free trial to unlock Hake GeoDesk." )
-                                      .arg( name ) );
-        setPage( PagePricing );
+        // Direct newly registered first-time user immediately to Activation Code screen
+        setPage( PageActivate );
+        mUi->lblActivateError->setText( tr( "Account created successfully! As a first-time user, please enter your 16-character activation code to unlock Hake GeoDesk." ) );
+        mUi->lblActivateError->setStyleSheet( QStringLiteral( "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; font-weight: 500;" ) );
+        mUi->lblActivateError->show();
       }
       else
       {
@@ -652,4 +679,42 @@ void HakeActivationDialog::onSignOut()
 {
   HakeLicenseManager::instance()->clearLicense();
   setPage( PageWelcome );
+}
+
+void HakeActivationDialog::onForgotPasswordClicked()
+{
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
+
+  if ( !serverUrl.isEmpty() )
+  {
+    QDesktopServices::openUrl( QUrl( QStringLiteral( "%1/admin/login/" ).arg( serverUrl ) ) );
+  }
+  else
+  {
+    QMessageBox::information( this, tr( "Forgot Password" ),
+      tr( "Please contact your license administrator or support@haketech.com to reset your account password." ) );
+  }
+}
+
+void HakeActivationDialog::onTermsClicked()
+{
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
+  QDesktopServices::openUrl( QUrl( QStringLiteral( "%1/terms" ).arg( serverUrl ) ) );
+}
+
+void HakeActivationDialog::onPrivacyClicked()
+{
+  QString serverUrl = Qgis::licenseServerUrl().trimmed();
+  while ( serverUrl.endsWith( QLatin1Char( '/' ) ) )
+    serverUrl.chop( 1 );
+  QDesktopServices::openUrl( QUrl( QStringLiteral( "%1/privacy" ).arg( serverUrl ) ) );
+}
+
+void HakeActivationDialog::onSupportClicked()
+{
+  QDesktopServices::openUrl( QUrl( QStringLiteral( "mailto:support@haketech.com?subject=Hake%20GeoDesk%20Support" ) ) );
 }

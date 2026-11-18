@@ -17,6 +17,7 @@ set(QGIS_APP_SRCS
   licensing/ed25519_verify.cpp
   licensing/hakelicensemanager.cpp
   licensing/hakeactivationdialog.cpp
+  licensing/hakeglobewidget.cpp
   qgspythonconsoledockwidget.cpp
   qgsprocessingtoolboxdockwidget.cpp
   qgsmetasearchdialog.cpp

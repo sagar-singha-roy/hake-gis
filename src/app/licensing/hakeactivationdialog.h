@@ -6,6 +6,7 @@
 #include "qgis_app.h"
 
 class QTimer;
+class HakeGlobeWidget;
 
 namespace Ui
 {
@@ -70,6 +71,10 @@ private slots:
   void onDeactivateWorkstationClicked();
   void onBuyAnnualClicked();
   void onBuyBusinessClicked();
+  void onForgotPasswordClicked();
+  void onTermsClicked();
+  void onPrivacyClicked();
+  void onSupportClicked();
 
   // Formatting & Animation
   void onActivationCodeEdited( const QString &text );
@@ -86,6 +91,7 @@ private:
   bool mRequireStartupLogin = false;
   QTimer *mRainbowTimer = nullptr;
   int mRainbowHue = 0;
+  HakeGlobeWidget *mGlobeWidget = nullptr;
   QString mCurrentAuthenticatedEmail;
   QString mCurrentAuthenticatedName;
   QString mCurrentAuthenticatedPassword;
