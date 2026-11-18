@@ -96,15 +96,13 @@ HakeActivationDialog::HakeActivationDialog( QWidget *parent, bool requireStartup
     mUi->lblHeaderLogo->setText( QString() );
     mUi->lblActivateCardLogo->setPixmap( logoPixmap.scaled( 50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     mUi->lblActivateCardLogo->setText( QString() );
-    mUi->lblSignUpHeroBrandIcon->setPixmap( logoPixmap.scaled( 34, 34, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
-    mUi->lblSignUpHeroBrandIcon->setText( QString() );
   }
 
-  // Load 3D perspective GIS digital elevation terrain map for Create Account split-screen
-  QPixmap map3dPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_3d_map.jpg" ) );
+  // Load 3D perspective GIS India relief map for Create Account split-screen
+  QPixmap map3dPixmap( QStringLiteral( "/Users/piyakshi/Desktop/Hake Gis Licensing/hake-gis/images/signup_india_3d_map.jpg" ) );
   if ( !map3dPixmap.isNull() )
   {
-    mUi->lblSignUp3DMap->setPixmap( map3dPixmap.scaled( 370, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    mUi->lblSignUp3DMap->setPixmap( map3dPixmap );
   }
 
   // Display workstation hardware id in UI header and activate form
@@ -413,6 +411,25 @@ void HakeActivationDialog::setupConnections()
 
   // Live Auto-formatting for 16-character code
   connect( mUi->txtActivationCode, &QLineEdit::textEdited, this, &HakeActivationDialog::onActivationCodeEdited );
+
+  // Live Auto-formatting and keyboard handling for Payment Checkout
+  connect( mUi->txtPayCardNumber, &QLineEdit::textEdited, this, &HakeActivationDialog::onPayCardNumberEdited );
+  connect( mUi->txtPayExpiry, &QLineEdit::textEdited, this, &HakeActivationDialog::onPayExpiryEdited );
+  connect( mUi->txtPayCardNumber, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitPayment );
+  connect( mUi->txtPayExpiry, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitPayment );
+  connect( mUi->txtPayCvc, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitPayment );
+  connect( mUi->txtPayName, &QLineEdit::textEdited, this, [this]() {
+    mUi->lblPayError->hide();
+    mUi->txtPayName->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" ) );
+  } );
+  connect( mUi->txtPayEmail, &QLineEdit::textEdited, this, [this]() {
+    mUi->lblPayError->hide();
+    mUi->txtPayEmail->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" ) );
+  } );
+  connect( mUi->txtPayCvc, &QLineEdit::textEdited, this, [this]() {
+    mUi->lblPayError->hide();
+    mUi->txtPayCvc->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" ) );
+  } );
 
   // Enter key shortcuts for fast keyboard navigation
   connect( mUi->txtLoginPassword, &QLineEdit::returnPressed, this, &HakeActivationDialog::onSubmitLogin );
@@ -911,20 +928,176 @@ void HakeActivationDialog::onGoPaymentClicked( int planIndex )
   if ( !mCurrentAuthenticatedName.isEmpty() )
     mUi->txtPayName->setText( mCurrentAuthenticatedName );
 
+  // Reset payment field styles and error state
+  QString normalStyle = QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" );
+  QString normalCardStyle = QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 13.5px; font-family: monospace; letter-spacing: 1.2px; padding: 7px 10px;" );
+  mUi->txtPayName->setStyleSheet( normalStyle );
+  mUi->txtPayEmail->setStyleSheet( normalStyle );
+  mUi->txtPayCardNumber->setStyleSheet( normalCardStyle );
+  mUi->txtPayExpiry->setStyleSheet( normalStyle );
+  mUi->txtPayCvc->setStyleSheet( normalStyle );
+  mUi->lblPayError->hide();
+
   mUi->stackPayment->setCurrentIndex( 0 ); // Show checkout form
   setPage( PagePayment );
 }
 
+void HakeActivationDialog::onPayCardNumberEdited( const QString &text )
+{
+  mUi->lblPayError->hide();
+  mUi->txtPayCardNumber->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 13.5px; font-family: monospace; letter-spacing: 1.2px; padding: 7px 10px;" ) );
+
+  // Extract digits only
+  QString digits;
+  for ( const QChar &ch : text )
+  {
+    if ( ch.isDigit() )
+      digits.append( ch );
+  }
+
+  if ( digits.length() > 16 )
+    digits = digits.left( 16 );
+
+  QString formatted;
+  for ( int i = 0; i < digits.length(); ++i )
+  {
+    if ( i > 0 && ( i % 4 == 0 ) )
+      formatted.append( ' ' );
+    formatted.append( digits.at( i ) );
+  }
+
+  if ( formatted != text )
+  {
+    int cursor = mUi->txtPayCardNumber->cursorPosition();
+    mUi->txtPayCardNumber->blockSignals( true );
+    mUi->txtPayCardNumber->setText( formatted );
+    mUi->txtPayCardNumber->setCursorPosition( qMin( cursor + 1, formatted.length() ) );
+    mUi->txtPayCardNumber->blockSignals( false );
+  }
+}
+
+void HakeActivationDialog::onPayExpiryEdited( const QString &text )
+{
+  mUi->lblPayError->hide();
+  mUi->txtPayExpiry->setStyleSheet( QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" ) );
+
+  QString digits;
+  for ( const QChar &ch : text )
+  {
+    if ( ch.isDigit() )
+      digits.append( ch );
+  }
+
+  if ( digits.length() > 4 )
+    digits = digits.left( 4 );
+
+  QString formatted;
+  if ( digits.length() >= 2 )
+  {
+    formatted = digits.left( 2 ) + QStringLiteral( "/" ) + digits.mid( 2 );
+  }
+  else
+  {
+    formatted = digits;
+  }
+
+  if ( formatted != text )
+  {
+    mUi->txtPayExpiry->blockSignals( true );
+    mUi->txtPayExpiry->setText( formatted );
+    mUi->txtPayExpiry->blockSignals( false );
+  }
+}
+
 void HakeActivationDialog::onSubmitPayment()
 {
-  QString email = mUi->txtPayEmail->text().trimmed();
-  if ( email.isEmpty() )
-    email = QStringLiteral( "licensee@geodesk.org" );
+  // Reset previous styles
+  QString normalStyle = QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" );
+  QString normalCardStyle = QStringLiteral( "background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 13.5px; font-family: monospace; letter-spacing: 1.2px; padding: 7px 10px;" );
+  QString errorStyle = QStringLiteral( "background: #fef2f2; border: 1.5px solid #ef4444; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;" );
+  QString errorCardStyle = QStringLiteral( "background: #fef2f2; border: 1.5px solid #ef4444; border-radius: 7px; font-size: 13.5px; font-family: monospace; letter-spacing: 1.2px; padding: 7px 10px;" );
 
+  mUi->txtPayName->setStyleSheet( normalStyle );
+  mUi->txtPayEmail->setStyleSheet( normalStyle );
+  mUi->txtPayCardNumber->setStyleSheet( normalCardStyle );
+  mUi->txtPayExpiry->setStyleSheet( normalStyle );
+  mUi->txtPayCvc->setStyleSheet( normalStyle );
+  mUi->lblPayError->hide();
+
+  // 1. Mandatory Name Validation
   QString name = mUi->txtPayName->text().trimmed();
   if ( name.isEmpty() )
-    name = QStringLiteral( "Valued Customer" );
+  {
+    mUi->txtPayName->setStyleSheet( errorStyle );
+    mUi->txtPayName->setFocus();
+    mUi->lblPayError->setText( tr( "⚠️ Please enter the cardholder name." ) );
+    mUi->lblPayError->show();
+    return;
+  }
 
+  // 2. Mandatory Email Validation
+  QString email = mUi->txtPayEmail->text().trimmed();
+  if ( email.isEmpty() || !email.contains( '@' ) || !email.contains( '.' ) )
+  {
+    mUi->txtPayEmail->setStyleSheet( errorStyle );
+    mUi->txtPayEmail->setFocus();
+    mUi->lblPayError->setText( tr( "⚠️ Please enter a valid email address for license delivery." ) );
+    mUi->lblPayError->show();
+    return;
+  }
+
+  // 3. Mandatory 16-Digit Card Number Validation
+  QString cardRaw = mUi->txtPayCardNumber->text();
+  QString cardDigits;
+  for ( const QChar &ch : cardRaw )
+  {
+    if ( ch.isDigit() )
+      cardDigits.append( ch );
+  }
+
+  if ( cardDigits.length() != 16 )
+  {
+    mUi->txtPayCardNumber->setStyleSheet( errorCardStyle );
+    mUi->txtPayCardNumber->setFocus();
+    if ( cardDigits.isEmpty() )
+    {
+      mUi->lblPayError->setText( tr( "⚠️ Mandatory: Please enter a 16-digit card number to generate the code." ) );
+    }
+    else
+    {
+      mUi->lblPayError->setText( tr( "⚠️ Card number must be exactly 16 digits (currently entered %1 of 16)." ).arg( cardDigits.length() ) );
+    }
+    mUi->lblPayError->show();
+    return;
+  }
+
+  // 4. Mandatory Expiry Date Validation (MM/YY)
+  QString expiry = mUi->txtPayExpiry->text().trimmed();
+  QRegularExpression expRegex( QStringLiteral( "^(0[1-9]|1[0-2])\\/([0-9]{2})$" ) );
+  QRegularExpressionMatch expMatch = expRegex.match( expiry );
+  if ( !expMatch.hasMatch() )
+  {
+    mUi->txtPayExpiry->setStyleSheet( errorStyle );
+    mUi->txtPayExpiry->setFocus();
+    mUi->lblPayError->setText( tr( "⚠️ Please enter a valid expiration date (MM/YY) with month between 01-12." ) );
+    mUi->lblPayError->show();
+    return;
+  }
+
+  // 5. Mandatory CVC Validation (3 or 4 digits)
+  QString cvc = mUi->txtPayCvc->text().trimmed();
+  bool isCvcNumeric = false;
+  cvc.toInt( &isCvcNumeric );
+  if ( !isCvcNumeric || ( cvc.length() != 3 && cvc.length() != 4 ) )
+  {
+    mUi->txtPayCvc->setStyleSheet( errorStyle );
+    mUi->txtPayCvc->setFocus();
+    mUi->lblPayError->setText( tr( "⚠️ Please enter a valid 3 or 4-digit CVC code." ) );
+    mUi->lblPayError->show();
+    return;
+  }
+
+  // ALL MANDATORY CHECKS PASSED -> GENERATE 16-DIGIT CODE
   QString planTier = ( mSelectedPlanIndex == 0 ) ? QStringLiteral( "starter" )
                    : ( mSelectedPlanIndex == 2 ) ? QStringLiteral( "business" )
                    : QStringLiteral( "annual" );

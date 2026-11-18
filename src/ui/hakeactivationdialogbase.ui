@@ -988,194 +988,71 @@
        </property>
 
        <!-- LEFT HAND HERO PANEL: Cosmic Deep Navy Gradient with 3D Map -->
-       <item>
-        <widget class="QFrame" name="panelSignUpHero">
-         <property name="minimumSize">
-          <size>
-           <width>430</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>450</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">
-           QFrame#panelSignUpHero {
-             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #050b1a, stop:0.45 #0a1738, stop:1 #102454);
-             border-right: 1px solid rgba(255, 255, 255, 0.1);
-           }
-          </string>
-         </property>
-         <layout class="QVBoxLayout" name="signUpHeroLayout">
-          <property name="spacing">
-           <number>10</number>
+        <item>
+         <widget class="QFrame" name="panelSignUpHero">
+          <property name="minimumSize">
+           <size>
+            <width>430</width>
+            <height>0</height>
+           </size>
           </property>
-          <property name="leftMargin">
-           <number>28</number>
+          <property name="maximumSize">
+           <size>
+            <width>450</width>
+            <height>16777215</height>
+           </size>
           </property>
-          <property name="topMargin">
-           <number>24</number>
+          <property name="styleSheet">
+           <string notr="true">
+            QFrame#panelSignUpHero {
+              background: #050b1a;
+              border-right: 1px solid rgba(255, 255, 255, 0.1);
+            }
+           </string>
           </property>
-          <property name="rightMargin">
-           <number>28</number>
-          </property>
-          <property name="bottomMargin">
-           <number>20</number>
-          </property>
+          <layout class="QVBoxLayout" name="signUpHeroLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="lblSignUp3DMap">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>1</horstretch>
+               <verstretch>1</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="scaledContents">
+              <bool>true</bool>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background: transparent;</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
 
-          <!-- Top Brand Header (Hake Technologies) -->
-          <item>
-           <layout class="QHBoxLayout" name="signUpHeroBrandLayout">
-            <item>
-             <widget class="QLabel" name="lblSignUpHeroBrandIcon">
-              <property name="minimumSize">
-               <size>
-                <width>34</width>
-                <height>34</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>34</width>
-                <height>34</height>
-               </size>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background: transparent;</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="lblSignUpHeroBrandName">
-              <property name="font">
-               <font>
-                <pointsize>15</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;</string>
-              </property>
-              <property name="text">
-               <string>&lt;span style=&quot;color: #ffffff; font-weight: 800;&quot;&gt;Hake &lt;/span&gt;&lt;span style=&quot;color: #38bdf8; font-weight: 800;&quot;&gt;Technologies&lt;/span&gt;</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="signUpHeroBrandSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QLabel" name="lblSignUpHeroVersionBadge">
-              <property name="styleSheet">
-               <string notr="true">background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 2px 8px; font-size: 10px; font-weight: 600;</string>
-              </property>
-              <property name="text">
-               <string>v2026.1</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-
-          <!-- Hero Main Title -->
-          <item>
-           <widget class="QLabel" name="lblSignUpHeroTitle">
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="font">
-             <font>
-              <family>IBM Plex Serif</family>
-              <pointsize>26</pointsize>
-              <weight>63</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">color: #ffffff; font-weight: 600; font-size: 26px; line-height: 1.25; font-family: "IBM Plex Serif", Georgia, serif; background: transparent; margin-top: 4px; margin-bottom: 4px;</string>
-            </property>
-            <property name="text">
-             <string>&lt;div align=&quot;center&quot; style=&quot;font-family: 'IBM Plex Serif', Georgia, serif; font-weight: 600; color: #ffffff;&quot;&gt;Welcome to&lt;br&gt;&lt;span style=&quot;font-size: 28px;&quot;&gt;Hake GeoDesk&lt;/span&gt;&lt;/div&gt;</string>
-            </property>
-           </widget>
-          </item>
-
-          <!-- 3D Map Container -->
-          <item>
-           <widget class="QFrame" name="frameSignUp3DMap">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>1</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>260</width>
-              <height>300</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background: transparent; border: none;</string>
-            </property>
-            <layout class="QVBoxLayout" name="signUp3DMapLayout">
-             <property name="leftMargin"><number>0</number></property>
-             <property name="topMargin"><number>0</number></property>
-             <property name="rightMargin"><number>0</number></property>
-             <property name="bottomMargin"><number>0</number></property>
-             <item>
-              <widget class="QLabel" name="lblSignUp3DMap">
-               <property name="scaledContents">
-                <bool>true</bool>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">border-radius: 14px; border: 1.5px solid rgba(56, 189, 248, 0.25);</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-
-          <!-- Hero Bottom Copyright -->
-          <item>
-           <widget class="QLabel" name="lblSignUpHeroCopyright">
-            <property name="styleSheet">
-             <string notr="true">color: #64748b; font-size: 10.5px; font-weight: 400; font-family: 'Open Sans', -apple-system, sans-serif;</string>
-            </property>
-            <property name="text">
-             <string>© 2026 Hake Technologies, Inc. All rights reserved.</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-
-       <!-- RIGHT HAND AUTH PANEL: Clean White Card with Create Account Form -->
+        <!-- RIGHT HAND AUTH PANEL: Clean White Card with Create Account Form -->
        <item>
         <widget class="QFrame" name="panelSignUpAuth">
          <property name="styleSheet">
@@ -2459,83 +2336,119 @@
                 </item>
 
                 <item>
-                 <widget class="QLabel" name="lblPayCardLabel">
-                  <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property>
-                  <property name="text"><string>Card Number (Simulated Checkout)</string></property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtPayCardNumber">
-                  <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; font-family: monospace; padding: 7px 10px;</string></property>
-                  <property name="text"><string>4242 •••• •••• 4242</string></property>
-                 </widget>
-                </item>
+                  <widget class="QLabel" name="lblPayCardLabel">
+                   <property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property>
+                   <property name="text"><string>16-Digit Card Number</string></property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="txtPayCardNumber">
+                   <property name="maxLength">
+                    <number>19</number>
+                   </property>
+                   <property name="placeholderText">
+                    <string>1234 5678 9012 3456</string>
+                   </property>
+                   <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 13.5px; font-family: monospace; letter-spacing: 1.2px; padding: 7px 10px;</string></property>
+                   <property name="text"><string/></property>
+                  </widget>
+                 </item>
 
-                <item>
-                 <layout class="QHBoxLayout" name="payExpCvcRow">
-                  <item>
-                   <layout class="QVBoxLayout" name="payExpCol">
-                    <item>
-                     <widget class="QLabel" name="lblPayExp"><property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property><property name="text"><string>Expiry Date</string></property></widget>
-                    </item>
-                    <item>
-                     <widget class="QLineEdit" name="txtPayExpiry">
-                      <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;</string></property>
-                      <property name="text"><string>12/28</string></property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item>
-                   <layout class="QVBoxLayout" name="payCvcCol">
-                    <item>
-                     <widget class="QLabel" name="lblPayCvc"><property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property><property name="text"><string>CVC</string></property></widget>
-                    </item>
-                    <item>
-                     <widget class="QLineEdit" name="txtPayCvc">
-                      <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;</string></property>
-                      <property name="text"><string>888</string></property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="payExpCvcRow">
+                   <item>
+                    <layout class="QVBoxLayout" name="payExpCol">
+                     <item>
+                      <widget class="QLabel" name="lblPayExp"><property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property><property name="text"><string>Expiry Date</string></property></widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtPayExpiry">
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="placeholderText">
+                        <string>MM/YY</string>
+                       </property>
+                       <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;</string></property>
+                       <property name="text"><string/></property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="payCvcCol">
+                     <item>
+                      <widget class="QLabel" name="lblPayCvc"><property name="styleSheet"><string notr="true">font-weight: 600; font-size: 11.5px; color: #1e293b;</string></property><property name="text"><string>CVC</string></property></widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtPayCvc">
+                       <property name="maxLength">
+                        <number>4</number>
+                       </property>
+                       <property name="placeholderText">
+                        <string>CVC</string>
+                       </property>
+                       <property name="styleSheet"><string notr="true">background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 7px; font-size: 12.5px; padding: 7px 10px;</string></property>
+                       <property name="text"><string/></property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </item>
 
-                <item>
-                 <widget class="QPushButton" name="btnSubmitPayment">
-                  <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-                  <property name="styleSheet">
-                   <string notr="true">
-                    QPushButton#btnSubmitPayment {
-                      background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);
-                      color: #ffffff;
-                      font-family: 'Open Sans', -apple-system, sans-serif;
-                      font-weight: 700;
-                      font-size: 13.5px;
-                      border-radius: 8px;
-                      border: 1px solid #1e40af;
-                      border-bottom: 3.5px solid #172554;
-                      padding: 10px 18px 12px 18px;
-                      margin-top: 6px;
-                    }
-                    QPushButton#btnSubmitPayment:hover {
-                      background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);
-                      border-bottom: 3.5px solid #1e3a8a;
-                    }
-                    QPushButton#btnSubmitPayment:pressed {
-                      background: #1d4ed8;
-                      border-bottom: 1px solid #172554;
-                      padding-top: 12px;
-                      padding-bottom: 10px;
-                    }
-                   </string>
-                  </property>
-                  <property name="text"><string>Pay &amp; Generate 16-Digit License Key →</string></property>
-                 </widget>
-                </item>
+                 <item>
+                  <widget class="QLabel" name="lblPayError">
+                   <property name="visible">
+                    <bool>false</bool>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background: #fef2f2; border: 1.5px solid #f87171; border-radius: 7px; color: #b91c1c; font-size: 11.5px; font-weight: 600; padding: 6px 10px; margin-top: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Please enter a valid 16-digit card number.</string>
+                   </property>
+                  </widget>
+                 </item>
 
-                <item>
+                 <item>
+                  <widget class="QPushButton" name="btnSubmitPayment">
+                   <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+                   <property name="styleSheet">
+                    <string notr="true">
+                     QPushButton#btnSubmitPayment {
+                       background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);
+                       color: #ffffff;
+                       font-family: 'Open Sans', -apple-system, sans-serif;
+                       font-weight: 700;
+                       font-size: 14px;
+                       letter-spacing: 0.3px;
+                       border-radius: 8px;
+                       border: 1px solid #1e40af;
+                       border-bottom: 3.5px solid #172554;
+                       padding: 10px 18px 12px 18px;
+                       margin-top: 6px;
+                     }
+                     QPushButton#btnSubmitPayment:hover {
+                       background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #2563eb);
+                       border-bottom: 3.5px solid #1e3a8a;
+                     }
+                     QPushButton#btnSubmitPayment:pressed {
+                       background: #1d4ed8;
+                       border-bottom: 1px solid #172554;
+                       padding-top: 12px;
+                       padding-bottom: 10px;
+                     }
+                    </string>
+                   </property>
+                   <property name="text"><string>Generate Code</string></property>
+                  </widget>
+                 </item>
+
+                 <item>
                  <widget class="QPushButton" name="btnBackFromPayment">
                   <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
                   <property name="styleSheet"><string notr="true">QPushButton#btnBackFromPayment { background: transparent; color: #64748b; font-weight: 600; font-size: 12px; padding: 3px; border: none; } QPushButton#btnBackFromPayment:hover { color: #2563eb; }</string></property>

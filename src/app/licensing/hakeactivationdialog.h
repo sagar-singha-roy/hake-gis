@@ -85,6 +85,8 @@ private slots:
 
   // Formatting & Animation
   void onActivationCodeEdited( const QString &text );
+  void onPayCardNumberEdited( const QString &text );
+  void onPayExpiryEdited( const QString &text );
   void onRainbowTimerTick();
 
 private:
