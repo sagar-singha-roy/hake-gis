@@ -514,7 +514,12 @@ if(APPLE)
     COMMAND ${CMAKE_COMMAND} -E create_symlink
       "${QGIS_OUTPUT_DIRECTORY}"
       "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app"
-    COMMENT "Ensuring Hake GeoDesk.app bundle symlink is up-to-date"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${QGIS_OUTPUT_DIRECTORY}/Contents/Resources/python"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${CMAKE_CURRENT_SOURCE_DIR}/hake_plugin_launcher.py"
+      "${QGIS_OUTPUT_DIRECTORY}/Contents/Resources/python/hake_plugin_launcher.py"
+    COMMENT "Ensuring Hake GeoDesk.app bundle symlink and launcher are up-to-date"
   )
 endif()
 
