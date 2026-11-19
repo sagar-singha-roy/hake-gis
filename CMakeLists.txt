@@ -332,10 +332,13 @@ if(WITH_CORE)
     # The qgis_desktop target is meant to build a minimal but complete running QGIS during development
     # This should help to reduce compile time while still having a "complete enough" QGIS for most of the development
     add_custom_target(qgis_desktop
-      DEPENDS qgis provider_postgres staged-plugins resources svg doc icons
+      DEPENDS qgis provider_postgres resources svg doc icons
     )
-    if ( WITH_PYTHON )
-      add_dependencies(qgis_desktop qgispython pycore pygui pyanalysis staged-plugins pyplugin-installer )
+    if ( WITH_BINDINGS )
+      add_dependencies(qgis_desktop staged-plugins)
+    endif()
+    if ( WITH_PYTHON AND WITH_BINDINGS )
+      add_dependencies(qgis_desktop qgispython pycore pygui pyanalysis pyplugin-installer )
     endif()
   endif()
 

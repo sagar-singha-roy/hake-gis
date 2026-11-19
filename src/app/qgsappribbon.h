@@ -133,6 +133,14 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     void saveUserHeightOffset() const;
     void loadUserHeightOffset();
 
+    /**
+     * Watches the hidden classic menu bar: keeps top-level menu actions registered on the main
+     * window (so their shortcuts work) and presents non-standard menus, such as those added by
+     * installed extensions, in the Extensions tab.
+     */
+    void watchMenuBar( QMenuBar *menuBar );
+    void syncMenuBar();
+
   protected:
     bool event( QEvent *event ) override;
     void changeEvent( QEvent *event ) override;
@@ -159,13 +167,6 @@ class APP_EXPORT QgsAppRibbon : public QTabWidget
     void mirrorToolbar( QgsAppRibbonGroup *group, QToolBar *toolbar );
     void syncMirroredGroup( QToolBar *toolbar );
 
-    /**
-     * Watches the hidden classic menu bar: keeps top-level menu actions registered on the main
-     * window (so their shortcuts work) and presents non-standard menus, such as those added by
-     * installed extensions, in the Extensions tab.
-     */
-    void watchMenuBar( QMenuBar *menuBar );
-    void syncMenuBar();
     bool isStandardMenu( const QMenu *menu ) const;
 
     QgisApp *mApp = nullptr;

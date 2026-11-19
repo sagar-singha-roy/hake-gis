@@ -41,6 +41,7 @@
 #include <QByteArray>
 #include <QCheckBox>
 #include <QDesktopServices>
+#include <QDirIterator>
 #include <QDomDocument>
 #include <QFileDialog>
 #include <QLibrary>
