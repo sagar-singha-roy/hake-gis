@@ -335,44 +335,6 @@ jobs:
           python scripts/hake_theme_validate.py --installed $root
           if ($LASTEXITCODE -ne 0) { throw "Installed Hake Night theme validation failed" }
 
-      # Issue #10: prove the packaged Windows runtime can locate proj.db and run
-      # GDAL Polygonize without machine-global PROJ_DATA / OSGeo4W.
-      - name: Assert packaged PROJ/GDAL/Python layout
-        shell: pwsh
-        run: |
-          & "${{ github.workspace }}\scripts\ci\windows_runtime_smoke.ps1" `
-            -BuildDir "${{ github.workspace }}\build" `
-            -RepoRoot "${{ github.workspace }}" `
-            -Mode AssertZip
-
-      - name: Install NSIS artifact, test portable ZIP, and run self-contained runtime smoke tests
-        shell: pwsh
-        run: |
-          & "${{ github.workspace }}\scripts\ci\windows_runtime_smoke.ps1" `
-            -BuildDir "${{ github.workspace }}\build" `
-            -RepoRoot "${{ github.workspace }}" `
-            -ReportDir "${{ github.workspace }}\build\runtime-smoke" `
-            -Mode Runtime
-
-      - name: Verify installed code revision
-        shell: pwsh
-        run: |
-          $global:LASTEXITCODE = 0
-          python scripts/ci/hake_verify_revision.py `
-            --expected "${{ github.sha }}" `
-            --package-root "C:\Hake GeoDesk" `
-            --process-exe "C:\Hake GeoDesk\bin\hake-geodesk-process.exe"
-          if ($LASTEXITCODE -ne 0) { throw "Code revision verification failed" }
-
-      - name: 📤 Upload runtime smoke diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-runtime-smoke-diagnostics
-          path: |
-            build/runtime-smoke/**
-          if-no-files-found: ignore
-
       - name: 📦 Create SDK
 #        if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
         run: |

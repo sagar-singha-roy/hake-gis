@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   Package assertions + NSIS install + PROJ/GDAL runtime smoke for Hake GeoDesk Windows CI.
