@@ -25,6 +25,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+$global:LASTEXITCODE = 0
 
 if (-not $ReportDir) {
     $ReportDir = Join-Path $BuildDir "runtime-smoke"
@@ -351,9 +352,11 @@ function Invoke-AppExeVersion([string]$InstallRoot, [string]$Label) {
 
     Write-Host "Running $appExe --version ..."
     $logApp = Join-Path $ReportDir "app_version_$Label.log"
-    & $appExe --version *> $logApp
-    $codeApp = $LASTEXITCODE
+    $logAppErr = Join-Path $ReportDir "app_version_err_$Label.log"
+    $procApp = Start-Process -FilePath $appExe -ArgumentList "--version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $logApp -RedirectStandardError $logAppErr
+    $codeApp = if ($null -ne $procApp.ExitCode) { $procApp.ExitCode } else { 1 }
     Get-Content -LiteralPath $logApp -ErrorAction SilentlyContinue | Write-Host
+    Get-Content -LiteralPath $logAppErr -ErrorAction SilentlyContinue | Write-Host
     if ($codeApp -ne 0) {
         throw "$appExe --version exited with code $codeApp (see $logApp)"
     }
@@ -361,9 +364,11 @@ function Invoke-AppExeVersion([string]$InstallRoot, [string]$Label) {
 
     Write-Host "Running $processExe --version ..."
     $logProc = Join-Path $ReportDir "process_version_$Label.log"
-    & $processExe --version *> $logProc
-    $codeProc = $LASTEXITCODE
+    $logProcErr = Join-Path $ReportDir "process_version_err_$Label.log"
+    $procProc = Start-Process -FilePath $processExe -ArgumentList "--version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $logProc -RedirectStandardError $logProcErr
+    $codeProc = if ($null -ne $procProc.ExitCode) { $procProc.ExitCode } else { 1 }
     Get-Content -LiteralPath $logProc -ErrorAction SilentlyContinue | Write-Host
+    Get-Content -LiteralPath $logProcErr -ErrorAction SilentlyContinue | Write-Host
     if ($codeProc -ne 0) {
         throw "$processExe --version exited with code $codeProc (see $logProc)"
     }
@@ -422,6 +427,7 @@ function Invoke-Smoke([string]$InstallRoot, [string]$Label, [switch]$Isolated) {
     $localScript = Join-Path $ReportDir "windows_runtime_smoke.py"
     Copy-Item -LiteralPath $script -Destination $localScript -Force
 
+    $global:LASTEXITCODE = 0
     & $python -u $localScript `
         --install-root $InstallRoot `
         --report-dir $ReportDir `
@@ -468,6 +474,7 @@ print('wrote', r'$($tif.Replace('\','\\'))')
 "@
     $mkPath = Join-Path $work "mk_raster.py"
     Set-Content -LiteralPath $mkPath -Value $mk -Encoding UTF8
+    $global:LASTEXITCODE = 0
     & $python -u $mkPath
     if ($LASTEXITCODE -ne 0) { throw "Failed to create process test raster" }
 
@@ -486,6 +493,7 @@ print('wrote', r'$($tif.Replace('\','\\'))')
     )
     Write-Host "Running: $processExe $($args -join ' ')"
     $log = Join-Path $ReportDir "process_polygonize.log"
+    $global:LASTEXITCODE = 0
     & $processExe @args *> $log
     $code = $LASTEXITCODE
     Get-Content -LiteralPath $log -ErrorAction SilentlyContinue | Write-Host
@@ -509,6 +517,7 @@ assert count >= 2, count
 "@
     $valPath = Join-Path $work "validate_out.py"
     Set-Content -LiteralPath $valPath -Value $validate -Encoding UTF8
+    $global:LASTEXITCODE = 0
     & $python -u $valPath
     if ($LASTEXITCODE -ne 0) { throw "process output GeoPackage validation failed" }
     Write-Host "hake-geodesk-process polygonize PASSED"

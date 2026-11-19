@@ -331,6 +331,7 @@ jobs:
           }
           if ($extracted -eq 0) { throw "Hake Night theme was not packaged" }
           Write-Host "Extracted $extracted Hake Night theme files"
+          $global:LASTEXITCODE = 0
           python scripts/hake_theme_validate.py --installed $root
           if ($LASTEXITCODE -ne 0) { throw "Installed Hake Night theme validation failed" }
 
@@ -356,6 +357,7 @@ jobs:
       - name: Verify installed code revision
         shell: pwsh
         run: |
+          $global:LASTEXITCODE = 0
           python scripts/ci/hake_verify_revision.py `
             --expected "${{ github.sha }}" `
             --package-root "C:\Hake GeoDesk" `
