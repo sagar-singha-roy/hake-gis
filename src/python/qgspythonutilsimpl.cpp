@@ -240,26 +240,28 @@ _ssr = StartupScriptRunner()
     return false;
   }
 
-  // Verify that required binary PyQt6 modules imported by SIP bindings are installed
+  // Verify that required binary PyQt6 modules are installed
   if ( !runString(
          QStringLiteral(
            "import sys\n"
            "_missing = []\n"
-           "_pkg_map = {'PyQt6.QtMultimedia': 'python3-pyqt6.qtmultimedia', 'PyQt6.QtPositioning': 'python3-pyqt6.qtpositioning'}\n"
-           "_check_mods = ['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'PyQt6.QtNetwork', 'PyQt6.QtXml', 'PyQt6.QtPositioning']\n"
-           "if sys.platform.startswith('linux'):\n"
-           "    _check_mods.append('PyQt6.QtMultimedia')\n"
-           "for _mod in _check_mods:\n"
+           "_core_mods = ['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'PyQt6.QtNetwork', 'PyQt6.QtXml']\n"
+           "for _mod in _core_mods:\n"
            "    try:\n"
            "        __import__(_mod)\n"
            "    except ImportError:\n"
            "        _missing.append(_mod)\n"
            "if _missing:\n"
            "    if sys.platform.startswith('linux'):\n"
-           "        _pkgs = list(dict.fromkeys([_pkg_map.get(m, 'python3-pyqt6') for m in _missing]))\n"
-           "        raise ImportError('Required PyQt6 module(s) missing: ' + ', '.join(_missing) + '. Please install them via: sudo apt install ' + ' '.join(_pkgs))\n"
+           "        raise ImportError('Required core PyQt6 module(s) missing: ' + ', '.join(_missing) + '. Please install python3-pyqt6.')\n"
            "    else:\n"
-           "        raise ImportError('Required PyQt6 module(s) missing: ' + ', '.join(_missing) + '. The application bundle or runtime environment appears incomplete. Please reinstall Hake GeoDesk.')\n"
+           "        raise ImportError('Required core PyQt6 module(s) missing: ' + ', '.join(_missing) + '. The application bundle appears incomplete.')\n"
+           "# Gracefully probe optional modules without aborting Python support\n"
+           "for _opt in ['PyQt6.QtPositioning', 'PyQt6.QtMultimedia']:\n"
+           "    try:\n"
+           "        __import__(_opt)\n"
+           "    except ImportError:\n"
+           "        pass\n"
          ),
          QObject::tr( "Couldn't load required PyQt6 modules." ) + '\n' + QObject::tr( "Python support will be disabled." )
        ) )

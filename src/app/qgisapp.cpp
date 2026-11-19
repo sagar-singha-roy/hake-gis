@@ -14481,6 +14481,7 @@ Qgs3DMapCanvas *QgisApp::createNewMapCanvas3D( const QString &name, Qgis::SceneM
 #else
   Q_UNUSED( name );
   Q_UNUSED( sceneMode );
+  QMessageBox::information( this, tr( "New 3D Map View" ), tr( "3D map support is not available in this build." ) );
 #endif
   return nullptr;
 }
@@ -14927,6 +14928,10 @@ void QgisApp::addPluginToMenu( const QString &name, QAction *action )
 {
   QMenu *menu = getPluginMenu( name );
   menu->addAction( action );
+  if ( mAppRibbon )
+  {
+    mAppRibbon->syncMenuBar();
+  }
 }
 
 void QgisApp::removePluginMenu( const QString &name, QAction *action )

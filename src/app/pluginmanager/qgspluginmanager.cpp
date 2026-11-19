@@ -812,9 +812,20 @@ void QgsPluginManager::downloadAndInstallPlugin( const QString &pluginId, const 
 
     if ( success )
     {
-      // If the zip contained a nested root directory matching pluginId, flatten it
-      const QString nestedDir = targetDir + "/" + pluginId;
-      if ( QDir( nestedDir ).exists() )
+      // If the zip contained a nested root directory, flatten it
+      QDir tDir( targetDir );
+      QString nestedDir;
+      const QFileInfoList subDirs = tDir.entryInfoList( QDir::Dirs | QDir::NoDotAndDotDot );
+      for ( const QFileInfo &sd : subDirs )
+      {
+        if ( sd.fileName().compare( pluginId, Qt::CaseInsensitive ) == 0 || QFile::exists( sd.filePath() + u"/metadata.txt"_s ) )
+        {
+          nestedDir = sd.filePath();
+          break;
+        }
+      }
+
+      if ( !nestedDir.isEmpty() && QDir( nestedDir ).exists() )
       {
         QDir inner( nestedDir );
         const QFileInfoList innerFiles = inner.entryInfoList( QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot );
@@ -834,6 +845,23 @@ void QgsPluginManager::downloadAndInstallPlugin( const QString &pluginId, const 
         inner.removeRecursively();
       }
 
+#if !defined( Q_OS_WIN )
+      // Ensure standard read/execute permissions on extracted directories and files on Unix
+      QDirIterator permIt( targetDir, QDir::AllEntries | QDir::NoDotAndDotDot, QDirIterator::Subdirectories );
+      while ( permIt.hasNext() )
+      {
+        permIt.next();
+        if ( permIt.fileInfo().isDir() )
+        {
+          QFile::setPermissions( permIt.filePath(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner | QFileDevice::ReadGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::ExeOther );
+        }
+        else
+        {
+          QFile::setPermissions( permIt.filePath(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadGroup | QFileDevice::ReadOther );
+        }
+      }
+#endif
+
       if ( mPlugins.contains( pluginId ) )
       {
         mPlugins[pluginId][u"status"_s] = u"installed"_s;
@@ -841,7 +869,9 @@ void QgsPluginManager::downloadAndInstallPlugin( const QString &pluginId, const 
         mPlugins[pluginId][u"version_installed"_s] = mPlugins[pluginId].value( u"version_available"_s );
       }
       reloadModelData();
-      pushMessage( tr( "Plugin '%1' installed successfully." ).arg( pluginId ), Qgis::MessageLevel::Success, 6 );
+      savePluginState( pluginId, true );
+      loadPlugin( pluginId );
+      pushMessage( tr( "Plugin '%1' installed and activated successfully." ).arg( pluginId ), Qgis::MessageLevel::Success, 6 );
     }
     else
     {

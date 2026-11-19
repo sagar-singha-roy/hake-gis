@@ -23,7 +23,9 @@
  ***************************************************************************/
 """
 
+import os
 import shutil
+import sys
 from pathlib import Path
 
 from qgis.core import (
@@ -221,14 +223,50 @@ class QgsPluginInstallerInstallingDialog(
             self.reject()
             return
 
+        # Locate the source directory inside extractDir (handling case variations and nested archives)
+        sourceDir = extractDir.filePath(self.plugin["id"])
+        if not os.path.exists(sourceDir):
+            candidates = [
+                os.path.join(extractDir.path(), d)
+                for d in os.listdir(extractDir.path())
+                if os.path.isdir(os.path.join(extractDir.path(), d))
+            ]
+            matched = False
+            for c in candidates:
+                if os.path.basename(c).lower() == self.plugin["id"].lower():
+                    sourceDir = c
+                    matched = True
+                    break
+            if not matched:
+                for c in candidates:
+                    if os.path.exists(os.path.join(c, "metadata.txt")):
+                        sourceDir = c
+                        matched = True
+                        break
+            if not matched and os.path.exists(os.path.join(extractDir.path(), "metadata.txt")):
+                sourceDir = extractDir.path()
+
         # Copy extracted plugin to plugins folder
         # we copy instead of move, so that the target files inherit parent folder permissions on windows
         try:
             shutil.copytree(
-                extractDir.filePath(self.plugin["id"]),
+                sourceDir,
                 pluginTargetDirectory,
                 copy_function=shutil.copy,
             )
+            # Ensure proper directory and file permissions on Unix (Linux & macOS)
+            if sys.platform != "win32":
+                for root, dirs, files in os.walk(pluginTargetDirectory):
+                    for d in dirs:
+                        try:
+                            os.chmod(os.path.join(root, d), 0o755)
+                        except OSError:
+                            pass
+                    for f in files:
+                        try:
+                            os.chmod(os.path.join(root, f), 0o644)
+                        except OSError:
+                            pass
         except:
             self.mResult = (
                 self.tr("Could not store plugin to the plugin directory:")

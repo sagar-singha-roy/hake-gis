@@ -164,8 +164,8 @@ fi
 
 if [[ -d "${QT_PLUGIN_SRC}" ]]; then
     echo "    Found Qt6 plugins at: ${QT_PLUGIN_SRC}"
-    # Copy essential plugin subdirectories (including Wayland, XCB, and Multimedia)
-    for plug_dir in platforms imageformats xcbglintegrations wayland-graphics-integration-client wayland-shell-integration wayland-decoration-client sqldrivers multimedia tls; do
+    # Copy essential plugin subdirectories (including Wayland, XCB, Multimedia, and Qt3D)
+    for plug_dir in platforms imageformats xcbglintegrations wayland-graphics-integration-client wayland-shell-integration wayland-decoration-client sqldrivers multimedia tls renderers renderplugins geometryloaders sceneparsers; do
         if [[ -d "${QT_PLUGIN_SRC}/${plug_dir}" ]]; then
             mkdir -p "${APPDIR}/usr/plugins/${plug_dir}"
             cp -r "${QT_PLUGIN_SRC}/${plug_dir}/." "${APPDIR}/usr/plugins/${plug_dir}/" 2>/dev/null || true
@@ -482,7 +482,6 @@ export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${APPDIR}/usr/lib/hake-gis:${APPDIR}/u
 
 # QGIS application paths
 export QGIS_PREFIX_PATH="${APPDIR}/usr"
-export QGIS_PLUGINPATH="${APPDIR}/usr/lib/hake-gis/plugins"
 
 # Geospatial data definitions
 if [ -d "${APPDIR}/usr/share/proj" ]; then

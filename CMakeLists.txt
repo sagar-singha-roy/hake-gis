@@ -4,11 +4,6 @@ cmake_minimum_required(VERSION 3.22.0)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_AUTORCC ON)
 
-# not supported in QGIS 4_0
-set(WITH_PYTHON OFF)
-set(WITH_3D OFF)
-set(WITH_QTWEBENGINE OFF)
-
 # set path to additional CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # POLICIES
@@ -23,9 +18,9 @@ endif()
 # don't relink it only the shared object changes
 set(CMAKE_LINK_DEPENDS_NO_SHARED ON)
 
-option (WITH_PYTHON "Determines whether Python support should be built (disabling it will in particular disable processing)" OFF)
+option (WITH_PYTHON "Determines whether Python support should be built (disabling it will in particular disable processing)" ON)
 
-set (WITH_3D FALSE CACHE BOOL "Determines whether QGIS 3D library should be built")
+set (WITH_3D TRUE CACHE BOOL "Determines whether QGIS 3D library should be built")
 set (WITH_AUTH TRUE CACHE BOOL "Determines whether AUTH support should be included")
 #set (WITH_BINDINGS ${WITH_PYTHON} CACHE BOOL "Determines whether Python bindings should be built")
 set (WITH_BINDINGS TRUE CACHE BOOL "Determines whether Python bindings should be built")

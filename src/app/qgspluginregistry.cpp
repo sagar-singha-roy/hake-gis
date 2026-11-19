@@ -284,11 +284,10 @@ bool QgsPluginRegistry::checkQgisVersion( const QString &minVersion, const QStri
   const QString maxVer = u"%1%2%3"_s.arg( maxVerMajor, 2, 10, QChar( '0' ) ).arg( maxVerMinor, 2, 10, QChar( '0' ) ).arg( maxVerBugfix, 2, 10, QChar( '0' ) );
   const QString curVer = u"%1%2%3"_s.arg( qgisMajor, 2, 10, QChar( '0' ) ).arg( qgisMinor, 2, 10, QChar( '0' ) ).arg( qgisBugfix, 2, 10, QChar( '0' ) );
 
-  // For Hake GeoDesk (QGIS 4.x runtime), allow modern QGIS 3.x ecosystem plugins (minVerMajor >= 3)
-  // as the community repository metadata capped maxVersion at 3.99.
-  if ( qgisMajor >= 4 && minVerMajor >= 3 )
+  // For Hake GeoDesk (QGIS 4.x runtime), allow modern QGIS 3.x and compatible ecosystem plugins
+  if ( qgisMajor >= 4 && minVerMajor >= 2 )
   {
-    return minVer <= curVer;
+    return true;
   }
 
   // compare

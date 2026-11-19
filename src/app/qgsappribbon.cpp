@@ -1855,7 +1855,9 @@ bool QgsAppRibbon::eventFilter( QObject *watched, QEvent *event )
     return QTabWidget::eventFilter( watched, event );
   }
 
-  if ( ( event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved ) && mMenuBar && watched == mMenuBar.data() )
+  if ( ( event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved )
+       && ( ( mMenuBar && watched == mMenuBar.data() )
+            || ( mApp && ( watched == mApp->pluginMenu() || watched == mApp->vectorMenu() || watched == mApp->rasterMenu() || watched == mApp->databaseMenu() || watched == mApp->webMenu() ) ) ) )
   {
     // Extensions add or remove top-level menus in bursts; coalesce into one sync.
     if ( !mMenuBarSyncPending )
@@ -2579,6 +2581,19 @@ void QgsAppRibbon::watchMenuBar( QMenuBar *menuBar )
     return;
   mMenuBar = menuBar;
   menuBar->installEventFilter( this );
+  if ( mApp )
+  {
+    if ( mApp->pluginMenu() )
+      mApp->pluginMenu()->installEventFilter( this );
+    if ( mApp->vectorMenu() )
+      mApp->vectorMenu()->installEventFilter( this );
+    if ( mApp->rasterMenu() )
+      mApp->rasterMenu()->installEventFilter( this );
+    if ( mApp->databaseMenu() )
+      mApp->databaseMenu()->installEventFilter( this );
+    if ( mApp->webMenu() )
+      mApp->webMenu()->installEventFilter( this );
+  }
   syncMenuBar();
 }
 
@@ -2639,24 +2654,27 @@ void QgsAppRibbon::syncMenuBar()
     const QList<QAction *> pluginActions = mApp->pluginMenu()->actions();
     for ( QAction *action : pluginActions )
     {
-      if ( !action )
+      if ( !action || action->isSeparator() )
         continue;
+      if ( action->objectName() == u"mActionManagePlugins"_s || action->objectName() == u"mActionShowPluginManager"_s )
+        continue;
+
       QMenu *menu = action->menu();
-      if ( menu && !isStandardMenu( menu ) )
+      if ( menu && isStandardMenu( menu ) )
+        continue;
+
+      bool alreadyIncluded = false;
+      for ( const auto &entry : std::as_const( extensionEntries ) )
       {
-        bool alreadyIncluded = false;
-        for ( const auto &entry : std::as_const( extensionEntries ) )
+        if ( entry.action == action || ( entry.action && entry.action->text() == action->text() ) )
         {
-          if ( entry.action == action || ( entry.action && entry.action->text() == action->text() ) )
-          {
-            alreadyIncluded = true;
-            break;
-          }
+          alreadyIncluded = true;
+          break;
         }
-        if ( !alreadyIncluded )
-        {
-          extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString(), QString() } );
-        }
+      }
+      if ( !alreadyIncluded )
+      {
+        extensionEntries.append( QgsAppRibbonGroup::Entry { action, false, QString(), QString(), QString(), QString() } );
       }
     }
   }

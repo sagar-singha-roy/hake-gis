@@ -865,13 +865,48 @@ class QgsPluginInstaller(QObject):
             if infoString:
                 success = False
 
+            # Locate source directory inside extractDir (handling case variations and nested archives)
+            sourceDir = extractDir.filePath(pluginName)
+            if not os.path.exists(sourceDir):
+                candidates = [
+                    os.path.join(extractDir.path(), d)
+                    for d in os.listdir(extractDir.path())
+                    if os.path.isdir(os.path.join(extractDir.path(), d))
+                ]
+                matched = False
+                for c in candidates:
+                    if os.path.basename(c).lower() == pluginName.lower():
+                        sourceDir = c
+                        matched = True
+                        break
+                if not matched:
+                    for c in candidates:
+                        if os.path.exists(os.path.join(c, "metadata.txt")):
+                            sourceDir = c
+                            matched = True
+                            break
+                if not matched and os.path.exists(os.path.join(extractDir.path(), "metadata.txt")):
+                    sourceDir = extractDir.path()
+
             try:
                 # we copy instead of move, so that the target files inherit parent folder permissions on windows
                 shutil.copytree(
-                    extractDir.filePath(pluginName),
+                    sourceDir,
                     pluginDirectory,
                     copy_function=shutil.copy,
                 )
+                if sys.platform != "win32":
+                    for root, dirs, files in os.walk(pluginDirectory):
+                        for d in dirs:
+                            try:
+                                os.chmod(os.path.join(root, d), 0o755)
+                            except OSError:
+                                pass
+                        for f in files:
+                            try:
+                                os.chmod(os.path.join(root, f), 0o644)
+                            except OSError:
+                                pass
             except:
                 infoString = (
                     self.tr("Could not store plugin to the plugin directory:")

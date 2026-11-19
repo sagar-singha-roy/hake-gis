@@ -184,10 +184,9 @@ def isCompatible(curVer, minVer, maxVer):
     maxVer_str = f"{max_major:04n}{int(maxVer_parts[1]):04n}{int(maxVer_parts[2]):04n}"
     curVer_str = f"{cur_major:04n}{int(curVer_parts[1]):04n}{int(curVer_parts[2]):04n}"
 
-    # For Hake GeoDesk (runtime major >= 4), allow modern QGIS 3.x ecosystem plugins
-    # (minVer >= 3.0) where upstream repository metadata capped maxVersion at 3.99.
-    if cur_major >= 4 and min_major >= 3:
-        return minVer_str <= curVer_str
+    # For Hake GeoDesk (runtime major >= 4), allow modern QGIS 3.x and compatible plugins
+    if cur_major >= 4 and min_major >= 2:
+        return True
 
     return minVer_str <= curVer_str and maxVer_str >= curVer_str
 
