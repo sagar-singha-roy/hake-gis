@@ -592,20 +592,26 @@ QMainWindow::separator:hover
 QToolBar {
     background: @background;
     border: 1px solid @background;
+    padding: 2px 4px;
+    spacing: 2px;
 }
 
 QToolBar::handle:horizontal
 {
     image: url(@theme_path/icons/handle-horizontal.svg);
-    width: 0.2em;
-    height: 0.5em;
+    width: 10px;
+    height: 22px;
+    margin: 1px 2px;
+    padding: 0 3px;
 }
 
 QToolBar::handle:vertical
 {
     image: url(@theme_path/icons/handle-vertical.svg);
-    width: 0.5em;
-    height: 0.2em;
+    width: 22px;
+    height: 10px;
+    margin: 2px 1px;
+    padding: 3px 0;
 }
 
 QToolBar::separator:horizontal

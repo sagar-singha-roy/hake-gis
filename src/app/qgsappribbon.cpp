@@ -1032,6 +1032,22 @@ bool QgsAppRibbonGroup::resolveDeferred( QObject *root )
           resolved = true;
         }
       }
+      if ( entry.action && entry.action->icon().isNull() )
+      {
+        if ( entry.action->text().contains( "GRASS", Qt::CaseInsensitive ) )
+          entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s ) );
+        else if ( entry.action->text().contains( "Processing", Qt::CaseInsensitive ) )
+          entry.action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+        else if ( entry.action->text().contains( "Web", Qt::CaseInsensitive ) || entry.action->text().contains( "MetaSearch", Qt::CaseInsensitive ) )
+          entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+        else if ( entry.action->text().contains( "Database", Qt::CaseInsensitive ) || entry.action->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+          entry.action->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+        else if ( entry.action->text().contains( "View", Qt::CaseInsensitive ) )
+          entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-view.svg"_s ) );
+        else
+          entry.action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s ) );
+        resolved = true;
+      }
     }
   }
   return resolved;
@@ -1107,20 +1123,32 @@ void QgsAppRibbonGroup::rebuild()
 QgsAppRibbonButton *QgsAppRibbonGroup::makeButton( QWidget *parent, const Entry &entry ) const
 {
   auto *button = new QgsAppRibbonButton( parent, mMetrics );
-  button->setDefaultAction( entry.action );
   button->setLabel( entry.label );
+
   QMenu *menu = dropDownMenu( entry.action );
   if ( !menu && entry.action && entry.action->menu() )
     menu = entry.action->menu();
+
   if ( menu )
   {
     button->setDropDown( true );
+    button->setPopupMode( QToolButton::InstantPopup );
     button->setMenu( menu );
+    if ( entry.action )
+    {
+      button->setIcon( entry.action->icon() );
+      button->setText( entry.label.isEmpty() ? entry.action->text() : entry.label );
+      button->setToolTip( entry.action->toolTip() );
+      button->setEnabled( entry.action->isEnabled() );
+      button->setVisible( entry.action->isVisible() );
+    }
   }
   else
   {
+    button->setDefaultAction( entry.action );
     button->setDropDown( false );
   }
+
   const bool iconOnly = ( mLevel == IconsOnly );
   button->setIconOnly( iconOnly );
   return button;
@@ -2550,6 +2578,26 @@ void QgsAppRibbon::addMenu( QgsAppRibbonGroup *group, QMenu *menu, const QString
 {
   if ( group && menu )
   {
+    if ( menu->icon().isNull() || menu->menuAction()->icon().isNull() )
+    {
+      QIcon ico;
+      if ( menu->objectName() == "mViewMenu"_L1 || overrideLabel.contains( "View", Qt::CaseInsensitive ) )
+        ico = QgsHakeIcons::icon( u"menus/hake-menu-view.svg"_s );
+      else if ( overrideLabel.contains( "Vector", Qt::CaseInsensitive ) )
+        ico = QgsHakeIcons::icon( u"menus/hake-menu-vector.svg"_s );
+      else if ( overrideLabel.contains( "Raster", Qt::CaseInsensitive ) )
+        ico = QgsHakeIcons::icon( u"menus/hake-menu-raster.svg"_s );
+      else if ( overrideLabel.contains( "Extension", Qt::CaseInsensitive ) || overrideLabel.contains( "Plugin", Qt::CaseInsensitive ) )
+        ico = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+      else if ( overrideLabel.contains( "Help", Qt::CaseInsensitive ) )
+        ico = QgsHakeIcons::icon( u"help/hake-help-contents.svg"_s );
+
+      if ( !ico.isNull() )
+      {
+        menu->setIcon( ico );
+        menu->menuAction()->setIcon( ico );
+      }
+    }
     group->addEntry( { menu->menuAction(), false, QString(), QString(), QString(), overrideLabel } );
     menu->installEventFilter( this );
   }
@@ -2739,6 +2787,24 @@ void QgsAppRibbon::syncMenuBar()
       QMenu *menu = action->menu();
       if ( menu && isStandardMenu( menu ) )
         continue;
+
+      if ( action->icon().isNull() )
+      {
+        if ( action->text().contains( "GRASS", Qt::CaseInsensitive ) )
+          action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s ) );
+        else if ( action->text().contains( "Processing", Qt::CaseInsensitive ) )
+          action->setIcon( QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s ) );
+        else if ( action->text().contains( "Web", Qt::CaseInsensitive ) || action->text().contains( "MetaSearch", Qt::CaseInsensitive ) )
+          action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ) );
+        else if ( action->text().contains( "Database", Qt::CaseInsensitive ) || action->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+          action->setIcon( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ) );
+        else
+          action->setIcon( QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s ) );
+      }
+      if ( menu && menu->icon().isNull() )
+      {
+        menu->setIcon( action->icon() );
+      }
 
       bool alreadyIncluded = false;
       for ( const auto &entry : std::as_const( extensionEntries ) )

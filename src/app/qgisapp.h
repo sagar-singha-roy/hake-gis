@@ -2501,6 +2501,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void createMenus();
     void createProfileMenu();
     void createToolBars();
+    void compactToolBars();
+    void triggerToolbarCompaction();
     void createStatusBar();
     void createAppRibbon();
     void hideClassicToolBars();

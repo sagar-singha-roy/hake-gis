@@ -3839,11 +3839,9 @@ void QgisApp::createToolBars()
     << mDigitizeToolBar
     << mAdvancedDigitizeToolBar
     << mShapeDigitizeToolBar
-    << mMapNavToolBar
     << mAttributesToolBar
     << mSelectionToolBar
     << mPluginToolBar
-    << mHelpToolBar
     << mRasterToolBar
     << mVectorToolBar
     << mDatabaseToolBar
@@ -3852,6 +3850,21 @@ void QgisApp::createToolBars()
     << mSnappingToolBar
     << mMeshToolBar
     << mAnnotationsToolBar;
+
+  if ( mHelpToolBar )
+  {
+    removeToolBar( mHelpToolBar );
+    mHelpToolBar->hide();
+  }
+  if ( mMapNavToolBar )
+  {
+    removeToolBar( mMapNavToolBar );
+    mMapNavToolBar->hide();
+  }
+  if ( mLayerToolBar )
+  {
+    addToolBar( mLayerToolBar, Qt::LeftToolBarArea );
+  }
 
   mSnappingWidget = new QgsSnappingWidget( QgsProject::instance(), mMapCanvas, mSnappingToolBar );
   mSnappingWidget->setObjectName( u"mSnappingWidget"_s );
@@ -4265,6 +4278,127 @@ void QgisApp::createToolBars()
   QAction *annotationAction = mAnnotationsToolBar->addWidget( bt );
   annotationAction->setObjectName( u"ActionAnnotation"_s );
   connect( bt, &QToolButton::triggered, this, &QgisApp::toolButtonActionTriggered );
+
+  // Vector Toolbar default actions
+  if ( mVectorToolBar && mVectorToolBar->actions().isEmpty() )
+  {
+    mVectorToolBar->addAction( mActionOpenTable );
+    mVectorToolBar->addAction( mActionOpenFieldCalc );
+    mVectorToolBar->addAction( mActionSelectFeatures );
+    mVectorToolBar->addAction( mActionVertexTool );
+    mVectorToolBar->addAction( mActionSplitFeatures );
+    mVectorToolBar->addAction( mActionSimplifyFeature );
+    mVectorToolBar->addAction( mActionAddRing );
+  }
+
+  // Database Toolbar default actions
+  if ( mDatabaseToolBar && mDatabaseToolBar->actions().isEmpty() )
+  {
+    QAction *actionDbManager = new QAction( QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s ), tr( "DB Manager" ), this );
+    actionDbManager->setObjectName( u"mActionDbManagerToolBar"_s );
+    actionDbManager->setToolTip( tr( "DB Manager" ) );
+    connect( actionDbManager, &QAction::triggered, this, [this]() {
+      for ( QAction *act : findChildren<QAction *>() )
+      {
+        if ( act->objectName() == "mActionDbManager"_L1 || act->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+        {
+          act->trigger();
+          return;
+        }
+      }
+      if ( mActionQueryHistory )
+        mActionQueryHistory->trigger();
+    } );
+    mDatabaseToolBar->addAction( actionDbManager );
+    if ( mActionQueryHistory )
+      mDatabaseToolBar->addAction( mActionQueryHistory );
+  }
+
+  // Web Toolbar default actions
+  if ( mWebToolBar && mWebToolBar->actions().isEmpty() )
+  {
+    QAction *actionWebMetaSearch = new QAction( QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s ), tr( "MetaSearch Catalog Client" ), this );
+    actionWebMetaSearch->setObjectName( u"mActionWebCatalogClient"_s );
+    actionWebMetaSearch->setToolTip( tr( "MetaSearch Catalog Client" ) );
+    connect( actionWebMetaSearch, &QAction::triggered, this, &QgisApp::showMetaSearch );
+    mWebToolBar->addAction( actionWebMetaSearch );
+  }
+
+  // Hook toolbars into auto-compaction
+  const auto allCreatedToolBars = findChildren<QToolBar *>();
+  for ( QToolBar *tb : allCreatedToolBars )
+  {
+    if ( tb == mAppRibbonBar )
+      continue;
+    connect( tb, &QToolBar::visibilityChanged, this, &QgisApp::triggerToolbarCompaction );
+    connect( tb, &QToolBar::topLevelChanged, this, &QgisApp::triggerToolbarCompaction );
+  }
+}
+
+void QgisApp::triggerToolbarCompaction()
+{
+  QTimer::singleShot( 0, this, &QgisApp::compactToolBars );
+}
+
+void QgisApp::compactToolBars()
+{
+  static bool inCompaction = false;
+  if ( inCompaction )
+    return;
+  inCompaction = true;
+
+  const QList<Qt::ToolBarArea> areas = { Qt::TopToolBarArea, Qt::LeftToolBarArea, Qt::RightToolBarArea, Qt::BottomToolBarArea };
+  for ( Qt::ToolBarArea area : areas )
+  {
+    const bool horizontal = ( area == Qt::TopToolBarArea || area == Qt::BottomToolBarArea );
+    QList<QToolBar *> tbs;
+    const auto allToolbars = findChildren<QToolBar *>();
+    for ( QToolBar *tb : allToolbars )
+    {
+      if ( tb == mAppRibbonBar || !tb->isVisible() || tb->isFloating() )
+        continue;
+      if ( toolBarArea( tb ) == area )
+        tbs.append( tb );
+    }
+    if ( tbs.size() <= 1 )
+      continue;
+
+    // Group into rows/columns
+    QList<QList<QToolBar *>> lines;
+    std::sort( tbs.begin(), tbs.end(), [horizontal]( QToolBar *a, QToolBar *b ) {
+      return horizontal ? ( a->y() < b->y() ) : ( a->x() < b->x() );
+    } );
+
+    for ( QToolBar *tb : tbs )
+    {
+      bool placed = false;
+      const int coord = horizontal ? tb->y() : tb->x();
+      for ( auto &line : lines )
+      {
+        const int lineCoord = horizontal ? line.first()->y() : line.first()->x();
+        if ( std::abs( coord - lineCoord ) < 24 )
+        {
+          line.append( tb );
+          placed = true;
+          break;
+        }
+      }
+      if ( !placed )
+        lines.append( { tb } );
+    }
+
+    for ( auto &line : lines )
+    {
+      std::sort( line.begin(), line.end(), [horizontal]( QToolBar *a, QToolBar *b ) {
+        return horizontal ? ( a->x() < b->x() ) : ( a->y() < b->y() );
+      } );
+      for ( int i = 0; i < line.size() - 1; ++i )
+      {
+        insertToolBar( line.at( i + 1 ), line.at( i ) );
+      }
+    }
+  }
+  inCompaction = false;
 }
 
 void QgisApp::createAppRibbon()
@@ -4341,11 +4475,9 @@ void QgisApp::hideClassicToolBars()
     << mDigitizeToolBar
     << mAdvancedDigitizeToolBar
     << mShapeDigitizeToolBar
-    << mMapNavToolBar
     << mAttributesToolBar
     << mSelectionToolBar
     << mPluginToolBar
-    << mHelpToolBar
     << mRasterToolBar
     << mVectorToolBar
     << mDatabaseToolBar
@@ -13080,7 +13212,6 @@ void QgisApp::loadRasterAttributeTableFromFile()
   QgsRasterAttributeTableAppUtils::loadRasterAttributeTableFromFile( mLayerTreeView, visibleMessageBar() );
 }
 
-
 void QgisApp::applyStyleToGroup()
 {
   if ( !mLayerTreeView )
@@ -13186,7 +13317,6 @@ void QgisApp::showPluginManager( int tabIndex, const QString &searchTerm )
     mQgisInterface->pluginManagerInterface()->showPluginManager( tabIndex, searchTerm );
   }
 }
-
 
 // implementation of the python runner
 class QgsPythonRunnerImpl : public QgsPythonRunner
@@ -14936,6 +15066,17 @@ QMenu *QgisApp::getPluginMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   // Where to put it? - we worked that out above...
   mPluginMenu->insertMenu( before, menu );
 
@@ -15002,6 +15143,17 @@ QMenu *QgisApp::getDatabaseMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   if ( before )
     mDatabaseMenu->insertMenu( before, menu );
   else
@@ -15052,6 +15204,17 @@ QMenu *QgisApp::getRasterMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   if ( before )
     mRasterMenu->insertMenu( before, menu );
   else
@@ -15092,6 +15255,17 @@ QMenu *QgisApp::getVectorMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   if ( before )
     mVectorMenu->insertMenu( before, menu );
   else
@@ -15132,6 +15306,17 @@ QMenu *QgisApp::getWebMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   if ( before )
     mWebMenu->insertMenu( before, menu );
   else
@@ -15172,6 +15357,17 @@ QMenu *QgisApp::getMeshMenu( const QString &menuName )
   // It doesn't exist, so create
   QMenu *menu = new QMenu( cleanedMenuName, this );
   menu->setObjectName( normalizedMenuName( cleanedMenuName ) );
+  QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+  if ( cleanedMenuName.contains( "GRASS", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+  else if ( cleanedMenuName.contains( "Processing", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+  else if ( cleanedMenuName.contains( "Web", Qt::CaseInsensitive ) || cleanedMenuName.contains( "MetaSearch", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+  else if ( cleanedMenuName.contains( "Database", Qt::CaseInsensitive ) || cleanedMenuName.contains( "DB Manager", Qt::CaseInsensitive ) )
+    pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+  menu->setIcon( pluginIcon );
+  menu->menuAction()->setIcon( pluginIcon );
   if ( before )
     mMeshMenu->insertMenu( before, menu );
   else
@@ -15409,6 +15605,19 @@ void QgisApp::removePluginMeshMenu( const QString &name, QAction *action )
 
 int QgisApp::addPluginToolBarIcon( QAction *qAction )
 {
+  if ( qAction && qAction->icon().isNull() )
+  {
+    QIcon pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-plugins.svg"_s );
+    if ( qAction->text().contains( "GRASS", Qt::CaseInsensitive ) )
+      pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-grass.svg"_s );
+    else if ( qAction->text().contains( "Processing", Qt::CaseInsensitive ) )
+      pluginIcon = QgsHakeIcons::icon( u"processing/hake-processing-toolbox.svg"_s );
+    else if ( qAction->text().contains( "Web", Qt::CaseInsensitive ) || qAction->text().contains( "MetaSearch", Qt::CaseInsensitive ) )
+      pluginIcon = QgsHakeIcons::icon( u"menus/hake-menu-web.svg"_s );
+    else if ( qAction->text().contains( "Database", Qt::CaseInsensitive ) || qAction->text().contains( "DB Manager", Qt::CaseInsensitive ) )
+      pluginIcon = QgsHakeIcons::icon( u"database/hake-database-db-manager.svg"_s );
+    qAction->setIcon( pluginIcon );
+  }
   mPluginToolBar->addAction( qAction );
   return 0;
 }
