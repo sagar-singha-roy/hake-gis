@@ -2229,6 +2229,13 @@ QgisApp::~QgisApp()
   // shouldn't be needed, but from this stage on, we don't want/need ANY map canvas refreshes to take place
   mFreezeCount = 1000000;
 
+  if ( QgsProject::instance() )
+  {
+    if ( QgsLayerTreeGroup *root = QgsProject::instance()->layerTreeRoot() )
+      root->disconnect( this );
+    QgsProject::instance()->disconnect( this );
+  }
+
 #ifdef HAVE_GEOREFERENCER
   if ( mGeoreferencer )
   {
@@ -2350,8 +2357,12 @@ QgisApp::~QgisApp()
   mMapStylingDock = nullptr;
   delete mCoordsEdit;
   mCoordsEdit = nullptr;
-  delete mLayerTreeView;
-  mLayerTreeView = nullptr;
+  if ( mLayerTreeView )
+  {
+    mLayerTreeView->disconnect( this );
+    delete mLayerTreeView;
+    mLayerTreeView = nullptr;
+  }
   delete mMessageButton;
   mMessageButton = nullptr;
   delete mAboutDialog;
@@ -5650,12 +5661,19 @@ void QgisApp::setupLayerTreeViewFromSettings()
 
 void QgisApp::updateNewLayerInsertionPoint()
 {
+  if ( !mLayerTreeView || !mLayerTreeView->layerTreeModel() )
+    return;
+
   QgsLayerTreeRegistryBridge::InsertionPoint insertionPoint = layerTreeInsertionPoint();
-  QgsProject::instance()->layerTreeRegistryBridge()->setLayerInsertionPoint( insertionPoint );
+  if ( QgsProject::instance() && QgsProject::instance()->layerTreeRegistryBridge() )
+    QgsProject::instance()->layerTreeRegistryBridge()->setLayerInsertionPoint( insertionPoint );
 }
 
 QgsLayerTreeRegistryBridge::InsertionPoint QgisApp::layerTreeInsertionPoint() const
 {
+  if ( !mLayerTreeView || !mLayerTreeView->layerTreeModel() )
+    return QgsLayerTreeRegistryBridge::InsertionPoint( nullptr, 0 );
+
   // defaults
   QgsLayerTreeGroup *insertGroup = mLayerTreeView->layerTreeModel()->rootGroup();
   QModelIndex current = mLayerTreeView->currentIndex();
@@ -15611,7 +15629,8 @@ void QgisApp::markDirty()
 void QgisApp::extentChanged()
 {
   // allow symbols in the legend update their preview if they use map units
-  mLayerTreeView->layerTreeModel()->setLegendMapViewData( mMapCanvas->mapUnitsPerPixel(), static_cast<int>( std::round( mMapCanvas->mapSettings().outputDpi() ) ), mMapCanvas->scale() );
+  if ( mLayerTreeView && mLayerTreeView->layerTreeModel() && mMapCanvas )
+    mLayerTreeView->layerTreeModel()->setLegendMapViewData( mMapCanvas->mapUnitsPerPixel(), static_cast<int>( std::round( mMapCanvas->mapSettings().outputDpi() ) ), mMapCanvas->scale() );
 }
 
 void QgisApp::layersWereAdded( const QList<QgsMapLayer *> &layers )
