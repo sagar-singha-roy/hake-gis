@@ -10,20 +10,61 @@ import types
 import importlib
 import traceback
 
+# 0. Provide requests fallback if not installed globally
+try:
+    import requests
+except ImportError:
+    try:
+        import pip._vendor.requests as _vendored_requests
+        sys.modules["requests"] = _vendored_requests
+    except ImportError:
+        pass
+
 def create_dynamic_mock(name="Mock"):
-    """Creates a callable, iterable, attribute-accepting mock object."""
+    """
+    Creates a dynamic class/type that acts as both a valid Python type (for pyqtSignal,
+    isinstance, subclassing) and an instance factory for QGIS compatibility.
+    """
     default_name = name
-    class DynamicMock:
-        def __init__(self, obj_name=None, *args, **kwargs):
-            self._obj_name = default_name if obj_name is None else obj_name
+
+    class DynamicMeta(type):
+        def __getattr__(cls, item):
+            if item.startswith("__") and item.endswith("__"):
+                raise AttributeError(item)
+            return create_dynamic_mock(f"{cls.__name__}.{item}")
+
+        def __str__(cls):
+            return cls.__name__
+
+        def __repr__(cls):
+            return f"<QgsMockClass {cls.__name__}>"
+
+        def __bool__(cls):
+            return True
+
+        def __iter__(cls):
+            return iter([create_dynamic_mock("Item1"), create_dynamic_mock("Item2")])
+
+        def __enter__(cls):
+            return cls
+
+        def __exit__(cls, *args):
+            return False
+
+        def __call__(cls, *args, **kwargs):
+            return super().__call__(*args, **kwargs)
+
+    class DynamicMock(metaclass=DynamicMeta):
+        def __init__(self, *args, **kwargs):
+            self._obj_name = default_name
 
         def __call__(self, *args, **kwargs):
-            return DynamicMock(self._obj_name)
+            return self
 
         def __getattr__(self, item):
             if item.startswith("__") and item.endswith("__"):
                 raise AttributeError(item)
-            return DynamicMock(f"{self._obj_name}.{item}")
+            return create_dynamic_mock(f"{self._obj_name}.{item}")
 
         def __setattr__(self, key, value):
             if key.startswith("_"):
@@ -35,7 +76,13 @@ def create_dynamic_mock(name="Mock"):
             return True
 
         def __iter__(self):
-            return iter([])
+            return iter([create_dynamic_mock("Item1"), create_dynamic_mock("Item2")])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
 
         def __len__(self):
             return 0
@@ -62,7 +109,7 @@ def create_dynamic_mock(name="Mock"):
             return self._obj_name
 
         def __repr__(self):
-            return f"<QgsMock {self._obj_name}>"
+            return f"<{self._obj_name} instance>"
 
         def isValid(self):
             return True
@@ -74,10 +121,10 @@ def create_dynamic_mock(name="Mock"):
             return self._obj_name
 
         def extent(self):
-            return DynamicMock("QgsRectangle")
+            return create_dynamic_mock("QgsRectangle")()
 
         def crs(self):
-            mock_crs = DynamicMock("QgsCoordinateReferenceSystem")
+            mock_crs = create_dynamic_mock("QgsCoordinateReferenceSystem")()
             mock_crs.authid = lambda: "EPSG:4326"
             mock_crs.description = lambda: "WGS 84"
             mock_crs.toWkt = lambda: "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433]]"
@@ -101,12 +148,15 @@ def create_dynamic_mock(name="Mock"):
         def center(self):
             return self
 
-    return DynamicMock()
+    DynamicMock.__name__ = name
+    return DynamicMock
 
 class DynamicModule(types.ModuleType):
     """Dynamic module that returns stubs for missing attributes instead of raising ImportError."""
-    def __init__(self, name):
+    def __init__(self, name, is_package=False):
         super().__init__(name)
+        if is_package:
+            self.__path__ = []
 
     def __getattr__(self, item):
         if item.startswith("__") and item.endswith("__"):
@@ -114,6 +164,26 @@ class DynamicModule(types.ModuleType):
         stub = create_dynamic_mock(f"{self.__name__}.{item}")
         setattr(self, item, stub)
         return stub
+
+class DynamicFallbackFinder:
+    """Fallback finder for sys.meta_path to gracefully resolve optional plugin dependencies."""
+    @classmethod
+    def find_spec(cls, fullname, path, target=None):
+        if fullname.startswith("PyQt") or fullname.startswith("qgis") or fullname in sys.modules:
+            return None
+        from importlib.machinery import ModuleSpec
+        return ModuleSpec(fullname, cls, is_package=True)
+
+    @classmethod
+    def create_module(cls, spec):
+        mod = DynamicModule(spec.name, is_package=True)
+        return mod
+
+    @classmethod
+    def exec_module(cls, mod):
+        pass
+
+sys.meta_path.append(DynamicFallbackFinder)
 
 def main():
     if len(sys.argv) < 3:
@@ -160,17 +230,25 @@ def main():
             pass
 
     if QtWidgets:
+        # Patch PyQt6 QAction and QActionGroup onto QtWidgets for Qt5/Qt6 plugin compatibility
+        if hasattr(QtGui, "QAction") and not hasattr(QtWidgets, "QAction"):
+            QtWidgets.QAction = QtGui.QAction
+        if hasattr(QtGui, "QActionGroup") and not hasattr(QtWidgets, "QActionGroup"):
+            QtWidgets.QActionGroup = QtGui.QActionGroup
+        if hasattr(QtGui, "QShortcut") and not hasattr(QtWidgets, "QShortcut"):
+            QtWidgets.QShortcut = QtGui.QShortcut
+
         app = QtWidgets.QApplication.instance()
         if not app:
             app = QtWidgets.QApplication([f"Hake GeoDesk — {package_name}"])
 
     # 2. Setup dynamic QGIS compatibility layer
     if "qgis" not in sys.modules:
-        qgis = DynamicModule("qgis")
-        qgis_core = DynamicModule("qgis.core")
-        qgis_gui = DynamicModule("qgis.gui")
+        qgis = DynamicModule("qgis", is_package=True)
+        qgis_core = DynamicModule("qgis.core", is_package=True)
+        qgis_gui = DynamicModule("qgis.gui", is_package=True)
         qgis_utils = DynamicModule("qgis.utils")
-        qgis_PyQt = DynamicModule("qgis.PyQt")
+        qgis_PyQt = DynamicModule("qgis.PyQt", is_package=True)
 
         # Map Qt modules into qgis.PyQt
         if QtWidgets and QtCore and QtGui:
@@ -179,9 +257,6 @@ def main():
             qgis_PyQt.QtGui = QtGui
             if uic:
                 qgis_PyQt.uic = uic
-            # Critical: many QGIS plugins import QAction from QtWidgets even in PyQt6
-            if hasattr(QtGui, "QAction") and not hasattr(QtWidgets, "QAction"):
-                QtWidgets.QAction = QtGui.QAction
 
         class MockQgsPointXY:
             def __init__(self, x=90.6244, y=24.9406, *args, **kwargs):
@@ -214,12 +289,9 @@ def main():
             def __str__(self): return f"Rectangle({self._xmin}, {self._ymin}, {self._xmax}, {self._ymax})"
 
         class MockCoordinateTransform:
-            def __init__(self, *args, **kwargs):
-                pass
-            def transform(self, pt, *args, **kwargs):
-                return pt
-            def transformBoundingBox(self, bbox, *args, **kwargs):
-                return bbox
+            def __init__(self, *args, **kwargs): pass
+            def transform(self, pt, *args, **kwargs): return pt
+            def transformBoundingBox(self, bbox, *args, **kwargs): return bbox
 
         class MockQgsProject:
             _instance = None
@@ -231,10 +303,8 @@ def main():
                 if cls._instance is None:
                     cls._instance = MockQgsProject()
                 return cls._instance
-            def mapLayers(self):
-                return self._layers
-            def layers(self):
-                return list(self._layers.values())
+            def mapLayers(self): return self._layers
+            def layers(self): return list(self._layers.values())
             def addMapLayer(self, layer, addToLegend=True):
                 if layer:
                     lid = getattr(layer, "id", lambda: str(id(layer)))()
@@ -243,14 +313,12 @@ def main():
             def removeMapLayer(self, lid):
                 self._layers.pop(lid, None)
             def crs(self):
-                mock_crs = create_dynamic_mock("QgsCoordinateReferenceSystem")
+                mock_crs = create_dynamic_mock("QgsCoordinateReferenceSystem")()
                 mock_crs.authid = lambda: "EPSG:4326"
                 mock_crs.description = lambda: "WGS 84"
                 return mock_crs
-            def fileName(self):
-                return ""
-            def homePath(self):
-                return os.path.expanduser("~")
+            def fileName(self): return ""
+            def homePath(self): return os.path.expanduser("~")
 
         class MockQgsMessageLog:
             @staticmethod
@@ -283,7 +351,48 @@ def main():
                 return ""
             @staticmethod
             def getThemeIcon(name=""):
-                return QtGui.QIcon() if QtGui else create_dynamic_mock("QIcon")
+                return QtGui.QIcon() if QtGui else create_dynamic_mock("QIcon")()
+
+        # GUI Widget classes
+        class MockQgsMapCanvas(QtWidgets.QGraphicsView if QtWidgets else object):
+            def __init__(self, parent=None, *args, **kwargs):
+                if QtWidgets:
+                    super().__init__(parent)
+            def setCanvasColor(self, color): pass
+            def enableAntiAliasing(self, flag): pass
+            def setWheelFactor(self, factor): pass
+            def setDirty(self, flag): pass
+            def refresh(self): pass
+            def extent(self): return MockQgsRectangle()
+            def setExtent(self, *args): pass
+            def scale(self): return 100000.0
+            def size(self): return QtCore.QSize(800, 600) if QtCore else (800, 600)
+            def mapSettings(self): return create_dynamic_mock("QgsMapSettings")()
+            def scene(self):
+                return QtWidgets.QGraphicsScene(self) if QtWidgets else create_dynamic_mock("QGraphicsScene")()
+            def setMapTool(self, *args): pass
+            def unsetMapTool(self, *args): pass
+            def mapTool(self): return create_dynamic_mock("QgsMapTool")()
+            def currentLayer(self): return None
+            def setCurrentLayer(self, layer): pass
+            def __getattr__(self, item): return create_dynamic_mock(f"QgsMapCanvas.{item}")
+
+        class MockQgsMessageBar(QtWidgets.QFrame if QtWidgets else object):
+            def __init__(self, parent=None, *args, **kwargs):
+                if QtWidgets:
+                    super().__init__(parent)
+            def pushMessage(self, *args, **kwargs): pass
+            def pushInfo(self, *args, **kwargs): pass
+            def pushSuccess(self, *args, **kwargs): pass
+            def pushWarning(self, *args, **kwargs): pass
+            def pushCritical(self, *args, **kwargs): pass
+            def pushWidget(self, *args, **kwargs): pass
+            def popWidget(self, *args, **kwargs): pass
+
+        class MockOverrideCursor:
+            def __init__(self, *args, **kwargs): pass
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
 
         qgis_core.QgsPointXY = MockQgsPointXY
         qgis_core.QgsPoint = MockQgsPointXY
@@ -295,6 +404,16 @@ def main():
         qgis_core.QgsApplication = MockQgsApplication
         qgis_core.QgsSettings = (QtCore.QSettings if QtCore else create_dynamic_mock("QgsSettings"))
         qgis_core.QgsCoordinateReferenceSystem = lambda auth="EPSG:4326": create_dynamic_mock("QgsCRS")
+
+        qgis_gui.QgsMapCanvas = MockQgsMapCanvas
+        qgis_gui.QgsMessageBar = MockQgsMessageBar
+        if QtWidgets:
+            qgis_gui.QgsFilterLineEdit = QtWidgets.QLineEdit
+            qgis_gui.QgsCollapsibleGroupBox = QtWidgets.QGroupBox
+            qgis_gui.QgsColorButton = QtWidgets.QPushButton
+            qgis_gui.QgsDockWidget = QtWidgets.QDockWidget
+
+        qgis_utils.OverrideCursor = MockOverrideCursor
 
         qgis.core = qgis_core
         qgis.gui = qgis_gui
@@ -309,6 +428,8 @@ def main():
         sys.modules["qgis.PyQt.QtWidgets"] = QtWidgets
         sys.modules["qgis.PyQt.QtCore"] = QtCore
         sys.modules["qgis.PyQt.QtGui"] = QtGui
+        if uic:
+            sys.modules["qgis.PyQt.uic"] = uic
 
     # 3. Build interactive plugin host window
     registered_actions = []
@@ -318,7 +439,7 @@ def main():
         def __init__(self, title):
             super().__init__()
             self.setWindowTitle(f"Hake GeoDesk — {title}")
-            self.resize(720, 480)
+            self.resize(760, 520)
 
             # Center on screen
             if app:
@@ -380,7 +501,8 @@ def main():
             row = idx // 2
             col = idx % 2
 
-            btn = QtWidgets.QPushButton(action.icon(), f"  {action.text()}", self.scroll_content)
+            action_text = action.text().replace("&", "")
+            btn = QtWidgets.QPushButton(action.icon(), f"  {action_text}", self.scroll_content)
             btn.setMinimumHeight(44)
             btn.setStyleSheet(
                 "QPushButton { text-align: left; padding: 8px 16px; font-size: 13px; font-weight: 500; "
@@ -398,7 +520,7 @@ def main():
             # Add to Toolbar
             action = self.main_toolbar.addWidget(widget)
 
-            # Extract any child actions from menus/toolbars attached to this widget (e.g., QToolButton with QMenu)
+            # Extract child actions from menus/toolbars attached to this widget (e.g., QToolButton with QMenu)
             extracted_actions = []
             if hasattr(widget, "menu") and callable(getattr(widget, "menu")):
                 w_menu = widget.menu()
@@ -433,15 +555,43 @@ def main():
             widget.show()
             return action
 
+        def populate_menu_actions(self):
+            """Extracts top-level and submenu actions from menuBar into the central view."""
+            def _extract_submenu(menu, prefix):
+                for act in menu.actions():
+                    sub = act.menu()
+                    if sub:
+                        _extract_submenu(sub, f"{prefix} • {act.text().replace('&', '')}")
+                    elif act.text() and not act.isSeparator():
+                        self.register_action(act, prefix)
+
+            for act in self.main_menu_bar.actions():
+                menu = act.menu()
+                if menu:
+                    _extract_submenu(menu, act.text().replace("&", ""))
+
     host_window = PluginHostWindow(package_name) if QtWidgets else None
 
     # 4. Mock QgisInterface connecting to host window with full API coverage
     class StubIface:
         def __init__(self, win):
             self._main_window = win
+            self._canvas = MockQgsMapCanvas() if QtWidgets else create_dynamic_mock("QgsMapCanvas")()
+            self._msg_bar = MockQgsMessageBar() if QtWidgets else create_dynamic_mock("QgsMessageBar")()
 
         def mainWindow(self):
             return self._main_window
+
+        def iconSize(self, *args):
+            return QtCore.QSize(24, 24) if QtCore else (24, 24)
+
+        def firstRightStandardMenu(self):
+            # Return a stub action so menuBar().insertMenu(...) appends cleanly
+            act = QtGui.QAction("Help", self._main_window) if (QtGui and self._main_window) else None
+            class StubMenu:
+                def menuAction(self):
+                    return act
+            return StubMenu()
 
         def addToolBarIcon(self, action):
             if self._main_window and hasattr(self._main_window, "register_action"):
@@ -459,7 +609,7 @@ def main():
                 return QtGui.QAction(widget)
             elif QtWidgets and hasattr(QtWidgets, "QAction"):
                 return QtWidgets.QAction(widget)
-            return create_dynamic_mock("QAction")
+            return create_dynamic_mock("QAction")()
 
         def addRasterToolBarWidget(self, widget):
             return self.addToolBarWidget(widget)
@@ -485,7 +635,7 @@ def main():
         def addCustomToolBar(self, name):
             if self._main_window:
                 return self._main_window.addToolBar(name)
-            return create_dynamic_mock("QToolBar")
+            return create_dynamic_mock("QToolBar")()
 
         def addPluginToMenu(self, name, action):
             if self._main_window and hasattr(self._main_window, "register_action"):
@@ -521,58 +671,10 @@ def main():
             pass
 
         def messageBar(self):
-            class StubMsgBar:
-                def pushMessage(self, *args, **kwargs):
-                    pass
-                def pushInfo(self, *args, **kwargs):
-                    pass
-                def pushSuccess(self, *args, **kwargs):
-                    pass
-                def pushWarning(self, *args, **kwargs):
-                    pass
-                def pushCritical(self, *args, **kwargs):
-                    pass
-                def pushWidget(self, *args, **kwargs):
-                    pass
-                def popWidget(self, *args, **kwargs):
-                    pass
-            return StubMsgBar()
+            return self._msg_bar
 
         def mapCanvas(self):
-            class StubCanvas:
-                def extent(self):
-                    return qgis_core.QgsRectangle()
-                def setExtent(self, *args):
-                    pass
-                def refresh(self):
-                    pass
-                def scale(self):
-                    return 100000.0
-                def size(self):
-                    return QtCore.QSize(800, 600) if QtCore else (800, 600)
-                def mapSettings(self):
-                    ms = create_dynamic_mock("QgsMapSettings")
-                    ms.destinationCrs = lambda: qgis_core.QgsProject.instance().crs()
-                    ms.extent = lambda: qgis_core.QgsRectangle()
-                    return ms
-                def scene(self):
-                    s = create_dynamic_mock("QGraphicsScene")
-                    s.removeItem = lambda item: None
-                    s.addItem = lambda item: None
-                    return s
-                def setMapTool(self, *args):
-                    pass
-                def unsetMapTool(self, *args):
-                    pass
-                def mapTool(self):
-                    return create_dynamic_mock("QgsMapTool")
-                def currentLayer(self):
-                    return None
-                def setCurrentLayer(self, layer):
-                    pass
-                def __getattr__(self, item):
-                    return create_dynamic_mock(f"mapCanvas.{item}")
-            return StubCanvas()
+            return self._canvas
 
         def activeLayer(self):
             return None
@@ -581,37 +683,37 @@ def main():
             pass
 
         def layerTreeView(self):
-            return create_dynamic_mock("QgsLayerTreeView")
+            return QtWidgets.QTreeView() if QtWidgets else create_dynamic_mock("QgsLayerTreeView")()
 
         def legendInterface(self):
-            return create_dynamic_mock("QgsLegendInterface")
+            return create_dynamic_mock("QgsLegendInterface")()
 
         def pluginMenu(self):
-            return self._main_window.menuBar().addMenu("Plugins") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Plugins") if self._main_window else create_dynamic_mock("QMenu")()
 
         def rasterMenu(self):
-            return self._main_window.menuBar().addMenu("Raster") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Raster") if self._main_window else create_dynamic_mock("QMenu")()
 
         def vectorMenu(self):
-            return self._main_window.menuBar().addMenu("Vector") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Vector") if self._main_window else create_dynamic_mock("QMenu")()
 
         def databaseMenu(self):
-            return self._main_window.menuBar().addMenu("Database") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Database") if self._main_window else create_dynamic_mock("QMenu")()
 
         def webMenu(self):
-            return self._main_window.menuBar().addMenu("Web") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Web") if self._main_window else create_dynamic_mock("QMenu")()
 
         def viewMenu(self):
-            return self._main_window.menuBar().addMenu("View") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("View") if self._main_window else create_dynamic_mock("QMenu")()
 
         def editMenu(self):
-            return self._main_window.menuBar().addMenu("Edit") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Edit") if self._main_window else create_dynamic_mock("QMenu")()
 
         def fileMenu(self):
-            return self._main_window.menuBar().addMenu("File") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("File") if self._main_window else create_dynamic_mock("QMenu")()
 
         def helpMenu(self):
-            return self._main_window.menuBar().addMenu("Help") if self._main_window else create_dynamic_mock("QMenu")
+            return self._main_window.menuBar().addMenu("Help") if self._main_window else create_dynamic_mock("QMenu")()
 
         def __getattr__(self, item):
             """Fallback for any other QgisInterface method: intercepts widgets/actions and never crashes."""
@@ -655,8 +757,9 @@ def main():
             if QtWidgets and app:
                 QtWidgets.QMessageBox.critical(None, f"Plugin Error — {package_name}", err_msg)
 
-    # 6. Show the host window and launch action
+    # 6. Populate menus and show the host window
     if host_window:
+        host_window.populate_menu_actions()
         host_window.show()
         host_window.raise_()
         host_window.activateWindow()
