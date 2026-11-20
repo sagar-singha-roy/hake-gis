@@ -268,6 +268,23 @@ def main():
             Critical = 2
             Success = 3
 
+        class MockQgsApplication:
+            @staticmethod
+            def qgisSettingsDirPath():
+                return os.path.expanduser("~/.local/share/hake-geodesk/profiles/default/")
+            @staticmethod
+            def pkgDataPath():
+                return os.path.expanduser("~/.local/share/hake-geodesk/")
+            @staticmethod
+            def prefixPath():
+                return "/usr"
+            @staticmethod
+            def iconPath(name=""):
+                return ""
+            @staticmethod
+            def getThemeIcon(name=""):
+                return QtGui.QIcon() if QtGui else create_dynamic_mock("QIcon")
+
         qgis_core.QgsPointXY = MockQgsPointXY
         qgis_core.QgsPoint = MockQgsPointXY
         qgis_core.QgsRectangle = MockQgsRectangle
@@ -275,6 +292,8 @@ def main():
         qgis_core.QgsProject = MockQgsProject
         qgis_core.QgsMessageLog = MockQgsMessageLog
         qgis_core.Qgis = MockQgis
+        qgis_core.QgsApplication = MockQgsApplication
+        qgis_core.QgsSettings = (QtCore.QSettings if QtCore else create_dynamic_mock("QgsSettings"))
         qgis_core.QgsCoordinateReferenceSystem = lambda auth="EPSG:4326": create_dynamic_mock("QgsCRS")
 
         qgis.core = qgis_core
@@ -379,11 +398,38 @@ def main():
             # Add to Toolbar
             action = self.main_toolbar.addWidget(widget)
 
-            # Add to Central View Grid
-            idx = len(registered_actions) + len(registered_widgets) - 1
-            row = idx // 2
-            col = idx % 2
-            self.grid_layout.addWidget(widget, row, col)
+            # Extract any child actions from menus/toolbars attached to this widget (e.g., QToolButton with QMenu)
+            extracted_actions = []
+            if hasattr(widget, "menu") and callable(getattr(widget, "menu")):
+                w_menu = widget.menu()
+                if w_menu and hasattr(w_menu, "actions"):
+                    extracted_actions = [a for a in w_menu.actions() if hasattr(a, "text") and a.text()]
+            elif hasattr(widget, "actions") and callable(getattr(widget, "actions")):
+                extracted_actions = [a for a in widget.actions() if hasattr(a, "text") and a.text()]
+
+            for act in extracted_actions:
+                self.register_action(act, "Tools")
+
+            # If no child actions were found, create a dedicated launcher button in the central view
+            if not extracted_actions:
+                idx = len(registered_actions) + len(registered_widgets) - 1
+                row = idx // 2
+                col = idx % 2
+                label_text = widget.toolTip() if hasattr(widget, "toolTip") and widget.toolTip() else (widget.text() if hasattr(widget, "text") and widget.text() else "Execute Tool")
+                icon = widget.icon() if (hasattr(widget, "icon") and callable(getattr(widget, "icon")) and not widget.icon().isNull()) else QtGui.QIcon()
+                btn = QtWidgets.QPushButton(icon, f"  {label_text}", self.scroll_content)
+                btn.setMinimumHeight(44)
+                btn.setStyleSheet(
+                    "QPushButton { text-align: left; padding: 8px 16px; font-size: 13px; font-weight: 500; "
+                    "border: 1px solid #d0d7de; border-radius: 6px; background-color: #ffffff; } "
+                    "QPushButton:hover { background-color: #f3f4f6; border-color: #0969da; color: #0969da; }"
+                )
+                if hasattr(widget, "click") and callable(getattr(widget, "click")):
+                    btn.clicked.connect(widget.click)
+                elif hasattr(widget, "trigger") and callable(getattr(widget, "trigger")):
+                    btn.clicked.connect(widget.trigger)
+                self.grid_layout.addWidget(btn, row, col)
+
             widget.show()
             return action
 
@@ -484,6 +530,12 @@ def main():
                     pass
                 def pushWarning(self, *args, **kwargs):
                     pass
+                def pushCritical(self, *args, **kwargs):
+                    pass
+                def pushWidget(self, *args, **kwargs):
+                    pass
+                def popWidget(self, *args, **kwargs):
+                    pass
             return StubMsgBar()
 
         def mapCanvas(self):
@@ -503,6 +555,23 @@ def main():
                     ms.destinationCrs = lambda: qgis_core.QgsProject.instance().crs()
                     ms.extent = lambda: qgis_core.QgsRectangle()
                     return ms
+                def scene(self):
+                    s = create_dynamic_mock("QGraphicsScene")
+                    s.removeItem = lambda item: None
+                    s.addItem = lambda item: None
+                    return s
+                def setMapTool(self, *args):
+                    pass
+                def unsetMapTool(self, *args):
+                    pass
+                def mapTool(self):
+                    return create_dynamic_mock("QgsMapTool")
+                def currentLayer(self):
+                    return None
+                def setCurrentLayer(self, layer):
+                    pass
+                def __getattr__(self, item):
+                    return create_dynamic_mock(f"mapCanvas.{item}")
             return StubCanvas()
 
         def activeLayer(self):
@@ -510,6 +579,39 @@ def main():
 
         def setActiveLayer(self, layer):
             pass
+
+        def layerTreeView(self):
+            return create_dynamic_mock("QgsLayerTreeView")
+
+        def legendInterface(self):
+            return create_dynamic_mock("QgsLegendInterface")
+
+        def pluginMenu(self):
+            return self._main_window.menuBar().addMenu("Plugins") if self._main_window else create_dynamic_mock("QMenu")
+
+        def rasterMenu(self):
+            return self._main_window.menuBar().addMenu("Raster") if self._main_window else create_dynamic_mock("QMenu")
+
+        def vectorMenu(self):
+            return self._main_window.menuBar().addMenu("Vector") if self._main_window else create_dynamic_mock("QMenu")
+
+        def databaseMenu(self):
+            return self._main_window.menuBar().addMenu("Database") if self._main_window else create_dynamic_mock("QMenu")
+
+        def webMenu(self):
+            return self._main_window.menuBar().addMenu("Web") if self._main_window else create_dynamic_mock("QMenu")
+
+        def viewMenu(self):
+            return self._main_window.menuBar().addMenu("View") if self._main_window else create_dynamic_mock("QMenu")
+
+        def editMenu(self):
+            return self._main_window.menuBar().addMenu("Edit") if self._main_window else create_dynamic_mock("QMenu")
+
+        def fileMenu(self):
+            return self._main_window.menuBar().addMenu("File") if self._main_window else create_dynamic_mock("QMenu")
+
+        def helpMenu(self):
+            return self._main_window.menuBar().addMenu("Help") if self._main_window else create_dynamic_mock("QMenu")
 
         def __getattr__(self, item):
             """Fallback for any other QgisInterface method: intercepts widgets/actions and never crashes."""
@@ -525,6 +627,9 @@ def main():
     iface = StubIface(host_window)
     if "qgis.utils" in sys.modules:
         sys.modules["qgis.utils"].iface = iface
+        sys.modules["qgis.utils"].plugins = {}
+        sys.modules["qgis.utils"].active_plugins = [package_name]
+        sys.modules["qgis.utils"].isPluginLoaded = lambda pkg: pkg in sys.modules["qgis.utils"].plugins
 
     # 5. Load and initialize the plugin
     try:
@@ -540,6 +645,8 @@ def main():
     if hasattr(mod, "classFactory"):
         try:
             instance = mod.classFactory(iface)
+            if "qgis.utils" in sys.modules and instance:
+                sys.modules["qgis.utils"].plugins[package_name] = instance
             if hasattr(instance, "initGui"):
                 instance.initGui()
         except Exception as e:

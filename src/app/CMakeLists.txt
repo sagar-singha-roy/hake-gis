@@ -509,6 +509,15 @@ endif()
 
 set_target_properties(qgis PROPERTIES OUTPUT_NAME "${QGIS_APP_NAME}")
 
+add_custom_command(TARGET qgis POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+    "${QGIS_OUTPUT_DIRECTORY}/data/python"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/hake_plugin_launcher.py"
+    "${QGIS_OUTPUT_DIRECTORY}/data/python/hake_plugin_launcher.py"
+  COMMENT "Ensuring hake_plugin_launcher.py is up-to-date in build data directory"
+)
+
 if(APPLE)
   add_custom_command(TARGET qgis POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -522,6 +531,9 @@ if(APPLE)
     COMMENT "Ensuring Hake GeoDesk.app bundle symlink and launcher are up-to-date"
   )
 endif()
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/hake_plugin_launcher.py"
+  DESTINATION "${QGIS_DATA_DIR}/python")
 
 if(NOT LIBRARY_TYPE EQUAL STATIC)
   win32_version_info("Hake Geospatial App Library" "hake-gis-app" QGIS_APP_SRCS)

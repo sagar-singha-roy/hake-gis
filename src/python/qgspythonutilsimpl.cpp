@@ -263,7 +263,8 @@ _ssr = StartupScriptRunner()
            "    except ImportError:\n"
            "        pass\n"
          ),
-         QObject::tr( "Couldn't load required PyQt6 modules." ) + '\n' + QObject::tr( "Python support will be disabled." )
+         QObject::tr( "Couldn't load required PyQt6 modules." ) + '\n' + QObject::tr( "Python support will be disabled." ),
+         false
        ) )
   {
     return false;
@@ -529,7 +530,14 @@ QString QgsPythonUtilsImpl::runStringUnsafe( const QString &command, bool single
   // TODO: convert special characters from unicode strings u"…" to \uXXXX
   // so that they're not mangled to utf-8
   // (non-unicode strings can be mangled)
-  PyObject *obj = PyRun_String( command.toUtf8().constData(), single ? Py_single_input : Py_file_input, mMainDict, mMainDict );
+  // If the command string contains newlines or semicolons, it contains multiple statements.
+  // In Python C API, Py_single_input strictly accepts only a single statement and raises
+  // "SyntaxError: multiple statements found while compiling a single statement" if given multiple.
+  // Therefore, automatically fallback to Py_file_input whenever multiple statements are present.
+  const bool hasMultipleStatements = command.contains( '\n' ) || command.contains( ';' );
+  const int startSymbol = ( single && !hasMultipleStatements ) ? Py_single_input : Py_file_input;
+
+  PyObject *obj = PyRun_String( command.toUtf8().constData(), startSymbol, mMainDict, mMainDict );
   PyObject *errobj = PyErr_Occurred();
   if ( nullptr != errobj )
   {

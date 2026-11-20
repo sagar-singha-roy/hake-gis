@@ -958,6 +958,11 @@ void QgsPluginRegistry::executePythonPlugin( const QString &packageName, const Q
   // Look for python 3 executable
   QString pythonExe;
   const QStringList candidates = {
+    QCoreApplication::applicationDirPath() + QStringLiteral( "/python3" ),
+    QCoreApplication::applicationDirPath() + QStringLiteral( "/python" ),
+    QCoreApplication::applicationDirPath() + QStringLiteral( "/python3.12" ),
+    QCoreApplication::applicationDirPath() + QStringLiteral( "/python3.11" ),
+    QCoreApplication::applicationDirPath() + QStringLiteral( "/python3.10" ),
     QStringLiteral( "/opt/homebrew/bin/python3.15" ),
     QStringLiteral( "/opt/homebrew/bin/python3" ),
     QStringLiteral( "/usr/local/bin/python3" ),
@@ -992,6 +997,18 @@ void QgsPluginRegistry::executePythonPlugin( const QString &packageName, const Q
   if ( !QFile::exists( launcherScript ) )
   {
     launcherScript = QCoreApplication::applicationDirPath() + QStringLiteral( "/../Resources/python/hake_plugin_launcher.py" );
+  }
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QCoreApplication::applicationDirPath() + QStringLiteral( "/../share/hake-gis/python/hake_plugin_launcher.py" );
+  }
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QgsApplication::buildOutputPath() + QStringLiteral( "/data/python/hake_plugin_launcher.py" );
+  }
+  if ( !QFile::exists( launcherScript ) )
+  {
+    launcherScript = QgsApplication::buildOutputPath() + QStringLiteral( "/Contents/Resources/python/hake_plugin_launcher.py" );
   }
   if ( !QFile::exists( launcherScript ) )
   {
