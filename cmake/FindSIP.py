@@ -29,7 +29,23 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
-import sipbuild
+try:
+    import sipbuild
+except ImportError:
+    import sys, glob
+    for p in glob.glob("/opt/homebrew/opt/pyqt-builder/libexec/lib/python*/site-packages"):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    for p in glob.glob("/opt/homebrew/Cellar/pyqt-builder/*/libexec/lib/python*/site-packages"):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    for p in glob.glob("/opt/homebrew/Cellar/sip/*/libexec/lib/python*/site-packages"):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    for p in glob.glob("/usr/local/Cellar/sip/*/libexec/lib/python*/site-packages"):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import sipbuild
 
 print("sip_version:%06.0x" % sipbuild.version.SIP_VERSION)
 print("sip_version_str:%s" % sipbuild.version.SIP_VERSION_STR)

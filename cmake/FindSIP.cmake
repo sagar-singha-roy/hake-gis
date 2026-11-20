@@ -40,7 +40,15 @@ ELSE(SIP_VERSION)
       MESSAGE(STATUS "Found SIP version: ${SIP_VERSION_STR}")
     ENDIF(NOT SIP_FIND_QUIETLY)
 
-    FIND_PROGRAM(SIP_BUILD_EXECUTABLE sip-build)
+    FIND_PROGRAM(SIP_BUILD_EXECUTABLE NAMES sip-build PATHS
+      /opt/homebrew/opt/pyqt-builder/libexec/bin
+      /opt/homebrew/Cellar/pyqt-builder/1.21.0/libexec/bin
+      /usr/local/opt/pyqt-builder/libexec/bin
+      NO_DEFAULT_PATH
+    )
+    IF(NOT SIP_BUILD_EXECUTABLE)
+      FIND_PROGRAM(SIP_BUILD_EXECUTABLE sip-build)
+    ENDIF()
     IF(SIP_BUILD_EXECUTABLE)
       IF(NOT SIP_FIND_QUIETLY)
         MESSAGE(STATUS "Found sip-build executable: ${SIP_BUILD_EXECUTABLE}")
