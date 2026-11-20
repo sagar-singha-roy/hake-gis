@@ -55,7 +55,7 @@ namespace QgsGuiUtils
    * Qt::WindowMaximizeButtonHint is included but will be ignored if
    * the dialog is a fixed size and does not have a size grip.
    */
-  static const Qt::WindowFlags ModalDialogFlags = Qt::WindowFlags();
+  static const Qt::WindowFlags ModalDialogFlags = Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint;
 
   /**
    * Minimum magnification level allowed in map canvases.

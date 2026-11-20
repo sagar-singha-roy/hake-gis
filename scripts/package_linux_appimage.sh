@@ -184,6 +184,42 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 3b. Bundle Qt6 QML Modules (QtQuick, Controls, Layouts, Templates, etc.)
+# ------------------------------------------------------------------------------
+echo "==> [3b/8] Bundling Qt6 QML modules for Welcome Screen and QtQuick UI..."
+
+QT_QML_SRC=""
+for qd in \
+    /usr/lib/x86_64-linux-gnu/qt6/qml \
+    /usr/lib64/qt6/qml \
+    /usr/lib/qt6/qml \
+    /opt/qt6/qml; do
+    if [[ -d "${qd}/QtQuick" ]]; then
+        QT_QML_SRC="${qd}"
+        break
+    fi
+done
+
+if [[ -z "${QT_QML_SRC}" ]] && command -v qmake6 &>/dev/null; then
+    QT_QML_SRC="$(qmake6 -query QT_INSTALL_QML 2>/dev/null || true)"
+fi
+
+if [[ -d "${QT_QML_SRC}" ]]; then
+    echo "    Found Qt6 QML at: ${QT_QML_SRC}"
+    mkdir -p "${APPDIR}/usr/qml"
+    # Copy all QML modules required for WelcomeScreen (QtQuick, Controls, Layouts, Templates, Window, etc.)
+    rsync -a --exclude="*.a" --exclude="*.prl" "${QT_QML_SRC}/" "${APPDIR}/usr/qml/" 2>/dev/null || true
+    echo "    Verifying bundled QtQuick controls plugin:"
+    if find "${APPDIR}/usr/qml" -name "*qtquickcontrols2plugin*" 2>/dev/null | grep -q .; then
+        echo "      ✓ qtquickcontrols2plugin bundled successfully"
+    else
+        echo "      ! qtquickcontrols2plugin not detected in bundled QML path"
+    fi
+else
+    echo "WARNING: Could not locate Qt6 QML directory! Welcome Screen may require host QML packages." >&2
+fi
+
+# ------------------------------------------------------------------------------
 # 4. Bundle Python Runtime and PyQt6 Packages
 # ------------------------------------------------------------------------------
 echo "==> [4/8] Bundling Python runtime, PyQt6, and dependencies..."
@@ -342,11 +378,12 @@ is_excluded() {
     return 1
 }
 
-# Collect all ELF binaries, libraries, plugins, and Python extensions to inspect
+# Collect all ELF binaries, libraries, plugins, QML modules, and Python extensions to inspect
 get_elf_files() {
     find "${APPDIR}/usr/bin" \
          "${APPDIR}/usr/lib" \
          "${APPDIR}/usr/plugins" \
+         "${APPDIR}/usr/qml" \
          -type f \( -name "*.so*" -o -perm /111 \) 2>/dev/null || true
 }
 
@@ -500,9 +537,10 @@ if [ -d "${APPDIR}/usr/share/gdal" ]; then
     export GDAL_DATA="${APPDIR}/usr/share/gdal"
 fi
 
-# Qt6 plugins and QML
+# Qt6 plugins and QML imports (ensures WelcomeScreen.qml finds QtQuick.Controls)
 export QT_PLUGIN_PATH="${APPDIR}/usr/plugins:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/plugins"
-export QML2_IMPORT_PATH="${APPDIR}/usr/qml:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/qml"
+export QML_IMPORT_PATH="${APPDIR}/usr/qml:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/qml:${APPDIR}/usr/lib/qt6/qml"
+export QML2_IMPORT_PATH="${APPDIR}/usr/qml:${APPDIR}/usr/lib/x86_64-linux-gnu/qt6/qml:${APPDIR}/usr/lib/qt6/qml"
 
 # ==============================================================================
 # Display Platform Backend Detection (Wayland / XWayland / X11)

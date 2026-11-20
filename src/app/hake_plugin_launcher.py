@@ -9,6 +9,7 @@ import os
 import types
 import importlib
 import traceback
+import builtins
 
 # 0. Provide requests fallback if not installed globally
 try:
@@ -56,7 +57,14 @@ def create_dynamic_mock(name="Mock"):
 
     class DynamicMock(metaclass=DynamicMeta):
         def __init__(self, *args, **kwargs):
-            self._obj_name = default_name
+            if len(args) >= 2 and isinstance(args[1], str) and args[1]:
+                self._obj_name = args[1]
+            elif len(args) >= 1 and isinstance(args[0], str) and args[0]:
+                self._obj_name = args[0]
+            else:
+                self._obj_name = default_name
+            self._args = args
+            self._kwargs = kwargs
 
         def __call__(self, *args, **kwargs):
             return self
@@ -106,7 +114,7 @@ def create_dynamic_mock(name="Mock"):
             return 1.0
 
         def __str__(self):
-            return self._obj_name
+            return str(self._obj_name)
 
         def __repr__(self):
             return f"<{self._obj_name} instance>"
@@ -115,10 +123,13 @@ def create_dynamic_mock(name="Mock"):
             return True
 
         def name(self):
-            return self._obj_name
+            return str(self._obj_name)
 
         def id(self):
-            return self._obj_name
+            return f"{self._obj_name}_{id(self)}"
+
+        def source(self):
+            return self._args[0] if (hasattr(self, "_args") and len(self._args) > 0 and isinstance(self._args[0], str)) else ""
 
         def extent(self):
             return create_dynamic_mock("QgsRectangle")()
@@ -127,11 +138,18 @@ def create_dynamic_mock(name="Mock"):
             mock_crs = create_dynamic_mock("QgsCoordinateReferenceSystem")()
             mock_crs.authid = lambda: "EPSG:4326"
             mock_crs.description = lambda: "WGS 84"
-            mock_crs.toWkt = lambda: "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433]]"
+            mock_crs.toWkt = lambda: 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
             return mock_crs
 
         def authid(self):
             return "EPSG:4326"
+
+        def dataProvider(self):
+            mock_prov = create_dynamic_mock("QgsDataProvider")()
+            mock_prov.crs = self.crs
+            mock_prov.extent = self.extent
+            mock_prov.name = lambda: "wms"
+            return mock_prov
 
         def mapLayers(self):
             return {}
@@ -148,6 +166,18 @@ def create_dynamic_mock(name="Mock"):
         def center(self):
             return self
 
+        def fields(self):
+            return create_dynamic_mock("QgsFields")()
+
+        def geometry(self):
+            return create_dynamic_mock("QgsGeometry")()
+
+        def type(self):
+            return 1
+
+        def trigger(self, *args, **kwargs):
+            pass
+
     DynamicMock.__name__ = name
     return DynamicMock
 
@@ -159,6 +189,10 @@ class DynamicModule(types.ModuleType):
             self.__path__ = []
 
     def __getattr__(self, item):
+        if item == "__all__":
+            if hasattr(self, "_dynamic_all"):
+                return self._dynamic_all
+            raise AttributeError("__all__")
         if item.startswith("__") and item.endswith("__"):
             raise AttributeError(item)
         stub = create_dynamic_mock(f"{self.__name__}.{item}")
@@ -184,6 +218,39 @@ class DynamicFallbackFinder:
         pass
 
 sys.meta_path.append(DynamicFallbackFinder)
+
+# Comprehensive list of standard QGIS symbols to expose in qgis.core, qgis.gui, and builtins
+QGIS_CORE_CLASSES = [
+    "QgsRasterLayer", "QgsVectorLayer", "QgsMapLayer", "QgsPluginLayer", "QgsMeshLayer",
+    "QgsVectorTileLayer", "QgsPointCloudLayer", "QgsAnnotationLayer",
+    "QgsProject", "QgsPointXY", "QgsPoint", "QgsRectangle", "QgsBox3D",
+    "QgsCoordinateReferenceSystem", "QgsCoordinateTransform", "QgsCoordinateTransformContext",
+    "QgsFeature", "QgsGeometry", "QgsField", "QgsFields", "QgsAttributes", "QgsFeatureRequest",
+    "QgsWkbTypes", "QgsProperty", "QgsPropertyCollection",
+    "QgsSymbol", "QgsMarkerSymbol", "QgsLineSymbol", "QgsFillSymbol",
+    "QgsExpression", "QgsExpressionContext", "QgsExpressionContextUtils",
+    "QgsDistanceArea", "QgsUnitTypes", "QgsDataSourceUri",
+    "QgsMessageLog", "QgsApplication", "QgsSettings", "Qgis",
+    "QgsTask", "QgsTaskManager", "QgsNetworkAccessManager", "QgsNetworkContentFetcher",
+    "QgsProcessing", "QgsProcessingAlgorithm", "QgsProcessingParameterDefinition",
+    "QgsProcessingFeedback", "QgsProcessingContext", "QgsProcessingProvider",
+    "QgsRasterDataProvider", "QgsVectorDataProvider", "QgsDataProvider",
+    "QgsLayerTreeGroup", "QgsLayerTreeLayer", "QgsLayerTreeNode", "QgsLayerTreeModel",
+    "QgsMapSettings", "QgsRenderContext",
+    "QgsSpatialIndex", "QgsSpatialIndexKDBush",
+    "QgsVectorFileWriter", "QgsVectorLayerExporter",
+    "QgsRasterFileWriter", "QgsRasterPipe",
+    "QgsColorRamp", "QgsColorRampShader",
+    "QgsClassificationMethod", "QgsPalLabeling"
+]
+
+QGIS_GUI_CLASSES = [
+    "QgsMapCanvas", "QgsMessageBar", "QgsFilterLineEdit", "QgsCollapsibleGroupBox",
+    "QgsColorButton", "QgsDockWidget", "QgsMapTool", "QgsMapToolPan", "QgsMapToolZoom",
+    "QgsMapToolEmitPoint", "QgsMapMouseEvent", "QgsRubberBand", "QgsVertexMarker",
+    "QgsHighlight", "QgsExtentGroupBox", "QgsProjectionSelectionWidget",
+    "QgsFieldComboBox", "QgsMapLayerComboBox", "QgsLayerTreeView"
+]
 
 def main():
     if len(sys.argv) < 3:
@@ -241,6 +308,25 @@ def main():
         app = QtWidgets.QApplication.instance()
         if not app:
             app = QtWidgets.QApplication([f"Hake GeoDesk — {package_name}"])
+
+    # Install custom excepthook to gracefully capture exceptions in Qt slots without qAbort()
+    def plugin_excepthook(exc_type, exc_val, exc_tb):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_val, exc_tb)
+            return
+        formatted = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
+        print(f"[Hake GeoDesk Plugin Warning] Caught exception:\n{formatted}", file=sys.stderr)
+        if QtWidgets and app:
+            try:
+                QtWidgets.QMessageBox.warning(
+                    None,
+                    "Hake GeoDesk — Plugin Notification",
+                    f"Notice while running {package_name}:\n\n{exc_val}\n\nThe application continues operating normally."
+                )
+            except Exception:
+                pass
+
+    sys.excepthook = plugin_excepthook
 
     # 2. Setup dynamic QGIS compatibility layer
     if "qgis" not in sys.modules:
@@ -415,6 +501,23 @@ def main():
 
         qgis_utils.OverrideCursor = MockOverrideCursor
 
+        # Pre-populate all standard QGIS symbols into core/gui modules and builtins
+        for cls_name in QGIS_CORE_CLASSES:
+            if not hasattr(qgis_core, cls_name):
+                cls_obj = create_dynamic_mock(cls_name)
+                setattr(qgis_core, cls_name, cls_obj)
+            setattr(builtins, cls_name, getattr(qgis_core, cls_name))
+        qgis_core._dynamic_all = list(QGIS_CORE_CLASSES)
+        qgis_core.__all__ = list(QGIS_CORE_CLASSES)
+
+        for cls_name in QGIS_GUI_CLASSES:
+            if not hasattr(qgis_gui, cls_name):
+                cls_obj = create_dynamic_mock(cls_name)
+                setattr(qgis_gui, cls_name, cls_obj)
+            setattr(builtins, cls_name, getattr(qgis_gui, cls_name))
+        qgis_gui._dynamic_all = list(QGIS_GUI_CLASSES)
+        qgis_gui.__all__ = list(QGIS_GUI_CLASSES)
+
         qgis.core = qgis_core
         qgis.gui = qgis_gui
         qgis.utils = qgis_utils
@@ -431,9 +534,33 @@ def main():
         if uic:
             sys.modules["qgis.PyQt.uic"] = uic
 
+    # Setup processing mock module
+    if "processing" not in sys.modules:
+        proc = DynamicModule("processing")
+        proc.run = lambda *args, **kwargs: {}
+        proc.runAlgorithm = lambda *args, **kwargs: {}
+        proc.execAlgorithmDialog = lambda *args, **kwargs: None
+        proc.createAlgorithmDialog = lambda *args, **kwargs: None
+        sys.modules["processing"] = proc
+
     # 3. Build interactive plugin host window
     registered_actions = []
     registered_widgets = []
+
+    def safe_action_trigger(act):
+        try:
+            act.trigger()
+        except Exception:
+            plugin_excepthook(*sys.exc_info())
+
+    def safe_widget_click(w):
+        try:
+            if hasattr(w, "click") and callable(getattr(w, "click")):
+                w.click()
+            elif hasattr(w, "trigger") and callable(getattr(w, "trigger")):
+                w.trigger()
+        except Exception:
+            plugin_excepthook(*sys.exc_info())
 
     class PluginHostWindow(QtWidgets.QMainWindow if QtWidgets else object):
         def __init__(self, title):
@@ -509,7 +636,7 @@ def main():
                 "border: 1px solid #d0d7de; border-radius: 6px; background-color: #ffffff; } "
                 "QPushButton:hover { background-color: #f3f4f6; border-color: #0969da; color: #0969da; }"
             )
-            btn.clicked.connect(action.trigger)
+            btn.clicked.connect(lambda checked=False, a=action: safe_action_trigger(a))
             self.grid_layout.addWidget(btn, row, col)
 
         def register_widget(self, widget):
@@ -546,10 +673,7 @@ def main():
                     "border: 1px solid #d0d7de; border-radius: 6px; background-color: #ffffff; } "
                     "QPushButton:hover { background-color: #f3f4f6; border-color: #0969da; color: #0969da; }"
                 )
-                if hasattr(widget, "click") and callable(getattr(widget, "click")):
-                    btn.clicked.connect(widget.click)
-                elif hasattr(widget, "trigger") and callable(getattr(widget, "trigger")):
-                    btn.clicked.connect(widget.trigger)
+                btn.clicked.connect(lambda checked=False, w=widget: safe_widget_click(w))
                 self.grid_layout.addWidget(btn, row, col)
 
             widget.show()
@@ -586,7 +710,6 @@ def main():
             return QtCore.QSize(24, 24) if QtCore else (24, 24)
 
         def firstRightStandardMenu(self):
-            # Return a stub action so menuBar().insertMenu(...) appends cleanly
             act = QtGui.QAction("Help", self._main_window) if (QtGui and self._main_window) else None
             class StubMenu:
                 def menuAction(self):
@@ -618,6 +741,9 @@ def main():
             return self.addToolBarWidget(widget)
 
         def addDatabaseToolBarWidget(self, widget):
+            return self.addToolBarWidget(widget)
+
+        def addWebToolBarWidget(self, widget):
             return self.addToolBarWidget(widget)
 
         def addRasterToolBarIcon(self, action):
@@ -716,7 +842,6 @@ def main():
             return self._main_window.menuBar().addMenu("Help") if self._main_window else create_dynamic_mock("QMenu")()
 
         def __getattr__(self, item):
-            """Fallback for any other QgisInterface method: intercepts widgets/actions and never crashes."""
             def method_stub(*args, **kwargs):
                 for arg in args:
                     if hasattr(arg, "trigger") and hasattr(arg, "text"):
@@ -764,17 +889,14 @@ def main():
         host_window.raise_()
         host_window.activateWindow()
 
-        # If the plugin only registers 1 single action (or has a run method), trigger it automatically
+        # If the plugin only registers 1 single action (or has a run method), trigger it safely
         if len(registered_actions) == 1 and not registered_widgets:
-            try:
-                registered_actions[0].trigger()
-            except Exception as e:
-                print(f"Error triggering primary action: {e}", file=sys.stderr)
+            safe_action_trigger(registered_actions[0])
         elif hasattr(instance, "run") and callable(getattr(instance, "run")):
             try:
                 instance.run()
-            except Exception as e:
-                print(f"Error running instance.run(): {e}", file=sys.stderr)
+            except Exception:
+                plugin_excepthook(*sys.exc_info())
 
     if app:
         try:

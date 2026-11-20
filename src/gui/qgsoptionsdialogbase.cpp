@@ -89,6 +89,9 @@ void QgsOptionsDialogBase::initOptionsBase( bool restoreUi, const QString &title
   else
     mDialogTitle = title;
 
+  // Ensure options and management dialogs display both Minimize and Maximize controls across all desktop environments (Linux X11/Wayland, macOS, Windows)
+  setWindowFlags( windowFlags() | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint );
+
   // don't add to dialog margins
   // redefine now, or those in inherited .ui file will be added
   if ( auto *lLayout = layout() )

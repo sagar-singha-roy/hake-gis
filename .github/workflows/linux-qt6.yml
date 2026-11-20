@@ -126,6 +126,16 @@ jobs:
             python3-pyproj \
             python3-psycopg2 \
             python3-packaging
+          # Install Qt6 QML and QtQuick controls (essential for WelcomeScreen.qml)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-window \
+            qml6-module-qtqml-workerscript \
+            qml-module-qtquick-controls2 || true
           # Install Qt6 Wayland client integration and display testing servers
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             qt6-wayland \
