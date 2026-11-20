@@ -333,13 +333,6 @@ if [[ -d "${APPDIR}/usr/share/hake-gis/python" ]]; then
     ln -sfn "../../share/hake-gis/python/qgis" "${APPDIR}/usr/lib/python3/dist-packages/qgis"
 fi
 
-# Ensure hake_plugin_launcher.py is bundled for standalone/fallback plugin launching
-mkdir -p "${APPDIR}/usr/share/hake-gis/python"
-if [[ -f "${SRC_DIR}/src/app/hake_plugin_launcher.py" ]]; then
-    cp "${SRC_DIR}/src/app/hake_plugin_launcher.py" "${APPDIR}/usr/share/hake-gis/python/"
-    chmod +x "${APPDIR}/usr/share/hake-gis/python/hake_plugin_launcher.py" 2>/dev/null || true
-fi
-
 # ------------------------------------------------------------------------------
 # 5. Resolve and Bundle Native Shared Libraries
 # ------------------------------------------------------------------------------

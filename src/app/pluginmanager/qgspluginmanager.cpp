@@ -293,7 +293,19 @@ void QgsPluginManager::loadPlugin( const QString &id )
     library = plugin->value( u"id"_s );
     QgsDebugMsgLevel( "Loading Python plugin: " + library, 2 );
     pRegistry->loadPythonPlugin( library );
-    pushMessage( tr( "Plugin '%1' enabled and added to Extensions." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
+
+#ifdef WITH_BINDINGS
+    if ( !mPythonUtils || !mPythonUtils->isEnabled() )
+    {
+      pushMessage( tr( "Plugin '%1' is selected and enabled. Note: Python runtime bindings are not active in this build, so Python scripts cannot execute." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Warning, 8 );
+    }
+    else
+    {
+      pushMessage( tr( "Plugin '%1' loaded successfully." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Success, 4 );
+    }
+#else
+    pushMessage( tr( "Plugin '%1' is selected and enabled. Note: Python runtime bindings are not active in this build, so Python scripts cannot execute." ).arg( plugin->value( u"name"_s ) ), Qgis::MessageLevel::Warning, 8 );
+#endif
   }
   else // C++ plugin
   {
