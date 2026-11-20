@@ -324,13 +324,17 @@ void QgsPythonUtilsImpl::init()
   PyConfig_InitPythonConfig( &config );
 
 #ifdef QGIS_MAC_BUNDLE
-  // If we package QGIS as a mac app, we deploy Qt plugins into [app]/Contents/PlugIns
+  // If we package QGIS as a mac app, only set python home if bundled Python exists in the bundle
   if ( qgetenv( "PYTHONHOME" ).isNull() )
   {
-    status = PyConfig_SetString( &config, &config.home, QgsApplication::libraryPath().toStdWString().c_str() );
-    if ( PyStatus_Exception( status ) )
+    const QString libPath = QgsApplication::libraryPath();
+    if ( QDir( libPath + u"/Python.framework"_s ).exists() || QDir( libPath + u"/lib/python3"_s ).exists() )
     {
-      qWarning() << "Failed to set python home";
+      status = PyConfig_SetString( &config, &config.home, libPath.toStdWString().c_str() );
+      if ( PyStatus_Exception( status ) )
+      {
+        qWarning() << "Failed to set python home";
+      }
     }
   }
 #endif

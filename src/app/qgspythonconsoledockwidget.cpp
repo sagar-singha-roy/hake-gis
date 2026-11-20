@@ -74,10 +74,14 @@ QgsPythonConsoleDockWidget::QgsPythonConsoleDockWidget( QWidget *parent )
 
 QgsPythonConsoleDockWidget::~QgsPythonConsoleDockWidget()
 {
-  if ( mProcess && mProcess->state() != QProcess::NotRunning )
+  if ( mProcess )
   {
-    mProcess->kill();
-    mProcess->waitForFinished( 500 );
+    mProcess->disconnect();
+    if ( mProcess->state() != QProcess::NotRunning )
+    {
+      mProcess->kill();
+      mProcess->waitForFinished( 1000 );
+    }
   }
 }
 
