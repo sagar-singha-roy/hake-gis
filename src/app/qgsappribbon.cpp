@@ -42,6 +42,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QPointer>
@@ -343,16 +344,91 @@ class QgsAppRibbonButton : public QToolButton
       }
     }
 
+    void setMenu( QMenu *menu )
+    {
+      mMenu = menu;
+      QToolButton::setMenu( menu );
+    }
+
+    QMenu *menu() const
+    {
+      return mMenu ? mMenu.data() : QToolButton::menu();
+    }
+
+    void showMenu()
+    {
+      if ( mMenu && isEnabled() )
+      {
+        QPointer<QgsAppRibbonButton> guard( this );
+        setDown( true );
+        repaint();
+        QPoint pos = mapToGlobal( QPoint( 0, height() ) );
+        if ( isRightToLeft() )
+          pos.setX( mapToGlobal( QPoint( width(), height() ) ).x() - mMenu->sizeHint().width() );
+        mMenu->exec( pos );
+        if ( guard )
+        {
+          guard->setDown( false );
+          guard->update();
+        }
+        return;
+      }
+      QToolButton::showMenu();
+    }
+
     void mousePressEvent( QMouseEvent *e ) override
     {
+      if ( mMenu && isEnabled() && e->button() == Qt::LeftButton )
+      {
+        QPointer<QgsAppRibbonButton> guard( this );
+        setDown( true );
+        repaint();
+        QPoint pos = mapToGlobal( QPoint( 0, height() ) );
+        if ( isRightToLeft() )
+          pos.setX( mapToGlobal( QPoint( width(), height() ) ).x() - mMenu->sizeHint().width() );
+        mMenu->exec( pos );
+        if ( guard )
+        {
+          guard->setDown( false );
+          guard->update();
+        }
+        return;
+      }
       QToolButton::mousePressEvent( e );
       update();
     }
 
     void mouseReleaseEvent( QMouseEvent *e ) override
     {
+      if ( mMenu && e->button() == Qt::LeftButton )
+      {
+        setDown( false );
+        update();
+        return;
+      }
       QToolButton::mouseReleaseEvent( e );
       update();
+    }
+
+    void keyPressEvent( QKeyEvent *e ) override
+    {
+      if ( mMenu && isEnabled() && ( e->key() == Qt::Key_Space || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter || e->key() == Qt::Key_Down ) )
+      {
+        QPointer<QgsAppRibbonButton> guard( this );
+        setDown( true );
+        repaint();
+        QPoint pos = mapToGlobal( QPoint( 0, height() ) );
+        if ( isRightToLeft() )
+          pos.setX( mapToGlobal( QPoint( width(), height() ) ).x() - mMenu->sizeHint().width() );
+        mMenu->exec( pos );
+        if ( guard )
+        {
+          guard->setDown( false );
+          guard->update();
+        }
+        return;
+      }
+      QToolButton::keyPressEvent( e );
     }
 
     //! Shown instead of the action text; the action itself is not modified.
@@ -569,6 +645,7 @@ class QgsAppRibbonButton : public QToolButton
     bool mDropDown = false;
     bool mIconOnly = false;
     bool mCompact = false;
+    QPointer<QMenu> mMenu;
 };
 
 //! Subtle vertical group separator, inset from the page edges; color from the theme QSS via the palette.
