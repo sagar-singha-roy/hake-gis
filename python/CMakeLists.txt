@@ -164,6 +164,106 @@ return sipGetState(sipTransferObj);
 };
 ]])
 endif()
+# Check if PyQt6 already provides QMap<int, int> (introduced in PyQt 6.12.0)
+set(PYQT_PROVIDES_QMAP_INT_INT FALSE)
+if(PYQT_VERSION_STR)
+  if(NOT ${PYQT_VERSION_STR} VERSION_LESS 6.12.0)
+    set(PYQT_PROVIDES_QMAP_INT_INT TRUE)
+  endif()
+endif()
+
+# Also inspect qpycore_qmap.sip if present in PYQT_SIP_DIR
+if(EXISTS "${PYQT_SIP_DIR}/QtCore/qpycore_qmap.sip")
+  file(READ "${PYQT_SIP_DIR}/QtCore/qpycore_qmap.sip" _qpycore_qmap_contents)
+  if(_qpycore_qmap_contents MATCHES "QMap<int, int>")
+    set(PYQT_PROVIDES_QMAP_INT_INT TRUE)
+  endif()
+endif()
+
+if(NOT PYQT_PROVIDES_QMAP_INT_INT)
+  set(SIP_QMAP_INT_INT [[
+%MappedType QMap<int, int>
+{
+%TypeHeaderCode
+#include <QMap>
+%End
+
+%ConvertFromTypeCode
+  // Create the dictionary.
+  PyObject *d = PyDict_New();
+
+  if (!d)
+    return NULL;
+
+  // Set the dictionary elements.
+  QMap<int, int>::const_iterator i = sipCpp->constBegin();
+
+  while (i != sipCpp->constEnd())
+  {
+    PyObject *kobj = PyLong_FromLong(i.key());
+    PyObject *vobj = PyLong_FromLong(i.value());
+
+    if (kobj == NULL || vobj == NULL || PyDict_SetItem(d, kobj, vobj) < 0)
+    {
+      Py_DECREF(d);
+
+      if (kobj) {
+        Py_DECREF(kobj);
+      }
+      if (vobj) {
+        Py_DECREF(vobj);
+      }
+
+      return NULL;
+    }
+
+    Py_DECREF(kobj);
+    Py_DECREF(vobj);
+
+    ++i;
+  }
+
+  return d;
+%End
+
+%ConvertToTypeCode
+  PyObject *t1obj, *t2obj;
+  Py_ssize_t i = 0;
+
+  // Check the type if that is all that is required.
+  if (sipIsErr == NULL)
+  {
+    if (!PyDict_Check(sipPy))
+      return 0;
+
+    while (PyDict_Next(sipPy, &i, &t1obj, &t2obj))
+    {
+      if (!PyLong_Check(t1obj) || !PyLong_Check(t2obj))
+        return 0;
+    }
+
+    return 1;
+  }
+
+  QMap<int, int> *qm = new QMap<int, int>;
+
+  while (PyDict_Next(sipPy, &i, &t1obj, &t2obj))
+  {
+    int t1 = PyLong_AsLong(t1obj);
+    int t2 = PyLong_AsLong(t2obj);
+    qm->insert(t1, t2);
+  }
+
+  *sipCppPtr = qm;
+
+  return sipGetState(sipTransferObj);
+%End
+};
+]])
+else()
+  set(SIP_QMAP_INT_INT "// QMap<int, int> is provided by PyQt6 QtCore (qpycore_qmap.sip)")
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/PyQt6/core/conversions.sip.in ${CMAKE_CURRENT_BINARY_DIR}/PyQt6/core/conversions.sip @ONLY)
 
 # Deprecated annotation supports message only since version 6.9.0 with abi-version 12.16 / 13.9 and above

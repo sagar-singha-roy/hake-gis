@@ -2227,7 +2227,7 @@ template<TYPE>
 %End
 };
 
-// QMap<int, int> is already provided by PyQt6 QtCore (qpycore_qmap.sip)
+@SIP_QMAP_INT_INT@
 
 template<TYPE1, TYPE2>
 %MappedType QMap<TYPE1, TYPE2*>
