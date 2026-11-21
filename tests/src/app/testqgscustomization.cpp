@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "qgisapp.h"
+#include "qgsappribbon.h"
 #include "qgsbrowserdockwidget.h"
 #include "qgsbrowserguimodel.h"
 #include "qgsbrowserwidget.h"
@@ -129,6 +130,12 @@ void TestQgsCustomization::cleanupTestCase()
 void TestQgsCustomization::init()
 {
   mQgisApp = std::make_unique<QgisApp>();
+  // Host the locator in a Ribbon tab strip, as the application does
+  QToolBar *ribbonBar = new QToolBar( mQgisApp.get() );
+  ribbonBar->setObjectName( u"HakeAppRibbon"_s );
+  mQgisApp->mAppRibbon = new QgsAppRibbon( ribbonBar, nullptr );
+  ribbonBar->addWidget( mQgisApp->mAppRibbon );
+  mQgisApp->addToolBar( ribbonBar );
   mQgisApp->createStatusBar();
 
   mQgisApp->mToolbarMenu = new QMenu( u"Toolbars"_s, mQgisApp.get() );

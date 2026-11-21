@@ -19,6 +19,7 @@
 
 #include "qgis.h"
 #include "qgsapplication.h"
+#include "qgshakeicons.h"
 #include "qgslogger.h"
 #include "qgsnetworkaccessmanager.h"
 
@@ -30,6 +31,7 @@
 #include <QFileInfo>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QString>
 #include <QUrl>
@@ -45,18 +47,21 @@ namespace
   constexpr int WHATSNEW_TRANSFER_TIMEOUT_MS = 8000;
 }
 
-#ifdef Q_OS_MACOS
-// Modeless dialog with close button only
-constexpr Qt::WindowFlags kAboutWindowFlags = Qt::WindowSystemMenuHint;
-#else
-// Normal dialog in non Mac-OS
+// Standard unified dialog flags across all platforms
 constexpr Qt::WindowFlags kAboutWindowFlags = Qt::WindowFlags();
-#endif
 
 QgsAbout::QgsAbout( QWidget *parent )
   : QgsOptionsDialogBase( u"about"_s, parent, kAboutWindowFlags )
 {
   setupUi( this );
+  if ( QgsHakeIcons::isHakeTheme( QgsApplication::themeName() ) )
+  {
+    // Sidebar rows follow the page order in qgsabout.ui.
+    const QStringList pageIcons { u"about:about"_s, u"about:whats-new"_s, u"about:license"_s };
+    for ( int row = 0; row < std::min( static_cast<int>( pageIcons.size() ), mOptionsListWidget->count() ); ++row )
+      mOptionsListWidget->item( row )->setIcon( QgsHakeIcons::iconFor( pageIcons.at( row ), QString() ) );
+  }
+  updateLogo();
   setWindowTitle( tr( "About %1" ).arg( Qgis::productDisplayName() ) );
   connect( btnQgisUser, &QPushButton::clicked, this, &QgsAbout::btnQgisUser_clicked );
   connect( btnQgisHome, &QPushButton::clicked, this, &QgsAbout::btnQgisHome_clicked );
@@ -79,6 +84,24 @@ void QgsAbout::init()
   setLicence();
 }
 
+void QgsAbout::updateLogo()
+{
+  const qreal dpr = qgisIcon->devicePixelRatioF();
+  QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+  logo = logo.scaled( qgisIcon->maximumSize() * dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation );
+  logo.setDevicePixelRatio( dpr );
+  qgisIcon->setPixmap( logo );
+}
+
+bool QgsAbout::event( QEvent *e )
+{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
+  if ( e->type() == QEvent::DevicePixelRatioChange )
+    updateLogo();
+#endif
+  return QgsOptionsDialogBase::event( e );
+}
+
 void QgsAbout::updateWindowTitle()
 {
   // QgsOptionsDialogBase appends the current sidebar page (e.g. " — About").
@@ -99,11 +122,41 @@ void QgsAbout::updateWindowTitle()
 
 void QgsAbout::setLicence()
 {
-  QFile licenceFile( QgsApplication::licenceFilePath() );
+  QString licencePath = QgsApplication::licenceFilePath();
+  QFile licenceFile( licencePath );
+  if ( !licenceFile.exists() )
+  {
+    const QStringList fallbacks = {
+      QgsApplication::buildSourcePath() + u"/doc/LICENSE"_s,
+      QgsApplication::buildOutputPath() + u"/data/doc/LICENSE"_s,
+      QDir( QgsApplication::pkgDataPath() ).filePath( u"doc/LICENSE"_s ),
+      QCoreApplication::applicationDirPath() + u"/../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../Resources/hake-gis/doc/LICENSE"_s,
+      QCoreApplication::applicationDirPath() + u"/../../../data/doc/LICENSE"_s,
+      QDir::current().filePath( u"doc/LICENSE"_s )
+    };
+    for ( const QString &fb : fallbacks )
+    {
+      if ( QFile::exists( fb ) )
+      {
+        licenceFile.setFileName( fb );
+        break;
+      }
+    }
+  }
+
   QgsDebugMsgLevel( u"Reading licence file %1"_s.arg( licenceFile.fileName() ), 2 );
   if ( licenceFile.open( QIODevice::ReadOnly ) )
   {
-    txtLicense->setText( licenceFile.readAll() );
+    const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                        QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                        ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+    const QString textColor = isDark ? QStringLiteral( "#E6EDF5" ) : QStringLiteral( "#0F172A" );
+    txtLicense->document()->setDefaultStyleSheet( QStringLiteral(
+      "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13pt; color: %1; line-height: 1.6; padding: 12px; }"
+      "pre { font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace; font-size: 12pt; line-height: 1.55; color: %1; white-space: pre-wrap; word-wrap: break-word; }"
+    ).arg( textColor ) );
+    txtLicense->setText( QString::fromUtf8( licenceFile.readAll() ) );
   }
 }
 
@@ -111,8 +164,62 @@ void QgsAbout::setVersion( const QString &v )
 {
   txtVersion->setBackgroundRole( QPalette::NoRole );
   txtVersion->setAutoFillBackground( true );
+
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+  const QString textColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+  const QString headingColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString linkColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString tableBorder = isDark ? QStringLiteral( "rgba(255,255,255,0.08)" ) : QStringLiteral( "#E2E8F0" );
+
+  const QString style = QStringLiteral(
+    "body, table, td, tr, p {"
+    "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+    "  font-size: 12.5pt;"
+    "  color: %1;"
+    "  line-height: 1.6;"
+    "}"
+    "td {"
+    "  padding: 6px 14px;"
+    "  border-bottom: 1px solid %4;"
+    "}"
+    "b {"
+    "  font-size: 13.5pt;"
+    "  font-weight: 700;"
+    "  color: %2;"
+    "}"
+    "a {"
+    "  color: %3;"
+    "  text-decoration: none;"
+    "  font-weight: 600;"
+    "}"
+  ).arg( textColor, headingColor, linkColor, tableBorder );
+
+  txtVersion->document()->setDefaultStyleSheet( style );
   txtVersion->setHtml( v );
   mVersionString = v;
+}
+
+QString QgsAbout::defaultWhatsNewHtml()
+{
+  const QString ver = Qgis::productVersionLabel();
+  return u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"
+         "<h2>Hake GeoDesk – Desktop GIS</h2>"
+         "<p style=\"font-size: 13pt; color: #94A3B8; margin-top: 2px;\">Professional GIS for Mapping, Analysis & Spatial Intelligence</p>"
+         "<p style=\"margin: 16px 0 20px 0;\"><span style=\"background-color: #1E3A5F; color: #38BDF8; border: 1px solid #38BDF8; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;Version %1&nbsp;</span></p>"
+         "<h4>Product & branding</h4>"
+         "<ul>"
+         "<li>Desktop product identity: Hake GeoDesk – Desktop GIS with product version label %1.</li>"
+         "<li>Modern Qt6 desktop foundation for mapping, analysis, and spatial intelligence workflows.</li>"
+         "</ul>"
+         "<h4>User interface & map tools</h4>"
+         "<ul>"
+         "<li>Redesigned welcome page for a clearer first-run experience.</li>"
+         "<li>Create user-defined toolbars and menus; unlock shipping themes through plugins.</li>"
+         "<li>Map tool to edit blank segments; copy features in an array along a line.</li>"
+         "<li>Attribute table: double-click to zoom to a feature.</li>"
+         "</ul>"_s.arg( ver );
 }
 
 QString QgsAbout::whatsNewCachePath()
@@ -142,23 +249,108 @@ void QgsAbout::writeWhatsNewCache( const QString &path, const QByteArray &data )
     QgsDebugError( u"Could not write What's New cache %1"_s.arg( path ) );
     return;
   }
-  file.write( data );
+  QString content = QString::fromUtf8( data );
+  content.replace( u"2026.0.0"_s, Qgis::productVersionLabel() );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  content.replace( verRe, Qgis::productVersionLabel() );
+  file.write( content.toUtf8() );
+
+  const QString logoPath = info.absolutePath() + u"/logo.png"_s;
+  if ( !QFile::exists( logoPath ) )
+  {
+    const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+    logo.save( logoPath, "PNG" );
+  }
 }
 
 void QgsAbout::showWhatsNewHtml( const QString &html )
 {
   txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setHtml( html );
+
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive ) ||
+                      ( qApp && qApp->palette().color( QPalette::Window ).lightness() < 128 );
+
+  const QString bodyColor = isDark ? QStringLiteral( "#D7E1EC" ) : QStringLiteral( "#1E293B" );
+  const QString h2Color = isDark ? QStringLiteral( "#FFFFFF" ) : QStringLiteral( "#0F172A" );
+  const QString h3Color = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+  const QString h4Color = isDark ? QStringLiteral( "#2DD4BF" ) : QStringLiteral( "#0D9488" );
+  const QString listColor = isDark ? QStringLiteral( "#CBD5E1" ) : QStringLiteral( "#334155" );
+  const QString borderSep = isDark ? QStringLiteral( "rgba(255,255,255,0.12)" ) : QStringLiteral( "#CBD5E1" );
+  const QString linkColor = isDark ? QStringLiteral( "#38BDF8" ) : QStringLiteral( "#0284C7" );
+
+  QString style = QStringLiteral(
+    " body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12.5pt; line-height: 1.6; color: %1; padding: 10px; }"
+    " h2 { font-size: 16pt; font-weight: 700; color: %2; margin-top: 14px; margin-bottom: 6px; }"
+    " h3 { font-size: 14.5pt; font-weight: 700; color: %3; margin-top: 14px; margin-bottom: 6px; }"
+    " h4 { font-size: 13.5pt; font-weight: 600; color: %4; margin-top: 18px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid %6; }"
+    " li { font-size: 12.5pt; line-height: 1.6; margin-bottom: 6px; color: %5; }"
+    " p { font-size: 12.5pt; line-height: 1.6; margin-bottom: 8px; color: %1; }"
+    " a { color: %7; text-decoration: none; font-weight: 600; }"
+  ).arg( bodyColor, h2Color, h3Color, h4Color, listColor, borderSep, linkColor );
+
+  txtWhatsNew->document()->setDefaultStyleSheet( style );
+
+  const QPixmap logo( u":/images/icons/hake-gis-full.png"_s );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"http://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"https://plugins.haketech.com/logo.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u"qrc:/images/icons/hake-gis-full.png"_s ), logo );
+  txtWhatsNew->document()->addResource( QTextDocument::ImageResource, QUrl( u":/images/icons/hake-gis-full.png"_s ), logo );
+
+  QString processedHtml = html;
+
+  // Professional, standard-sized Hake Geo logo
+  static const QRegularExpression pImgLogoRe( u"<p[^>]*>\\s*<img[^>]*logo\\.png[^>]*>\\s*</p>"_s, QRegularExpression::CaseInsensitiveOption );
+  static const QRegularExpression imgLogoRe( u"<img[^>]*logo\\.png[^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
+  if ( processedHtml.contains( pImgLogoRe ) )
+  {
+    processedHtml.replace( pImgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
+  }
+  else if ( processedHtml.contains( imgLogoRe ) )
+  {
+    processedHtml.replace( imgLogoRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
+  }
+  else
+  {
+    static const QRegularExpression genericPImgRe( u"<p[^>]*>\\s*<img[^>]*src=[\"'][^\"']*[\"'][^>]*>\\s*</p>"_s, QRegularExpression::CaseInsensitiveOption );
+    static const QRegularExpression genericImgRe( u"<img[^>]*src=[\"'][^\"']*[\"'][^>]*>"_s, QRegularExpression::CaseInsensitiveOption );
+    if ( processedHtml.contains( genericPImgRe ) )
+      processedHtml.replace( genericPImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
+    else if ( processedHtml.contains( genericImgRe ) )
+      processedHtml.replace( genericImgRe, u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
+    else if ( !processedHtml.contains( u"hake-gis-full.png"_s ) )
+      processedHtml.prepend( u"<p style=\"margin: 0 0 10px 0;\"><img src=\"qrc:/images/icons/hake-gis-full.png\" width=\"155\"></p>"_s );
+  }
+
+  // Strip extraneous empty paragraphs or breaks right below the logo
+  static const QRegularExpression emptyTrailingSpaceRe( u"(<img[^>]+></p>)(?:\\s*<p>(?:&nbsp;|\\s)*</p>|\\s*<br\\s*/?>)+"_s, QRegularExpression::CaseInsensitiveOption );
+  processedHtml.replace( emptyTrailingSpaceRe, u"\\1"_s );
+
+  // Modern version badge styling
+  static const QRegularExpression verHeadingRe( u"<h3[^>]*>\\s*(Version\\s+[^<]+)\\s*</h3>"_s, QRegularExpression::CaseInsensitiveOption );
+  const QString verBadge = isDark
+    ? QStringLiteral( "<p style=\"margin: 14px 0 18px 0;\"><span style=\"background-color: #1E3A5F; color: #38BDF8; border: 1px solid #38BDF8; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;\\1&nbsp;</span></p>" )
+    : QStringLiteral( "<p style=\"margin: 14px 0 18px 0;\"><span style=\"background-color: #E0F2FE; color: #0369A1; border: 1px solid #0284C7; padding: 6px 14px; border-radius: 6px; font-size: 13.5pt; font-weight: bold;\">&nbsp;\\1&nbsp;</span></p>" );
+  processedHtml.replace( verHeadingRe, verBadge );
+
+  const QString curVersion = Qgis::productVersionLabel();
+  processedHtml.replace( u"2026.0.0"_s, curVersion );
+  static const QRegularExpression verRe( u"2026\\.0\\.\\d+"_s );
+  processedHtml.replace( verRe, curVersion );
+
+  txtWhatsNew->setHtml( processedHtml );
 }
 
 void QgsAbout::showWhatsNewFile( const QString &path )
 {
   if ( !QFile::exists( path ) )
     return;
-  txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  txtWhatsNew->setSource( QUrl::fromLocalFile( path ) );
+  QFile file( path );
+  if ( !file.open( QIODevice::ReadOnly ) )
+    return;
+  showWhatsNewHtml( QString::fromUtf8( file.readAll() ) );
 }
 
 void QgsAbout::setWhatsNew()
@@ -184,10 +376,7 @@ void QgsAbout::setWhatsNew()
   if ( QFile::exists( cachePath ) )
     showWhatsNewFile( cachePath );
   else
-  {
-    txtWhatsNew->clear();
-    txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
-  }
+    showWhatsNewHtml( defaultWhatsNewHtml() );
 
   QNetworkRequest request{ QUrl{ Qgis::whatsNewUrl() } };
   request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
@@ -212,16 +401,26 @@ void QgsAbout::whatsNewReplyFinished()
   if ( reply->error() != QNetworkReply::NoError )
   {
     QgsDebugMsgLevel( u"What's New fetch failed: %1"_s.arg( reply->errorString() ), 2 );
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 
   const QByteArray data = reply->readAll();
   if ( data.isEmpty() )
   {
-    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() && QFile::exists( cachePath ) )
-      showWhatsNewFile( cachePath );
+    if ( txtWhatsNew->toPlainText().trimmed().isEmpty() )
+    {
+      if ( QFile::exists( cachePath ) )
+        showWhatsNewFile( cachePath );
+      else
+        showWhatsNewHtml( defaultWhatsNewHtml() );
+    }
     return;
   }
 

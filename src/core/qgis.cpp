@@ -674,8 +674,8 @@ bool qgsVariantEqual( const QVariant &lhs, const QVariant &rhs )
 QString Qgis::defaultProjectScales()
 {
   return QStringLiteral(
-    "1:1000000,1:500000,1:250000,1:100000,1:50000,1:25000,"
-    "1:10000,1:5000,1:2500,1:1000,1:500"
+    "1:500,1:1000,1:2500,1:5000,1:10000,1:25000,"
+    "1:50000,1:100000,1:250000,1:500000,1:1000000"
   );
 }
 

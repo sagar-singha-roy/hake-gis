@@ -87,6 +87,9 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
 
     void uiThemeChanged( const QString &theme );
 
+    //! Syncs the theme list with the Appearance choice (only Custom allows picking any theme)
+    void appearanceModeChanged();
+
     /**
      * Slot to handle when type of project to open after launch is changed
      */

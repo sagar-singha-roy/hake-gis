@@ -50,7 +50,14 @@ QgsPgNewConnection::QgsPgNewConnection( QWidget *parent, const QString &connName
   connect( cb_geometryColumnsOnly, &QCheckBox::clicked, this, &QgsPgNewConnection::cb_geometryColumnsOnly_clicked );
   connect( buttonBox, &QDialogButtonBox::helpRequested, this, &QgsPgNewConnection::showHelp );
 
-  buttonBox->button( QDialogButtonBox::Ok )->setDisabled( true );
+  btnConnect->setIcon( QgsApplication::getThemeIcon( u"mIconConnect.svg"_s ) );
+  if ( QPushButton *okBtn = buttonBox->button( QDialogButtonBox::Ok ) )
+  {
+    okBtn->setText( tr( "Create Connection" ) );
+    okBtn->setObjectName( u"btnCreateConnection"_s );
+    okBtn->setDefault( true );
+    okBtn->setDisabled( true );
+  }
   connect( txtName, &QLineEdit::textChanged, this, &QgsPgNewConnection::updateOkButtonState );
   connect( txtService, &QLineEdit::textChanged, this, &QgsPgNewConnection::updateOkButtonState );
   connect( txtHost, &QLineEdit::textChanged, this, &QgsPgNewConnection::updateOkButtonState );

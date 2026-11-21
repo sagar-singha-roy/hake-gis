@@ -90,9 +90,8 @@ Qgis::ScriptLanguageCapabilities QgsCodeEditorPython::languageCapabilities() con
 void QgsCodeEditorPython::initializeLexer()
 {
   // current line
-  setEdgeMode( QsciScintilla::EdgeLine );
-  setEdgeColumn( settingMaxLineLength->value() );
-  setEdgeColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Edge ) );
+  setEdgeMode( QsciScintilla::EdgeNone );
+  setEdgeColumn( 0 );
 
   setWhitespaceVisibility( QsciScintilla::WsVisibleAfterIndent );
 

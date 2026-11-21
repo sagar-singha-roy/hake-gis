@@ -81,6 +81,10 @@ void QgsScaleComboBox::updateScales( const QStringList &scales )
     }
   }
 
+  std::sort( cleanedScalesList.begin(), cleanedScalesList.end(), []( const QString &a, const QString &b ) {
+    return toDouble( a ) < toDouble( b );
+  } );
+
   blockSignals( true );
   clear();
   addItems( cleanedScalesList );
@@ -98,9 +102,12 @@ void QgsScaleComboBox::setPredefinedScales( const QVector<double> &scales )
 
   const QString oldScale = currentText();
 
+  QVector<double> sortedScales = scales;
+  std::sort( sortedScales.begin(), sortedScales.end() );
+
   QStringList scalesStringList;
-  scalesStringList.reserve( scales.size() );
-  for ( double denominator : scales )
+  scalesStringList.reserve( sortedScales.size() );
+  for ( double denominator : sortedScales )
   {
     scalesStringList.push_back( toString( denominator ) );
   }

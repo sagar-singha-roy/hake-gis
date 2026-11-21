@@ -18,6 +18,7 @@ set(RESOURCES_FILES
   symbology-style.xml
   spatialite.db
   customization.xml
+  plugins.xml
   2to3migration.txt
   qgis_global_settings.ini
   ${CPT_CITY_QGIS_MIN_FILES}

@@ -50,11 +50,7 @@ QgsLocatorWidget::QgsLocatorWidget( QWidget *parent )
 {
   setObjectName( u"LocatorWidget"_s );
   mLineEdit->setShowClearButton( true );
-#ifdef Q_OS_MACOS
-  mLineEdit->setPlaceholderText( tr( "Type to locate (⌘K)" ) );
-#else
   mLineEdit->setPlaceholderText( tr( "Type to locate (Ctrl+K)" ) );
-#endif
 
   int placeholderMinWidth = mLineEdit->fontMetrics().boundingRect( mLineEdit->placeholderText() ).width();
   int minWidth = std::max( 200, static_cast<int>( placeholderMinWidth * 1.8 ) );
@@ -94,6 +90,13 @@ QgsLocatorWidget::QgsLocatorWidget( QWidget *parent )
 
   connect( mLineEdit, &QLineEdit::textChanged, this, &QgsLocatorWidget::scheduleDelayedPopup );
   connect( mResultsView, &QAbstractItemView::activated, this, &QgsLocatorWidget::acceptCurrentEntry );
+  connect( mResultsView, &QAbstractItemView::clicked, this, [this]( const QModelIndex &index ) {
+    if ( index.isValid() )
+    {
+      mResultsView->setCurrentIndex( index );
+      acceptCurrentEntry();
+    }
+  } );
   connect( mResultsView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &QgsLocatorWidget::selectionChanged );
   connect( mResultsView, &QAbstractItemView::customContextMenuRequested, this, &QgsLocatorWidget::showContextMenu );
 

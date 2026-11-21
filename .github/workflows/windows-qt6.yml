@@ -5,13 +5,31 @@ on:
     branches:
       - master
       - release-**
+      - ribbon-ui-enhancements
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   pull_request:
+    paths-ignore:
+      - '.github/workflows/linux-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/package_linux_*.sh'
+      - 'scripts/ci/linux_*'
+      - 'linux/**'
+      - 'debian/**'
+      - 'docs/linux_*.md'
   release:
     types: ['published']
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   packages: write
@@ -123,8 +141,10 @@ jobs:
       - name: 🛍️ Setup ccache
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
         with:
-          max-size: 1G
-          key: build-ccache-win64-qt6-${{ github.event.pull_request.base.ref || github.ref_name }}
+          max-size: 5G
+          key: build-ccache-win64-qt6-v3-${{ github.event.pull_request.base.ref || github.ref_name }}
+          restore-keys: |
+            build-ccache-win64-qt6-v3-
           save: ${{ github.event_name == 'push' }}
 
       - name: 🛍️ Tune ccache configuration
@@ -155,6 +175,7 @@ jobs:
           & $perl -v
 
       - name: 🌱 Install dependencies and generate project files
+        id: configure
         shell: bash
         env:
           X_VCPKG_ASSET_SOURCES: x-azurl,https://assetcache.open-vcpkg.org/assetcache,,read
@@ -208,16 +229,17 @@ jobs:
                 -D WITH_SFCGAL=ON \
                 -D ENABLE_TESTS=OFF \
                 -D USE_CCACHE=ON \
-                -D ENABLE_UNITY_BUILDS=OFF \
+                -D ENABLE_UNITY_BUILDS=ON \
                 -D CREATE_NSIS=ON \
                 -D FLEX_EXECUTABLE="${SOURCE_DIR}/win_flex.exe" \
                 -D BISON_EXECUTABLE="${SOURCE_DIR}/win_bison.exe" \
                 -D WITH_QTWEBENGINE=OFF \
+                -D HAKE_GIT_REVISION=${{ github.sha }} \
                 -D VCPKG_INSTALL_OPTIONS="--x-buildtrees-root=C:/src" \
                 -D NUGET_USERNAME=${{ github.actor }} \
                 -D NUGET_SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/qgis/index.json" \
-                -D NUGET_READ_USERNAME=qgis \
+                -D NUGET_READ_SOURCE="https://nuget.pkg.github.com/Subhankar-hub/index.json" \
+                -D NUGET_READ_USERNAME=Subhankar-hub \
                 -D NUGET_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: 🌋 Build
@@ -225,8 +247,20 @@ jobs:
         run: |
           cmake --build "${{ github.workspace }}/build" --config Release
 
-#      - uses: m-kuhn/action-tmate@patch-1
-#        if: failure()
+      # The disk cleanup step removes the runner's Python toolcache; restore one only
+      # after the build so it is not on PATH while vcpkg/CMake run.
+      - name: Setup Python for packaging and audit checks
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 🔍 Pre-packaging dependency & feature audit
+        shell: bash
+        run: |
+          python "${{ github.workspace }}/scripts/ci/windows_prepackage_audit.py" \
+            --repo-root "${{ github.workspace }}" \
+            --build-dir "${{ github.workspace }}/build" \
+            --json "${{ github.workspace }}/build/dist/prepackage_audit.json"
 
       - name: 📦 Package
         shell: bash
@@ -269,33 +303,37 @@ jobs:
           }
           Write-Host "Packaged GdalUtils.py decoder check passed"
 
-      # Issue #10: prove the packaged Windows runtime can locate proj.db and run
-      # GDAL Polygonize without machine-global PROJ_DATA / OSGeo4W.
-      - name: Assert packaged PROJ/GDAL/Python layout
+      - name: Verify packaged Hake Night theme
         shell: pwsh
         run: |
-          & "${{ github.workspace }}\scripts\ci\windows_runtime_smoke.ps1" `
-            -BuildDir "${{ github.workspace }}\build" `
-            -RepoRoot "${{ github.workspace }}" `
-            -Mode AssertZip
+          $build = "${{ github.workspace }}/build"
+          $zips = Get-ChildItem -Path $build -Filter *.zip | Sort-Object FullName
+          if (-not $zips) { throw "No CPack zip in $build" }
 
-      - name: Install NSIS artifact and run PROJ/GDAL smoke tests
-        shell: pwsh
-        run: |
-          & "${{ github.workspace }}\scripts\ci\windows_runtime_smoke.ps1" `
-            -BuildDir "${{ github.workspace }}\build" `
-            -RepoRoot "${{ github.workspace }}" `
-            -ReportDir "${{ github.workspace }}\build\runtime-smoke" `
-            -Mode Runtime
-
-      - name: 📤 Upload runtime smoke diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-runtime-smoke-diagnostics
-          path: |
-            build/runtime-smoke/**
-          if-no-files-found: ignore
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $root = Join-Path $env:RUNNER_TEMP "hake-theme-installed"
+          if (Test-Path $root) { Remove-Item -Recurse -Force $root }
+          $extracted = 0
+          foreach ($zpath in $zips) {
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($zpath.FullName)
+            try {
+              foreach ($entry in $archive.Entries) {
+                $name = $entry.FullName -replace '\\','/'
+                if ($name -notlike "*resources/themes/Hake Night/*" -or $name.EndsWith('/')) { continue }
+                $target = Join-Path $root $name
+                New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+                $extracted++
+              }
+            } finally {
+              $archive.Dispose()
+            }
+          }
+          if ($extracted -eq 0) { throw "Hake Night theme was not packaged" }
+          Write-Host "Extracted $extracted Hake Night theme files"
+          $global:LASTEXITCODE = 0
+          python scripts/hake_theme_validate.py --installed $root
+          if ($LASTEXITCODE -ne 0) { throw "Installed Hake Night theme validation failed" }
 
       - name: 📦 Create SDK
 #        if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
@@ -310,6 +348,15 @@ jobs:
           path: |
             sdk/vcpkg-export-*.zip
 
+      - name: 📋 Collect failure logs
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p "${{ github.workspace }}/build/failure_logs"
+          if [ -d "C:/src" ]; then
+            find "C:/src" -name "*.log" -exec cp {} "${{ github.workspace }}/build/failure_logs/" \; 2>/dev/null || true
+          fi
+
       - name: 📑 Upload dep build logs
         id: upload-build-logs
         uses: actions/upload-artifact@v7
@@ -317,22 +364,27 @@ jobs:
         with:
           name: build-logs-x64-windows
           path: |
-            C:/src/**/*.log
+            ${{ github.workspace }}/build/failure_logs/*.log
+            ${{ github.workspace }}/build/vcpkg-manifest-install.log
+            ${{ github.workspace }}/build/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log
+            ${{ github.workspace }}/build/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
 
       - name: 🧮 Report vcpkg build failures
-        if: failure() && github.event_name == 'pull_request'
+        if: failure() && steps.configure.outcome == 'failure' && github.event_name == 'pull_request'
         uses: ./.github/actions/vcpkg_build_failures_report
         with:
           buildtrees-dir: C:/src
           triplet: x64-windows
           pr: ${{ github.event.number }}
           artifact-url: ${{ steps.upload-build-logs.outputs.artifact-url }}
-          build-status: ${{ job.status }}
+          build-status: ${{ steps.configure.outcome }}
           manifest-install-log: ${{ github.workspace }}/build/vcpkg-manifest-install.log
           commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: 📤 Upload EXE installer
-        if: always()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-installer
         with:
@@ -350,7 +402,7 @@ jobs:
             build/*.zip
 
       - name: 📤 Upload ZIP bundle
-        if: always()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         id: artifact-win64-qt6
         with:

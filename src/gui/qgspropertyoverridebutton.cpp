@@ -46,10 +46,7 @@ QgsPropertyOverrideButton::QgsPropertyOverrideButton( QWidget *parent, const Qgs
 {
   setFocusPolicy( Qt::StrongFocus );
 
-  QString ss = u"QgsPropertyOverrideButton { background: none; border: 1px solid rgba(0, 0, 0, 0%); } QgsPropertyOverrideButton:focus { border: 1px solid palette(highlight); }"_s;
-#ifdef Q_OS_MACOS
-  ss += "QgsPropertyOverrideButton::menu-indicator { width: 5px; }"_L1;
-#endif
+  QString ss = u"QgsPropertyOverrideButton { background: none; border: 1px solid rgba(0, 0, 0, 0%); } QgsPropertyOverrideButton:focus { border: 1px solid palette(highlight); } QgsPropertyOverrideButton::menu-indicator { width: 5px; }"_s;
   setStyleSheet( ss );
 
   int iconSize = QgsGuiUtils::scaleIconSize( 24 );

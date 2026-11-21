@@ -477,6 +477,9 @@ QgsLayerTreeViewDefaultActions *QgsLayerTreeViewBase::defaultActions()
 QgsLayerTreeView::QgsLayerTreeView( QWidget *parent )
   : QgsLayerTreeViewBase( parent )
 {
+  setIconSize( QSize( 22, 22 ) );
+  setIndentation( 20 );
+
   // we need a custom item delegate in order to draw indicators
   setItemDelegate( new QgsLayerTreeViewItemDelegate( this ) );
   setStyle( new QgsLayerTreeViewProxyStyle( this ) );

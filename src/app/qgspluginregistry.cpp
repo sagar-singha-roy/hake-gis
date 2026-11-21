@@ -268,6 +268,12 @@ bool QgsPluginRegistry::checkQgisVersion( const QString &minVersion, const QStri
   const QString maxVer = u"%1%2%3"_s.arg( maxVerMajor, 2, 10, QChar( '0' ) ).arg( maxVerMinor, 2, 10, QChar( '0' ) ).arg( maxVerBugfix, 2, 10, QChar( '0' ) );
   const QString curVer = u"%1%2%3"_s.arg( qgisMajor, 2, 10, QChar( '0' ) ).arg( qgisMinor, 2, 10, QChar( '0' ) ).arg( qgisBugfix, 2, 10, QChar( '0' ) );
 
+  // For Hake GeoDesk (QGIS 4.x runtime), allow modern QGIS 3.x and compatible ecosystem plugins
+  if ( qgisMajor >= 4 && minVerMajor >= 2 )
+  {
+    return true;
+  }
+
   // compare
   return ( minVer <= curVer && maxVer >= curVer );
 }
@@ -279,6 +285,8 @@ void QgsPluginRegistry::loadPythonPlugin( const QString &packageName )
   if ( !mPythonUtils || !mPythonUtils->isEnabled() )
   {
     QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    QgsSettings settings;
+    settings.setValue( "/PythonPlugins/" + packageName, true );
     return;
   }
 
@@ -310,7 +318,8 @@ void QgsPluginRegistry::loadPythonPlugin( const QString &packageName )
     settings.remove( "/PythonPlugins/watchDogTimestamp/" + packageName );
   }
 #else
-  Q_UNUSED( packageName )
+  QgsSettings settings;
+  settings.setValue( "/PythonPlugins/" + packageName, true );
 #endif
 }
 
@@ -430,6 +439,8 @@ void QgsPluginRegistry::unloadPythonPlugin( const QString &packageName )
   if ( !mPythonUtils || !mPythonUtils->isEnabled() )
   {
     QgsMessageLog::logMessage( QObject::tr( "Python is not enabled in Hake Geospatial." ), QObject::tr( "Plugins" ) );
+    QgsSettings settings;
+    settings.setValue( "/PythonPlugins/" + packageName, false );
     return;
   }
 
@@ -443,7 +454,8 @@ void QgsPluginRegistry::unloadPythonPlugin( const QString &packageName )
   QgsSettings settings;
   settings.setValue( "/PythonPlugins/" + packageName, false );
 #else
-  Q_UNUSED( packageName )
+  QgsSettings settings;
+  settings.setValue( "/PythonPlugins/" + packageName, false );
 #endif
 }
 
@@ -712,40 +724,38 @@ bool QgsPluginRegistry::checkCppPlugin( const QString &pluginFullPath )
 bool QgsPluginRegistry::checkPythonPlugin( const QString &packageName )
 {
 #ifdef WITH_BINDINGS
-  QString pluginName, description, /*category,*/ version;
-
-  // get information from the plugin
-  // if there are some problems, don't continue with metadata retrieval
-  pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
-  description = mPythonUtils->getPluginMetadata( packageName, u"description"_s );
-  version = mPythonUtils->getPluginMetadata( packageName, u"version"_s );
-  // for Python plugins category still optional, by default used "Plugins" category
-  //category = mPythonUtils->getPluginMetadata( packageName, "category" );
-
-  if ( pluginName == "__error__"_L1 || description == "__error__"_L1 || version == "__error__"_L1 )
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
   {
-    QgsMessageLog::logMessage( QObject::tr( "Error when reading metadata of plugin %1" ).arg( packageName ), QObject::tr( "Plugins" ) );
-    return false;
-  }
+    QString pluginName = mPythonUtils->getPluginMetadata( packageName, u"name"_s );
+    QString description = mPythonUtils->getPluginMetadata( packageName, u"description"_s );
+    QString version = mPythonUtils->getPluginMetadata( packageName, u"version"_s );
 
-  return true;
-#else
-  Q_UNUSED( packageName )
-  return false;
+    if ( pluginName == "__error__"_L1 || description == "__error__"_L1 || version == "__error__"_L1 )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "Error when reading metadata of plugin %1" ).arg( packageName ), QObject::tr( "Plugins" ) );
+      return false;
+    }
+
+    return true;
+  }
 #endif
+
+  return false;
 }
 
 bool QgsPluginRegistry::isPythonPluginCompatible( const QString &packageName ) const
 {
 #ifdef WITH_BINDINGS
-  const QString minVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMinimumVersion"_s );
-  // try to read qgisMaximumVersion. Note checkQgisVersion can cope with "__error__" value.
-  const QString maxVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMaximumVersion"_s );
-  return minVersion != "__error__"_L1 && checkQgisVersion( minVersion, maxVersion );
-#else
-  Q_UNUSED( packageName )
-  return false;
+  if ( mPythonUtils && mPythonUtils->isEnabled() )
+  {
+    const QString minVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMinimumVersion"_s );
+    // try to read qgisMaximumVersion. Note checkQgisVersion can cope with "__error__" value.
+    const QString maxVersion = mPythonUtils->getPluginMetadata( packageName, u"qgisMaximumVersion"_s );
+    return minVersion != "__error__"_L1 && checkQgisVersion( minVersion, maxVersion );
+  }
 #endif
+
+  return false;
 }
 
 QList<QgsPluginMetadata *> QgsPluginRegistry::pluginData()

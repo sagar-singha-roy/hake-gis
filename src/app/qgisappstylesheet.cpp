@@ -60,16 +60,13 @@ void QgisAppStyleSheet::applyStyleSheet( const QMap<QString, QVariant> &opts )
   const QgsSettings settings;
   QString ss;
 
-  if ( mMacStyle )
-  {
-    ss += "QWidget#QgsTextFormatWidgetBase QTabWidget#mOptionsTab QTabBar::tab,"_L1;
-    ss += "QWidget#QgsRendererMeshPropsWidgetBase QTabWidget#mStyleOptionsTab"_L1;
-    ss += "QTabBar::tab { width: 1.2em; }"_L1;
-  }
+  ss += "QWidget#QgsTextFormatWidgetBase QTabWidget#mOptionsTab QTabBar::tab,"_L1;
+  ss += "QWidget#QgsRendererMeshPropsWidgetBase QTabWidget#mStyleOptionsTab"_L1;
+  ss += "QTabBar::tab { width: 1.2em; }"_L1;
 
   ss += "QGroupBox{ font-weight: 600; }"_L1;
 
-  const QString themeName = settings.value( u"UI/UITheme"_s, "Hake Light" ).toString();
+  const QString themeName = settings.value( u"UI/UITheme"_s, "default" ).toString();
   if ( themeName == "default"_L1 || !QgsApplication::uiThemes().contains( themeName ) )
   {
     //sidebar style

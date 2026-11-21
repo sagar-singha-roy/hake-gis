@@ -124,38 +124,83 @@ void QgsMessageBarItem::writeContent()
 
 
   // STYLESHEETS
+  const bool isDark = qApp && ( qApp->palette().color( QPalette::Window ).lightness() < 128 );
   QString contentStyleSheet;
   if ( mLevel == Qgis::MessageLevel::Success )
   {
-    mStyleSheet = QStringLiteral(
-      "QgsMessageBar { background-color: #dff0d8; border: 1px solid #8e998a; } "
-      "QLabel,QTextEdit { color: black; } "
-    );
-    contentStyleSheet = u"<style> a, a:visited, a:hover { color:#268300; } </style>"_s;
+    if ( isDark )
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #143324; border: 1px solid #166534; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #BBF7D0; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#4ADE80; }</style>"_s;
+    }
+    else
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #F0FDF4; border: 1px solid #86EFAC; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #166534; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style> a, a:visited, a:hover { color:#15803D; } </style>"_s;
+    }
   }
   else if ( mLevel == Qgis::MessageLevel::Critical )
   {
-    mStyleSheet = QStringLiteral(
-      "QgsMessageBar { background-color: #d65253; border: 1px solid #9b3d3d; } "
-      "QLabel,QTextEdit { color: white; } "
-    );
-    contentStyleSheet = u"<style>a, a:visited, a:hover { color:#4e0001; }</style>"_s;
+    if ( isDark )
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #3F1D1D; border: 1px solid #991B1B; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #FECACA; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#F87171; }</style>"_s;
+    }
+    else
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #991B1B; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#B91C1C; }</style>"_s;
+    }
   }
   else if ( mLevel == Qgis::MessageLevel::Warning )
   {
-    mStyleSheet = QStringLiteral(
-      "QgsMessageBar { background-color: #ffc800; border: 1px solid #e0aa00; } "
-      "QLabel,QTextEdit { color: black; } "
-    );
-    contentStyleSheet = u"<style>a, a:visited, a:hover { color:#945a00; }</style>"_s;
+    if ( isDark )
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #382A13; border: 1px solid #92400E; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #FDE68A; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#FBBF24; }</style>"_s;
+    }
+    else
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #FFFBEB; border: 1px solid #FCD34D; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #92400E; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#B45309; }</style>"_s;
+    }
   }
   else if ( mLevel == Qgis::MessageLevel::Info )
   {
-    mStyleSheet = QStringLiteral(
-      "QgsMessageBar { background-color: #e7f5fe; border: 1px solid #b9cfe4; } "
-      "QLabel,QTextEdit { color: #2554a1; } "
-    );
-    contentStyleSheet = u"<style>a, a:visited, a:hover { color:#3bb2fe; }</style>"_s;
+    if ( isDark )
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #172B4D; border: 1px solid #2684FF; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #B3D4FF; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#4C9AFF; }</style>"_s;
+    }
+    else
+    {
+      mStyleSheet = QStringLiteral(
+        "QgsMessageBar { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; } "
+        "QLabel,QTextEdit { color: #1E40AF; font-weight: 500; } "
+      );
+      contentStyleSheet = u"<style>a, a:visited, a:hover { color:#2563EB; }</style>"_s;
+    }
   }
   mStyleSheet += "QLabel#mItemCount { font-style: italic; }"_L1;
 

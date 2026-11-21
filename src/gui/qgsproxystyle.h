@@ -39,6 +39,9 @@ class GUI_EXPORT QgsProxyStyle : public QProxyStyle
      * The base style for the QProxyStyle will be set to match the current QGIS application style.
      */
     explicit QgsProxyStyle( QWidget *parent SIP_TRANSFER );
+#ifndef SIP_RUN
+    int styleHint( StyleHint hint, const QStyleOption *option = nullptr, const QWidget *widget = nullptr, QStyleHintReturn *returnData = nullptr ) const override;
+#endif
 };
 
 ///@cond PRIVATE
@@ -54,6 +57,7 @@ class GUI_EXPORT QgsAppStyle : public QProxyStyle
 
   public:
     explicit QgsAppStyle( const QString &base );
+    int styleHint( StyleHint hint, const QStyleOption *option = nullptr, const QWidget *widget = nullptr, QStyleHintReturn *returnData = nullptr ) const override;
     QPixmap generatedIconPixmap( QIcon::Mode iconMode, const QPixmap &pixmap, const QStyleOption *opt ) const override;
     void polish( QWidget *widget ) override;
 

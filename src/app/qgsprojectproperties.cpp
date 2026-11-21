@@ -157,6 +157,89 @@ QgsProjectProperties::QgsProjectProperties( QgsMapCanvas *mapCanvas, QWidget *pa
   // and connecting QDialogButtonBox's accepted/rejected signals to dialog's accept/reject slots
   initOptionsBase( false );
 
+  if ( mOptionsSplitter )
+  {
+    mOptionsSplitter->setOrientation( Qt::Vertical );
+    mOptionsSplitter->setChildrenCollapsible( false );
+    mOptionsSplitter->setHandleWidth( 0 );
+  }
+
+  mOptionsListFrame->setFixedHeight( 44 );
+
+  mOptionsListWidget->setViewMode( QListView::ListMode );
+  mOptionsListWidget->setFlow( QListView::LeftToRight );
+  mOptionsListWidget->setWrapping( false );
+  mOptionsListWidget->setWordWrap( false );
+  mOptionsListWidget->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+  mOptionsListWidget->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+  mOptionsListWidget->setHorizontalScrollMode( QAbstractItemView::ScrollPerPixel );
+  mOptionsListWidget->setIconSize( QSize( 18, 18 ) );
+  mOptionsListWidget->setSpacing( 2 );
+  mOptionsListWidget->setMaximumWidth( 16777215 );
+  mOptionsListWidget->setFixedHeight( 40 );
+  mOptionsListWidget->setTextElideMode( Qt::ElideNone );
+  mOptionsListWidget->setUniformItemSizes( false );
+
+  mOptionsListWidget->setStyleSheet(
+    u"QListWidget#mOptionsListWidget {"
+    "  background-color: transparent;"
+    "  border: none;"
+    "  outline: 0;"
+    "}"
+    "QListWidget#mOptionsListWidget::item {"
+    "  padding: 4px 10px;"
+    "  margin: 1px 2px;"
+    "  border-radius: 6px;"
+    "  border: 1px solid transparent;"
+    "  font-size: 11px;"
+    "  font-weight: 500;"
+    "}"
+    "QListWidget#mOptionsListWidget::item:hover {"
+    "  background-color: rgba(14, 165, 233, 0.12);"
+    "  border: 1px solid rgba(14, 165, 233, 0.35);"
+    "  color: #0284c7;"
+    "}"
+    "QListWidget#mOptionsListWidget::item:selected {"
+    "  background-color: rgba(14, 165, 233, 0.22);"
+    "  border: 1px solid #0ea5e9;"
+    "  color: #0284c7;"
+    "  font-weight: 600;"
+    "}"
+    "QListWidget#mOptionsListWidget QScrollBar:horizontal {"
+    "  height: 4px;"
+    "  background: transparent;"
+    "  margin: 0px;"
+    "}"
+    "QListWidget#mOptionsListWidget QScrollBar::handle:horizontal {"
+    "  background: rgba(148, 163, 184, 0.45);"
+    "  min-width: 24px;"
+    "  border-radius: 2px;"
+    "}"
+    "QListWidget#mOptionsListWidget QScrollBar::handle:horizontal:hover {"
+    "  background: #0ea5e9;"
+    "}"
+    "QListWidget#mOptionsListWidget QScrollBar::add-line:horizontal,"
+    "QListWidget#mOptionsListWidget QScrollBar::sub-line:horizontal {"
+    "  width: 0px;"
+    "  background: none;"
+    "}"_s
+  );
+  mOptionsListFrame->setStyleSheet(
+    u"QFrame#mOptionsListFrame {"
+    "  border-bottom: 1px solid rgba(148, 163, 184, 0.25);"
+    "  background-color: transparent;"
+    "}"_s
+  );
+
+  connect( mOptionsListWidget, &QListWidget::currentRowChanged, this, [this]( int row ) {
+    if ( QListWidgetItem *item = mOptionsListWidget->item( row ) )
+    {
+      mOptionsListWidget->scrollToItem( item, QAbstractItemView::EnsureVisible );
+    }
+  } );
+
+  setupRemixIcons();
+
   pixStyleMarker->setFixedSize( 24, 24 );
   pixStyleMarker->load( QgsApplication::iconPath( u"mIconPointLayer.svg"_s ) );
 
@@ -1071,6 +1154,7 @@ QgsProjectProperties::QgsProjectProperties( QgsMapCanvas *mapCanvas, QWidget *pa
   }
 
   // Project macros
+  ptePythonMacros->setEdgeMode( QsciScintilla::EdgeNone );
   QString pythonMacros = QgsProject::instance()->readEntry( u"Macros"_s, u"/pythonCode"_s, QString() );
   grpPythonMacros->setChecked( !pythonMacros.isEmpty() );
   if ( !pythonMacros.isEmpty() )
@@ -1166,7 +1250,17 @@ QgsProjectProperties::QgsProjectProperties( QgsMapCanvas *mapCanvas, QWidget *pa
     mOptionsStackedWidget->addWidget( page );
   }
 
+  setupRemixIcons();
+
   restoreOptionsBaseUi();
+
+  mOptionsListFrame->setFixedHeight( 44 );
+  mOptionsListWidget->setFixedHeight( 40 );
+  mOptionsListWidget->setWrapping( false );
+  if ( mOptionsSplitter )
+  {
+    mOptionsSplitter->setHandleWidth( 0 );
+  }
 
 #ifdef QGISDEBUG
   checkPageWidgetNameMap();
@@ -2921,5 +3015,62 @@ void QgsProjectProperties::customizeGeographicCoordinateFormat()
   if ( dlg.exec() )
   {
     mGeographicCoordinateFormat.reset( dlg.format() );
+  }
+}
+
+void QgsProjectProperties::updateOptionsListVerticalTabs()
+{
+  if ( mOptionsListFrame )
+  {
+    mOptionsListFrame->setFixedHeight( 44 );
+  }
+  if ( mOptionsListWidget )
+  {
+    mOptionsListWidget->setMaximumWidth( 16777215 );
+    mOptionsListWidget->setFixedHeight( 40 );
+    mOptionsListWidget->setWrapping( false );
+  }
+  if ( mOptionsSplitter )
+  {
+    mOptionsSplitter->setHandleWidth( 0 );
+  }
+}
+
+void QgsProjectProperties::setupRemixIcons()
+{
+  const QList<QPair<QString, QString>> icons = {
+    { u"mProjOptsGeneral"_s, u":/images/themes/default/propertyicons/general.svg"_s },
+    { u"mMetadataPage"_s, u":/images/themes/default/propertyicons/editmetadata.svg"_s },
+    { u"mViewSettingsPage"_s, u":/images/themes/default/propertyicons/overlay.svg"_s },
+    { u"mProjOptsCRS"_s, u":/images/themes/default/propertyicons/CRS.svg"_s },
+    { u"mProjTransformations"_s, u":/images/themes/default/transformation.svg"_s },
+    { u"mProjOptsSymbols"_s, u":/images/themes/default/propertyicons/symbology.svg"_s },
+    { u"mTabColors"_s, u":/images/themes/default/propertyicons/colors.svg"_s },
+    { u"mTab_DataSources"_s, u":/images/themes/default/propertyicons/attributes.svg"_s },
+    { u"mTabRelations"_s, u":/images/themes/default/relation.svg"_s },
+    { u"mTab_Variables"_s, u":/images/themes/default/propertyicons/variables.svg"_s },
+    { u"mProjOptsMacros"_s, u":/images/themes/default/propertyicons/action.svg"_s },
+    { u"mProjOptsOWS"_s, u":/images/themes/default/propertyicons/network_and_proxy.svg"_s },
+    { u"mTemporalOptions"_s, u":/images/themes/default/propertyicons/temporal.svg"_s },
+    { u"QgsProjectElevationSettingsWidget"_s, u":/images/themes/default/propertyicons/elevationscale.svg"_s },
+    { u"QgsProjectSensorSettingsWidget"_s, u":/images/themes/default/propertyicons/sensor.svg"_s }
+  };
+
+  const int rows = std::min( mOptionsListWidget->count(), mOptionsStackedWidget->count() );
+  for ( int row = 0; row < rows; ++row )
+  {
+    QWidget *page = mOptionsStackedWidget->widget( row );
+    if ( !page )
+      continue;
+    QString pageName = page->objectName();
+    QString className = QString::fromLatin1( page->metaObject()->className() );
+    for ( const auto &pair : icons )
+    {
+      if ( pair.first == pageName || pair.first == className )
+      {
+        mOptionsListWidget->item( row )->setIcon( QIcon( pair.second ) );
+        break;
+      }
+    }
   }
 }

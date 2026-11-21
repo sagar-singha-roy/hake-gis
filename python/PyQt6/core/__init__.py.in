@@ -26,6 +26,7 @@ import typing as _typing
 from qgis.PyQt.QtCore import NULL
 from qgis.PyQt.QtCore import Qt as _Qt
 from qgis.PyQt.QtCore import QMetaType as _QMetaType
+
 from qgis._core import *
 
 @MONKEYPATCH_INJECTIONS@

@@ -595,7 +595,7 @@ QString QgsAnnotationLayer::htmlMetadata() const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  QString metadata = u"<html>\n<body>\n<h1>"_s + tr( "General" ) + u"</h1>\n<hr>\n"_s + u"<table class=\"list-view\">\n"_s;
+  QString metadata = u"<html>\n<body>\n<h1>"_s + tr( "Layer Information" ) + u"</h1>\n<hr>\n"_s + u"<table class=\"list-view\">\n"_s;
 
   metadata += u"<tr><td class=\"highlight\">"_s + tr( "Name" ) + u"</td><td>"_s + name() + u"</td></tr>\n"_s;
 

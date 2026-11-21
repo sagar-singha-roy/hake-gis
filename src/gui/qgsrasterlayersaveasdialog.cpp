@@ -175,13 +175,10 @@ QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog(
     okButton->setEnabled( false );
   }
 
-#ifdef Q_OS_WIN
+  // Unify dialog button box layout consistently across all platforms
   mHelpButtonBox->setVisible( false );
   mButtonBox->addButton( QDialogButtonBox::Help );
   connect( mButtonBox, &QDialogButtonBox::helpRequested, this, &QgsRasterLayerSaveAsDialog::showHelp );
-#else
-  connect( mHelpButtonBox, &QDialogButtonBox::helpRequested, this, &QgsRasterLayerSaveAsDialog::showHelp );
-#endif
   connect( mButtonBox, &QDialogButtonBox::accepted, this, &QgsRasterLayerSaveAsDialog::accept );
   connect( mButtonBox, &QDialogButtonBox::rejected, this, &QgsRasterLayerSaveAsDialog::reject );
 

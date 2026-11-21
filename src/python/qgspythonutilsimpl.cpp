@@ -240,6 +240,36 @@ _ssr = StartupScriptRunner()
     return false;
   }
 
+  // Verify that required binary PyQt6 modules are installed
+  if ( !runString(
+         QStringLiteral(
+           "import sys\n"
+           "_missing = []\n"
+           "_core_mods = ['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'PyQt6.QtNetwork', 'PyQt6.QtXml']\n"
+           "for _mod in _core_mods:\n"
+           "    try:\n"
+           "        __import__(_mod)\n"
+           "    except ImportError:\n"
+           "        _missing.append(_mod)\n"
+           "if _missing:\n"
+           "    if sys.platform.startswith('linux'):\n"
+           "        raise ImportError('Required core PyQt6 module(s) missing: ' + ', '.join(_missing) + '. Please install python3-pyqt6.')\n"
+           "    else:\n"
+           "        raise ImportError('Required core PyQt6 module(s) missing: ' + ', '.join(_missing) + '. The application bundle appears incomplete.')\n"
+           "# Gracefully probe optional modules without aborting Python support\n"
+           "for _opt in ['PyQt6.QtPositioning', 'PyQt6.QtMultimedia']:\n"
+           "    try:\n"
+           "        __import__(_opt)\n"
+           "    except ImportError:\n"
+           "        pass\n"
+         ),
+         QObject::tr( "Couldn't load required PyQt6 modules." ) + '\n' + QObject::tr( "Python support will be disabled." ),
+         false
+       ) )
+  {
+    return false;
+  }
+
   // import QGIS bindings
   QString error_msg = QObject::tr( "Couldn't load PyHake Geospatial." ) + '\n' + QObject::tr( "Python support will be disabled." );
   if (
@@ -294,13 +324,17 @@ void QgsPythonUtilsImpl::init()
   PyConfig_InitPythonConfig( &config );
 
 #ifdef QGIS_MAC_BUNDLE
-  // If we package QGIS as a mac app, we deploy Qt plugins into [app]/Contents/PlugIns
+  // If we package QGIS as a mac app, only set python home if bundled Python exists in the bundle
   if ( qgetenv( "PYTHONHOME" ).isNull() )
   {
-    status = PyConfig_SetString( &config, &config.home, QgsApplication::libraryPath().toStdWString().c_str() );
-    if ( PyStatus_Exception( status ) )
+    const QString libPath = QgsApplication::libraryPath();
+    if ( QDir( libPath + u"/Python.framework"_s ).exists() || QDir( libPath + u"/lib/python3"_s ).exists() )
     {
-      qWarning() << "Failed to set python home";
+      status = PyConfig_SetString( &config, &config.home, libPath.toStdWString().c_str() );
+      if ( PyStatus_Exception( status ) )
+      {
+        qWarning() << "Failed to set python home";
+      }
     }
   }
 #endif
@@ -487,6 +521,11 @@ void QgsPythonUtilsImpl::uninstallErrorHook()
 
 QString QgsPythonUtilsImpl::runStringUnsafe( const QString &command, bool single )
 {
+  if ( !mMainDict )
+  {
+    return QStringLiteral( "Python interpreter is not initialized (mMainDict is null)" );
+  }
+
   // acquire global interpreter lock to ensure we are in a consistent state
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
@@ -495,7 +534,14 @@ QString QgsPythonUtilsImpl::runStringUnsafe( const QString &command, bool single
   // TODO: convert special characters from unicode strings u"…" to \uXXXX
   // so that they're not mangled to utf-8
   // (non-unicode strings can be mangled)
-  PyObject *obj = PyRun_String( command.toUtf8().constData(), single ? Py_single_input : Py_file_input, mMainDict, mMainDict );
+  // If the command string contains newlines or semicolons, it contains multiple statements.
+  // In Python C API, Py_single_input strictly accepts only a single statement and raises
+  // "SyntaxError: multiple statements found while compiling a single statement" if given multiple.
+  // Therefore, automatically fallback to Py_file_input whenever multiple statements are present.
+  const bool hasMultipleStatements = command.contains( '\n' ) || command.contains( ';' );
+  const int startSymbol = ( single && !hasMultipleStatements ) ? Py_single_input : Py_file_input;
+
+  PyObject *obj = PyRun_String( command.toUtf8().constData(), startSymbol, mMainDict, mMainDict );
   PyObject *errobj = PyErr_Occurred();
   if ( nullptr != errobj )
   {
@@ -887,6 +933,12 @@ QString QgsPythonUtilsImpl::PyObjectToQString( PyObject *obj )
 
 bool QgsPythonUtilsImpl::evalString( const QString &command, QString &result )
 {
+  if ( !mMainDict )
+  {
+    result = QString();
+    return false;
+  }
+
   // acquire global interpreter lock to ensure we are in a consistent state
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();

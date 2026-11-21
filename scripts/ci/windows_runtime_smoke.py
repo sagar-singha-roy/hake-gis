@@ -32,6 +32,8 @@ REPORT: dict = {
     "proj_db_locations": [],
     "proj_search_paths": [],
     "dll_modules": {},
+    "pyqt_modules": {},
+    "qgis_runtime": {},
     "epsg": {},
     "gpkg": None,
     "polygonize": None,
@@ -136,7 +138,7 @@ def _enum_loaded_dlls() -> dict[str, str]:
     ]
     GetModuleFileNameExW.restype = wintypes.DWORD
 
-    interesting_tokens = ("gdal", "proj", "geos", "sqlite3", "sqlite")
+    interesting_tokens = ("gdal", "proj", "geos", "sqlite3", "sqlite", "qt6", "qgis")
     found: dict[str, str] = {}
     buf = ctypes.create_unicode_buffer(32768)
     for mod in modules:
@@ -292,6 +294,144 @@ def _check_epsg(osr) -> None:
         except Exception as exc:  # noqa: BLE001
             REPORT["epsg"][str(epsg)] = str(exc)
             _fail(f"EPSG:{epsg} failed: {exc}")
+
+
+def _check_pyqt_and_qgis(install_root: Path) -> None:
+    _log("=== Checking PyQt6 and QGIS Runtime ===")
+    REPORT["pyqt_modules"] = {}
+    pyqt_modules = [
+        "PyQt6.QtCore",
+        "PyQt6.QtGui",
+        "PyQt6.QtWidgets",
+        "PyQt6.QtNetwork",
+        "PyQt6.QtMultimedia",
+        "PyQt6.QtMultimediaWidgets",
+        "PyQt6.QtPositioning",
+        "PyQt6.QtSerialPort",
+        "PyQt6.QtSvg",
+        "PyQt6.QtXml",
+        "PyQt6.sip",
+    ]
+    optional_pyqt_modules = {"PyQt6.QtMultimedia", "PyQt6.QtMultimediaWidgets"}
+    for mod in pyqt_modules:
+        try:
+            m = __import__(mod, fromlist=["*"])
+            REPORT["pyqt_modules"][mod] = {
+                "ok": True,
+                "file": getattr(m, "__file__", "built-in"),
+            }
+            _log(f"  Loaded {mod} from {getattr(m, '__file__', 'built-in')}")
+        except Exception as exc:  # noqa: BLE001
+            REPORT["pyqt_modules"][mod] = {"ok": False, "error": str(exc)}
+            if mod in optional_pyqt_modules:
+                _log(f"  Note: optional module {mod} not available: {exc}")
+            else:
+                _fail(f"Failed to import {mod}: {exc}")
+
+    # Check SIP registration
+    try:
+        from qgis.PyQt import sip
+        _log(f"  SIP module loaded: {sip}")
+    except Exception as exc:  # noqa: BLE001
+        _fail(f"Failed to import SIP module: {exc}")
+
+    # Check PyQt6 widget creation lifecycle
+    try:
+        from PyQt6.QtWidgets import QMainWindow, QLabel
+        win = QMainWindow()
+        win.setWindowTitle("Hake GeoDesk Smoke Test")
+        lbl = QLabel("Smoke Test", win)
+        win.setCentralWidget(lbl)
+        win.resize(300, 200)
+        _log("  PyQt6 QMainWindow creation verified.")
+    except Exception as exc:  # noqa: BLE001
+        _fail(f"PyQt6 QMainWindow creation failed: {exc}")
+
+    # Check QGIS Python bindings and QgsApplication
+    REPORT["qgis_runtime"] = {}
+    try:
+        from qgis.core import (
+            QgsApplication,
+            QgsCoordinateReferenceSystem,
+            QgsCoordinateTransform,
+            QgsFeature,
+            QgsGeometry,
+            QgsPointXY,
+            QgsProject,
+            QgsProviderRegistry,
+            QgsVectorLayer,
+        )
+        import qgis.gui
+        import qgis.analysis
+
+        _log(f"Setting QGIS Prefix Path: {install_root}")
+        QgsApplication.setPrefixPath(str(install_root), True)
+
+        app = QgsApplication([], False)
+        app.initQgis()
+
+        _log(f"QGIS initialized. Prefix: {QgsApplication.prefixPath()}")
+        _log(f"Plugin path: {QgsApplication.pluginPath()}")
+        _log(f"PkgData path: {QgsApplication.pkgDataPath()}")
+
+        crs4326 = QgsCoordinateReferenceSystem("EPSG:4326")
+        crs3857 = QgsCoordinateReferenceSystem("EPSG:3857")
+
+        if not crs4326.isValid():
+            _fail("EPSG:4326 CRS invalid in QgsApplication (proj.db issue)")
+        if not crs3857.isValid():
+            _fail("EPSG:3857 CRS invalid in QgsApplication (proj.db issue)")
+
+        if crs4326.isValid() and crs3857.isValid():
+            xform = QgsCoordinateTransform(crs4326, crs3857, QgsProject.instance())
+            pt = xform.transform(QgsPointXY(0.0, 0.0))
+            REPORT["qgis_runtime"]["crs_transform"] = {
+                "epsg4326_valid": True,
+                "epsg3857_valid": True,
+                "transformed_x": pt.x(),
+                "transformed_y": pt.y(),
+            }
+            _log(f"CRS transform: (0,0) EPSG:4326 -> ({pt.x()}, {pt.y()}) EPSG:3857")
+
+        providers = QgsProviderRegistry.instance().providerList()
+        REPORT["qgis_runtime"]["providers"] = providers
+        _log(f"Available QGIS providers: {providers}")
+        if "ogr" not in providers:
+            _fail("'ogr' provider missing from QgsProviderRegistry")
+        if "gdal" not in providers:
+            _fail("'gdal' provider missing from QgsProviderRegistry")
+        if "memory" not in providers:
+            _fail("'memory' provider missing from QgsProviderRegistry")
+
+        # Test memory vector layer creation and spatial geometry
+        vlayer = QgsVectorLayer("Point?crs=EPSG:4326&field=id:integer&field=name:string", "smoke_test_layer", "memory")
+        if not vlayer.isValid():
+            _fail("Memory vector layer creation failed in QgsApplication")
+        else:
+            feat = QgsFeature(vlayer.fields())
+            feat.setAttribute("id", 1)
+            feat.setAttribute("name", "Test Point")
+            feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(12.0, 55.0)))
+            vlayer.startEditing()
+            vlayer.addFeature(feat)
+            vlayer.commitChanges()
+            _log(f"Memory layer created successfully with {vlayer.featureCount()} feature(s).")
+
+        # Check processing plugin availability
+        try:
+            import processing  # noqa: F401
+            _log("Processing module imported successfully.")
+        except Exception as exc:  # noqa: BLE001
+            _log(f"Note: processing import returned: {exc}")
+
+        app.exitQgis()
+        REPORT["qgis_runtime"]["ok"] = True
+        _log("QgsApplication exited cleanly.")
+    except Exception as exc:  # noqa: BLE001
+        REPORT["qgis_runtime"]["ok"] = False
+        REPORT["qgis_runtime"]["error"] = str(exc)
+        _fail(f"QGIS runtime check failed: {exc}")
+        traceback.print_exc()
 
 
 def _check_gpkg(gdal, work: Path) -> None:
@@ -514,6 +654,7 @@ def main() -> int:
             _check_dlls(install_root)
             _check_versions_and_proj(gdal, osr, install_root)
             _check_epsg(osr)
+            _check_pyqt_and_qgis(install_root)
             _check_gpkg(gdal, work)
             _check_polygonize(gdal, ogr, install_root, work)
         except Exception as exc:  # noqa: BLE001

@@ -2884,11 +2884,15 @@ int QgsCoordinateReferenceSystem::syncDatabase()
       QString ellps = "";
       getOperationAndEllipsoidFromProjString( proj4, operation, ellps );
 
-      const QString translatedOperation = QgsCoordinateReferenceSystemUtils::translateProjection( operation );
+      QString translatedOperation = QgsCoordinateReferenceSystemUtils::translateProjection( operation );
       if ( translatedOperation.isEmpty() && !operation.isEmpty() )
       {
-        std::cout << u"Operation needs translation in QgsCoordinateReferenceSystemUtils::translateProjection: %1"_s.arg( operation ).toLocal8Bit().constData() << std::endl;
-        qFatal( "aborted" );
+        QgsMessageLog::logMessage(
+          u"Unknown projection operation in QgsCoordinateReferenceSystemUtils::translateProjection: %1"_s.arg( operation ),
+          u"CRS"_s,
+          Qgis::MessageLevel::Warning
+        );
+        translatedOperation = operation;
       }
 
       const bool deprecated = proj_is_deprecated( crs.get() );

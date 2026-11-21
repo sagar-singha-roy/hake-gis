@@ -86,11 +86,8 @@ void Qgs3DSymbolButton::updatePreview()
     return;
   }
 
-#ifdef Q_OS_WIN
-  QSize iconSize = QSize( width() - 10, height() - 6 );
-#else
-  QSize iconSize = QSize( width() - 10, height() - 12 );
-#endif
+  // consistent icon padding across all platforms
+  QSize iconSize = QSize( width() - 10, height() - 8 );
 
   const QIcon symbolIcon = Qgs3DSymbolUtils::vectorSymbolPreviewIcon( mSymbol.get(), iconSize, QgsScreenProperties( screen() ), 0 );
   setIcon( symbolIcon );

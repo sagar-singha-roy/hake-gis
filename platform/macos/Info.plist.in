@@ -341,6 +341,16 @@
 	<key>NSHighResolutionCapable</key>
 	<string>True</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>HAKE-GIS needs local network access to communicate with devices on your network.</string>
+	<string>Hake GeoDesk needs local network access to communicate with devices on your network.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Hake GeoDesk requires access to your Downloads folder to open GIS shapefiles, GeoPackages, rasters, and project files.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Hake GeoDesk requires access to your Documents folder to open and save GIS projects and datasets.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Hake GeoDesk requires access to your Desktop to load and export spatial data and maps.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>Hake GeoDesk requires access to removable storage to open GIS datasets on external drives.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>Hake GeoDesk requires access to network volumes to access shared geospatial datasets.</string>
 </dict>
 </plist>

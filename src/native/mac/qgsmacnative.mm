@@ -58,9 +58,15 @@ QgsMacNative::~QgsMacNative() {
 }
 
 void QgsMacNative::setIconPath(const QString &iconPath) {
-  mQgsUserNotificationCenter->_qgisIcon =
-      [[NSImage alloc] initWithCGImage:QPixmap(iconPath).toImage().toCGImage()
-                                  size:NSZeroSize];
+  QPixmap pm(iconPath);
+  if (!pm.isNull()) {
+    CGImageRef cgImage = pm.toImage().toCGImage();
+    if (cgImage) {
+      mQgsUserNotificationCenter->_qgisIcon =
+          [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];
+      CGImageRelease(cgImage);
+    }
+  }
 }
 
 const char *QgsMacNative::currentAppLocalizedName() {
@@ -102,8 +108,14 @@ QgsNative::NotificationResult QgsMacNative::showDesktopNotification(
     image = mQgsUserNotificationCenter->_qgisIcon;
   } else {
     const QPixmap px = QPixmap::fromImage(settings.image);
-    image = [[NSImage alloc] initWithCGImage:px.toImage().toCGImage()
-                                        size:NSZeroSize];
+    if (!px.isNull()) {
+      CGImageRef cgImage = px.toImage().toCGImage();
+      if (cgImage) {
+        image = [[NSImage alloc] initWithCGImage:cgImage
+                                            size:NSZeroSize];
+        CGImageRelease(cgImage);
+      }
+    }
   }
   notification.contentImage = image;
 

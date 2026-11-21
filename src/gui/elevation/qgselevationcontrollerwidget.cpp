@@ -255,14 +255,10 @@ void QgsElevationControllerWidget::setSignificantElevations( const QList<double>
 QgsElevationControllerLabels::QgsElevationControllerLabels( QWidget *parent )
   : QWidget( parent )
 {
-  // Drop the default widget font size by a couple of points
+  // Drop the default widget font size consistently across all platforms
   QFont smallerFont = font();
   int fontSize = smallerFont.pointSize();
-#ifdef Q_OS_WIN
-  fontSize = std::max( fontSize - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
-#else
-  fontSize = std::max( fontSize - 2, 7 );
-#endif
+  fontSize = std::max( fontSize - 1, 8 );
   smallerFont.setPointSize( fontSize );
   setFont( smallerFont );
 

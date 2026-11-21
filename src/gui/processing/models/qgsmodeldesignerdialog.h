@@ -138,23 +138,28 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public QgsProcessi
      */
     void activate();
 
+    /**
+     * Opens a model from a file dialog.
+     */
+    void openModel();
+
+    /**
+     * Saves the current model into the project.
+     */
+    void saveInProject();
+
   protected:
-    // cppcheck-suppress pureVirtualCall
-    virtual void repaintModel( bool showControls = true ) = 0;
-    virtual void addAlgorithm( const QString &algorithmId, const QPointF &pos ) = 0;
-    // cppcheck-suppress pureVirtualCall
-    virtual void addInput( const QString &inputId, const QPointF &pos ) = 0;
-    // cppcheck-suppress pureVirtualCall
-    virtual void exportAsScriptAlgorithm() = 0;
-    // cppcheck-suppress pureVirtualCall
-    virtual bool saveModel( bool saveAs = false ) = 0;
-    // cppcheck-suppress pureVirtualCall
-    virtual QgsProcessingAlgorithmWidgetBase *createExecutionWidget() = 0 SIP_TRANSFERBACK;
+    virtual void repaintModel( bool showControls = true );
+    virtual void addAlgorithm( const QString &algorithmId, const QPointF &pos = QPointF() );
+    virtual void addInput( const QString &inputId, const QPointF &pos = QPointF() );
+    virtual void exportAsScriptAlgorithm();
+    virtual bool saveModel( bool saveAs = false );
+    virtual QgsProcessingAlgorithmWidgetBase *createExecutionWidget() SIP_TRANSFERBACK;
 
     /**
      * Creates a new widget context appropriate for the dialog.
      */
-    virtual QgsProcessingParameterWidgetContext createWidgetContext() = 0; // cppcheck-suppress pureVirtualCall
+    virtual QgsProcessingParameterWidgetContext createWidgetContext();
 
     /**
      * Registers a Processing context \a generator class that will be used to retrieve

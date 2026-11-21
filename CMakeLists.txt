@@ -4,11 +4,6 @@ cmake_minimum_required(VERSION 3.22.0)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_AUTORCC ON)
 
-# not supported in QGIS 4_0
-set(WITH_PYTHON OFF)
-set(WITH_3D OFF)
-set(WITH_QTWEBENGINE OFF)
-
 # set path to additional CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # POLICIES
@@ -23,9 +18,9 @@ endif()
 # don't relink it only the shared object changes
 set(CMAKE_LINK_DEPENDS_NO_SHARED ON)
 
-option (WITH_PYTHON "Determines whether Python support should be built (disabling it will in particular disable processing)" OFF)
+option (WITH_PYTHON "Determines whether Python support should be built (disabling it will in particular disable processing)" ON)
 
-set (WITH_3D FALSE CACHE BOOL "Determines whether QGIS 3D library should be built")
+set (WITH_3D TRUE CACHE BOOL "Determines whether QGIS 3D library should be built")
 set (WITH_AUTH TRUE CACHE BOOL "Determines whether AUTH support should be included")
 #set (WITH_BINDINGS ${WITH_PYTHON} CACHE BOOL "Determines whether Python bindings should be built")
 set (WITH_BINDINGS TRUE CACHE BOOL "Determines whether Python bindings should be built")
@@ -78,12 +73,16 @@ set(CPACK_PACKAGE_VERSION_MINOR "0")
 set(CPACK_PACKAGE_VERSION_PATCH "2")
 set(COMPLETE_VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH})
 set(RELEASE_NAME "Norrköping")
-set(HAKE_PRODUCT_DISPLAY_NAME "Hake GeoDesk – Desktop GIS" CACHE STRING "User-facing product name shown in UI and installers")
+set(HAKE_PRODUCT_DISPLAY_NAME "Hake GeoDesk(Desktop GIS)" CACHE STRING "User-facing product name shown in UI and installers")
 # Windows/NSIS install folder only (ASCII). En-dashes break PROJ/SQLite open of proj.db on Windows.
 # Display branding stays HAKE_PRODUCT_DISPLAY_NAME.
 set(HAKE_PRODUCT_INSTALL_DIRECTORY "Hake GeoDesk" CACHE STRING "Filesystem-safe Windows/NSIS install directory name")
-set(HAKE_PRODUCT_VERSION_LABEL "2026.0.0" CACHE STRING "User-facing product version label (e.g. year-based release)")
-set(HAKE_WHATSNEW_URL "http://plugins.haketech.com/news/latest.html" CACHE STRING "Remote What's New URL for About dialog")
+set(HAKE_PRODUCT_VERSION_LABEL "2026.0.1" CACHE STRING "User-facing product version label (e.g. year-based release)")
+set(HAKE_WHATSNEW_URL "https://plugins.haketech.com/news/latest.html" CACHE STRING "Remote What's New URL for About dialog")
+# Code revision shown in About = Git commit this build comes from. CI passes
+# -DHAKE_GIT_REVISION=<full sha>; it is consumed once and not kept in the cache
+# (see cmake/CreateQgsVersion.cmake). The About link is <repository>/commit/<sha>.
+set(HAKE_GIT_REPOSITORY_URL "https://github.com/sagar-singha-roy/hake-gis" CACHE STRING "Repository base URL for code revision links")
 set(HAKE_INSTALLER_NAME "Hake Geodesk Installer" CACHE STRING "User-facing installer package name")
 set(HAKE_INSTALLER_FILE_NAME "Hake-Geodesk-Installer" CACHE STRING "Filesystem-safe installer artifact basename")
 project(hake-gis VERSION ${COMPLETE_VERSION})
@@ -333,10 +332,13 @@ if(WITH_CORE)
     # The qgis_desktop target is meant to build a minimal but complete running QGIS during development
     # This should help to reduce compile time while still having a "complete enough" QGIS for most of the development
     add_custom_target(qgis_desktop
-      DEPENDS qgis provider_postgres staged-plugins resources svg doc icons
+      DEPENDS qgis provider_postgres resources svg doc icons
     )
-    if ( WITH_PYTHON )
-      add_dependencies(qgis_desktop qgispython pycore pygui pyanalysis staged-plugins pyplugin-installer )
+    if ( WITH_BINDINGS )
+      add_dependencies(qgis_desktop staged-plugins)
+    endif()
+    if ( WITH_PYTHON AND WITH_BINDINGS )
+      add_dependencies(qgis_desktop qgispython pycore pygui pyanalysis pyplugin-installer )
     endif()
   endif()
 
@@ -1152,6 +1154,12 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_LIB_SUBDIR})
 # write a marker with source directory path into the output's bin directory
 # if run from the build directory QGIS will detect it and alter the paths
 file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/hake-gisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
+file(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/qgisbuildpath.txt "${CMAKE_SOURCE_DIR}\n${QGIS_OUTPUT_DIRECTORY}")
+
+if(APPLE)
+  file(REMOVE_RECURSE "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app")
+  file(CREATE_LINK "${QGIS_OUTPUT_DIRECTORY}" "${CMAKE_SOURCE_DIR}/Hake GeoDesk.app" SYMBOLIC)
+endif()
 
 # Write the qgis.env file to the bin folder to allow running qgis.exe correctly from build folder
 # and find the SDK installed folders. Only runs when VCPKG_APPLOCAL_DEPS=OFF because ON means it is packaged together

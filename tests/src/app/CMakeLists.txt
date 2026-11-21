@@ -19,6 +19,7 @@ set(TESTS
   testqgsattributetable.cpp
   testqgsapplocatorfilters.cpp
   testqgscustomization.cpp
+  testqgshaketheme.cpp
   testqgsdecorationscalebar.cpp
   testqgsdwgimportdialog.cpp
   testqgselevationprofilewidget.cpp

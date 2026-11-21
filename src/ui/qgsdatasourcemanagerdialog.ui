@@ -109,7 +109,7 @@
          </property>
          <item>
           <property name="text">
-           <string>Browser</string>
+           <string>Geo Explorer</string>
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">

@@ -17,7 +17,10 @@
 
 #include "processing/models/qgsmodelinputreorderwidget.h"
 #include "processing/models/qgsmodeloutputreorderwidget.h"
+#include "processing/models/qgsprocessingmodelchildalgorithm.h"
 #include "processing/models/qgsprocessingmodelgroupbox.h"
+#include "processing/models/qgsprocessingmodelparameter.h"
+#include "qgsprocessingparameterdefinitionwidget.h"
 #include "qgsapplication.h"
 #include "qgsfileutils.h"
 #include "qgsgui.h"
@@ -88,6 +91,34 @@ Qt::DropActions QgsModelerToolboxModel::supportedDragActions() const
 {
   return Qt::CopyAction;
 }
+
+class QgsModelDefaultExecutionWidget : public QgsProcessingAlgorithmWidgetBase
+{
+  public:
+    QgsModelDefaultExecutionWidget( QgsProcessingAlgorithm *algorithm, QMainWindow *parent = nullptr )
+      : QgsProcessingAlgorithmWidgetBase( parent, QgsProcessingAlgorithmWidgetBase::WidgetMode::Single, QgsProcessingAlgorithmWidgetBase::WidgetFlags(), Qgis::DockableWidgetInitialState::ForceDocked )
+    {
+      setAlgorithm( algorithm );
+    }
+
+    QgsProcessingContext *processingContext() override
+    {
+      if ( !mContext )
+      {
+        mContext = std::make_unique<QgsProcessingContext>();
+        mContext->setProject( QgsProject::instance() );
+      }
+      return mContext.get();
+    }
+
+    QVariantMap createProcessingParameters( QgsProcessingParametersGenerator::Flags ) override
+    {
+      return QVariantMap();
+    }
+
+  private:
+    std::unique_ptr<QgsProcessingContext> mContext;
+};
 
 QgsModelDesignerDialog::QgsModelDesignerDialog( QWidget *parent, Qt::WindowFlags flags )
   : QMainWindow( parent, flags )
@@ -165,8 +196,10 @@ QgsModelDesignerDialog::QgsModelDesignerDialog( QWidget *parent, Qt::WindowFlags
   connect( mActionExportPdf, &QAction::triggered, this, &QgsModelDesignerDialog::exportToPdf );
   connect( mActionExportSvg, &QAction::triggered, this, &QgsModelDesignerDialog::exportToSvg );
   connect( mActionExportPython, &QAction::triggered, this, &QgsModelDesignerDialog::exportAsPython );
+  connect( mActionOpen, &QAction::triggered, this, &QgsModelDesignerDialog::openModel );
   connect( mActionSave, &QAction::triggered, this, [this] { saveModel( false ); } );
   connect( mActionSaveAs, &QAction::triggered, this, [this] { saveModel( true ); } );
+  connect( mActionSaveInProject, &QAction::triggered, this, &QgsModelDesignerDialog::saveInProject );
   connect( mActionDeleteComponents, &QAction::triggered, this, &QgsModelDesignerDialog::deleteSelected );
   connect( mActionSnapSelected, &QAction::triggered, mView, &QgsModelGraphicsView::snapSelected );
   connect( mActionValidate, &QAction::triggered, this, &QgsModelDesignerDialog::validate );
@@ -376,6 +409,8 @@ QgsModelDesignerDialog::QgsModelDesignerDialog( QWidget *parent, Qt::WindowFlags
 
   // restore the toolbar and dock widgets positions using Qt settings API
   restoreState( settings.value( u"ModelDesigner/state"_s, QByteArray(), QgsSettings::App ).toByteArray() );
+
+  repaintModel( true );
 }
 
 QgsModelDesignerDialog::~QgsModelDesignerDialog()
@@ -1251,6 +1286,8 @@ void QgsModelDesignerDialog::run( const QSet<QString> &childAlgorithmSubset )
   if ( !mAlgorithmWidget )
   {
     mAlgorithmWidget = createExecutionWidget();
+    if ( !mAlgorithmWidget )
+      return;
     mAlgorithmWidget->hideShortHelp();
     mAlgorithmWidget->setTitle( tr( "Run Model" ) );
 
@@ -1625,6 +1662,266 @@ void QgsModelChildDependenciesWidget::showDialog()
 void QgsModelChildDependenciesWidget::updateSummaryText()
 {
   mLineEdit->setText( tr( "%n dependencies selected", nullptr, mValue.count() ) );
+}
+
+void QgsModelDesignerDialog::repaintModel( bool showControls )
+{
+  auto scene = std::make_unique<QgsModelGraphicsScene>( this );
+  if ( !showControls )
+    scene->setFlag( QgsModelGraphicsScene::FlagHideControls );
+
+  QgsSettings settings;
+  const bool showComments = settings.value( u"/Processing/Modeler/ShowComments"_s, true ).toBool();
+  if ( !showComments )
+    scene->setFlag( QgsModelGraphicsScene::FlagHideComments );
+
+  QgsProcessingContext localContext;
+  localContext.setProject( QgsProject::instance() );
+  QgsProcessingContext *ctx = mProcessingContextGenerator ? mProcessingContextGenerator->processingContext() : &localContext;
+
+  setModelScene( scene.release() );
+  if ( mScene && mModel )
+  {
+    mScene->createItems( mModel.get(), *ctx );
+    mScene->updateBounds();
+  }
+}
+
+QgsProcessingParameterWidgetContext QgsModelDesignerDialog::createWidgetContext()
+{
+  QgsProcessingParameterWidgetContext widgetContext;
+  widgetContext.setProject( QgsProject::instance() );
+  widgetContext.setModel( mModel.get() );
+  return widgetContext;
+}
+
+void QgsModelDesignerDialog::addAlgorithm( const QString &algorithmId, const QPointF &pos )
+{
+  const std::unique_ptr<QgsProcessingAlgorithm> alg( QgsApplication::processingRegistry()->createAlgorithmById( algorithmId ) );
+  if ( !alg )
+    return;
+
+  QgsProcessingModelChildAlgorithm childAlg( algorithmId );
+  childAlg.setDescription( alg->displayName() );
+
+  if ( pos.isNull() )
+  {
+    const double margin = 20;
+    const double boxWidth = 200;
+    const double boxHeight = 80;
+    double newX = margin + boxWidth / 2;
+    double newY = margin * 2 + boxHeight + boxHeight / 2;
+    if ( !mModel->childAlgorithms().isEmpty() )
+    {
+      double maxX = 0;
+      double maxY = 0;
+      for ( auto it = mModel->childAlgorithms().constBegin(); it != mModel->childAlgorithms().constEnd(); ++it )
+      {
+        maxX = std::max( maxX, it.value().position().x() );
+        maxY = std::max( maxY, it.value().position().y() );
+      }
+      newX = margin + boxWidth + maxX;
+      newY = margin + boxHeight + maxY;
+    }
+    childAlg.setPosition( QPointF( newX, newY ) );
+  }
+  else
+  {
+    childAlg.setPosition( pos );
+  }
+
+  if ( childAlg.comment() )
+  {
+    childAlg.comment()->setPosition(
+      childAlg.position() + QPointF( childAlg.size().width(), -1.5 * childAlg.size().height() )
+    );
+  }
+
+  double outputOffsetY = 1.5 * childAlg.size().height();
+  const double outputOffsetX = childAlg.size().width();
+  const QMap<QString, QgsProcessingModelOutput> outputs = childAlg.modelOutputs();
+  for ( auto it = outputs.constBegin(); it != outputs.constEnd(); ++it )
+  {
+    childAlg.modelOutput( it.key() ).setPosition(
+      childAlg.position() + QPointF( outputOffsetX, outputOffsetY )
+    );
+    outputOffsetY += 1.5 * childAlg.modelOutput( it.key() ).size().height();
+  }
+
+  beginUndoCommand( tr( "Add Algorithm" ) );
+  mModel->addChildAlgorithm( childAlg );
+  repaintModel();
+  endUndoCommand();
+}
+
+void QgsModelDesignerDialog::addInput( const QString &inputId, const QPointF &pos )
+{
+  QgsProcessingContext localContext;
+  localContext.setProject( QgsProject::instance() );
+  QgsProcessingContext *ctx = mProcessingContextGenerator ? mProcessingContextGenerator->processingContext() : &localContext;
+
+  const QgsProcessingParameterWidgetContext widgetContext = createWidgetContext();
+  QgsProcessingParameterDefinitionDialog dlg( inputId, *ctx, widgetContext, nullptr, mModel.get(), this );
+  if ( mProcessingContextGenerator )
+    dlg.registerProcessingContextGenerator( mProcessingContextGenerator );
+
+  if ( dlg.exec() )
+  {
+    std::unique_ptr<QgsProcessingParameterDefinition> newParam( dlg.createParameter() );
+    if ( newParam )
+    {
+      const QString safeName = QgsProcessingModelAlgorithm::safeName( newParam->description() );
+      QString name = safeName.toLower();
+      int i = 2;
+      while ( mModel->parameterDefinition( name ) )
+      {
+        name = safeName.toLower() + QString::number( i );
+        i++;
+      }
+      newParam->setName( name );
+
+      QPointF inputPos = pos;
+      if ( inputPos.isNull() )
+      {
+        const double margin = 20;
+        const double boxWidth = 200;
+        const double boxHeight = 80;
+        double newX = margin + boxWidth / 2;
+        if ( !mModel->parameterComponents().isEmpty() )
+        {
+          double maxX = 0;
+          for ( auto it = mModel->parameterComponents().constBegin(); it != mModel->parameterComponents().constEnd(); ++it )
+          {
+            maxX = std::max( maxX, it.value().position().x() );
+          }
+          newX = margin + boxWidth + maxX;
+        }
+        inputPos = QPointF( newX, margin + boxHeight / 2 );
+      }
+
+      QgsProcessingModelParameter component( newParam->name() );
+      component.setDescription( newParam->name() );
+      component.setPosition( inputPos );
+      if ( component.comment() )
+      {
+        component.comment()->setDescription( dlg.comments() );
+        component.comment()->setPosition(
+          component.position() + QPointF( component.size().width(), -1.5 * component.size().height() )
+        );
+      }
+
+      beginUndoCommand( tr( "Add Model Input" ) );
+      mModel->addModelParameter( newParam.release(), component );
+      repaintModel();
+      endUndoCommand();
+    }
+  }
+}
+
+bool QgsModelDesignerDialog::saveModel( bool saveAs )
+{
+  if ( !validateSave( SaveAction::SaveAsFile ) )
+    return false;
+
+  QString filename;
+  const bool modelNameMatchedFileName = mModel->modelNameMatchesFilePath();
+  if ( !mModel->sourceFilePath().isEmpty() && !saveAs )
+  {
+    filename = mModel->sourceFilePath();
+  }
+  else
+  {
+    QgsSettings settings;
+    const QString lastDir = settings.value( u"Processing/lastModelsDir"_s, QDir::homePath() ).toString();
+    const QString defaultName = mModel->name().isEmpty() ? QStringLiteral( "model.model3" ) : mModel->name() + QStringLiteral( ".model3" );
+    const QString initialPath = QDir( lastDir ).filePath( defaultName );
+
+    filename = QFileDialog::getSaveFileName(
+      this,
+      tr( "Save Model" ),
+      initialPath,
+      tr( "Processing models (*.model3 *.MODEL3)" )
+    );
+    if ( filename.isEmpty() )
+      return false;
+
+    filename = QgsFileUtils::ensureFileNameHasExtension( filename, QStringList() << QStringLiteral( "model3" ) );
+    settings.setValue( u"Processing/lastModelsDir"_s, QFileInfo( filename ).absoluteDir().absolutePath() );
+    mModel->setSourceFilePath( filename );
+
+    if ( mModel->name().isEmpty() || mModel->name() == tr( "model" ) || ( saveAs && modelNameMatchedFileName ) )
+    {
+      setModelName( QFileInfo( filename ).completeBaseName() );
+    }
+  }
+
+  if ( !mModel->toFile( filename ) )
+  {
+    QMessageBox::warning(
+      this,
+      tr( "Can't save model" ),
+      tr( "This model can't be saved in its original location (probably you do not have permission to do it). Please use the 'Save as…' option." )
+    );
+    return false;
+  }
+
+  if ( saveAs )
+  {
+    mMessageBar->pushMessage(
+      QString(),
+      tr( "Model was saved to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( filename ).toString(), QDir::toNativeSeparators( filename ) ),
+      Qgis::MessageLevel::Success,
+      5
+    );
+  }
+
+  setDirty( false );
+  return true;
+}
+
+void QgsModelDesignerDialog::openModel()
+{
+  if ( !checkForUnsavedChanges() )
+    return;
+
+  QgsSettings settings;
+  const QString lastDir = settings.value( u"Processing/lastModelsDir"_s, QDir::homePath() ).toString();
+  const QString filename = QFileDialog::getOpenFileName(
+    this,
+    tr( "Open Model" ),
+    lastDir,
+    tr( "Processing models (*.model3 *.MODEL3)" )
+  );
+  if ( !filename.isEmpty() )
+  {
+    settings.setValue( u"Processing/lastModelsDir"_s, QFileInfo( filename ).absoluteDir().absolutePath() );
+    loadModel( filename );
+  }
+}
+
+void QgsModelDesignerDialog::saveInProject()
+{
+  if ( !validateSave( SaveAction::SaveInProject ) )
+    return;
+
+  mModel->setSourceFilePath( QString() );
+  mMessageBar->pushMessage( QString(), tr( "Model was saved inside current project" ), Qgis::MessageLevel::Success, 5 );
+  setDirty( false );
+  QgsProject::instance()->setDirty( true );
+}
+
+void QgsModelDesignerDialog::exportAsScriptAlgorithm()
+{
+  exportAsPython();
+}
+
+QgsProcessingAlgorithmWidgetBase *QgsModelDesignerDialog::createExecutionWidget()
+{
+  if ( !mModel )
+    return nullptr;
+  auto widget = new QgsModelDefaultExecutionWidget( mModel->create(), this );
+  widget->registerProcessingFeedbackGenerator( this );
+  return widget;
 }
 
 ///@endcond

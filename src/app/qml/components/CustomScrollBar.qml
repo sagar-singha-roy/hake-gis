@@ -5,7 +5,7 @@ import QtQuick.Templates as T
 T.ScrollBar {
   id: control
 
-  property color color: "#a7a7a7"
+  property color color: welcomeTheme.scrollBarColor
   property real handleSize: 8
 
   width: horizontal ? parent.width : handleSize

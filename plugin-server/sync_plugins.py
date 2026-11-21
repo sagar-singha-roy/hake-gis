@@ -24,8 +24,9 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 # NOTE: Upstream uses ?qgis= because that is what plugins.qgis.org expects.
+# Querying QGIS 3.x series (?qgis=3.38) retrieves all 1,400+ ecosystem plugins.
 # The local/application selector is ?hake-geodesk= (see installer_data.py urlParams()).
-_DEFAULT_UPSTREAM = "https://plugins.qgis.org/plugins/plugins.xml?qgis=4.0"
+_DEFAULT_UPSTREAM = "https://plugins.qgis.org/plugins/plugins.xml?qgis=3.38"
 UPSTREAM_URL = os.environ.get("UPSTREAM_URL", _DEFAULT_UPSTREAM).strip() or _DEFAULT_UPSTREAM
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +42,7 @@ LOG_FILE = os.path.join(LOG_DIR, "sync.log")
 
 USER_AGENT = "HakeGeoDesk-PluginSync/2026"
 LOCAL_BASE_URL = os.environ.get(
-    "PLUGIN_SERVER_URL", "http://plugins.haketech.com"
+    "PLUGIN_SERVER_URL", "https://plugins.haketech.com"
 ).rstrip("/")
 
 

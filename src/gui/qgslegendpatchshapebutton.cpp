@@ -267,23 +267,15 @@ void QgsLegendPatchShapeButton::updatePreview()
       QStyleOptionToolButton opt;
       initStyleOption( &opt );
       QRect buttonSize = QApplication::style()->subControlRect( QStyle::CC_ToolButton, &opt, QStyle::SC_ToolButton, this );
-      //make sure height of icon looks good under different platforms
-#ifdef Q_OS_WIN
-      mIconSize = QSize( buttonSize.width() - 10, height() - 6 );
-#else
-      mIconSize = QSize( buttonSize.width() - 10, height() - 12 );
-#endif
+      // consistent icon padding across all platforms
+      mIconSize = QSize( buttonSize.width() - 10, height() - 8 );
     }
     currentIconSize = mIconSize;
   }
   else
   {
     //no menu
-#ifdef Q_OS_WIN
-    currentIconSize = QSize( width() - 10, height() - 6 );
-#else
-    currentIconSize = QSize( width() - 10, height() - 12 );
-#endif
+    currentIconSize = QSize( width() - 10, height() - 8 );
   }
 
   if ( !currentIconSize.isValid() || currentIconSize.width() <= 0 || currentIconSize.height() <= 0 )

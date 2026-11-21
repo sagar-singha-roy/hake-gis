@@ -1058,6 +1058,9 @@ GDALDatasetH QgsOgrProviderUtils::GDALOpenWrapper( const char *pszPath, bool bUp
     CPLSetThreadLocalConfigOption( "OGR_GPKG_FOREIGN_KEY_CHECK", "NO" );
   }
 
+  // Restore or rebuild missing .shx spatial indices on the fly
+  CPLSetThreadLocalConfigOption( "SHAPE_RESTORE_SHX", "YES" );
+
   const int nOpenFlags = GDAL_OF_VECTOR | ( bUpdate ? GDAL_OF_UPDATE : 0 );
   GDALDatasetH hDS = GDALOpenEx( pszPath, nOpenFlags, nullptr, papszOpenOptions, nullptr );
   CSLDestroy( papszOpenOptions );

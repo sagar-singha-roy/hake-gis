@@ -20,6 +20,7 @@
 #include "qgsproject.h"
 #include "qgsprojectviewsettings.h"
 #include "qgsscalecombobox.h"
+#include "qgshakeicons.h"
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -35,6 +36,11 @@ QgsStatusBarScaleWidget::QgsStatusBarScaleWidget( QgsMapCanvas *canvas, QWidget 
   : QWidget( parent )
   , mMapCanvas( canvas )
 {
+  QLabel *scaleIcon = new QLabel( this );
+  scaleIcon->setObjectName( u"mScaleIconLabel"_s );
+  scaleIcon->setPixmap( QgsHakeIcons::icon( u"map/hake-map-decoration-scale-bar.svg"_s ).pixmap( 16, 16 ) );
+  scaleIcon->setToolTip( tr( "Current map scale" ) );
+
   // add a label to show current scale
   mLabel = new QLabel();
   mLabel->setObjectName( u"mScaleLabel"_s );
@@ -51,16 +57,18 @@ QgsStatusBarScaleWidget::QgsStatusBarScaleWidget( QgsMapCanvas *canvas, QWidget 
   // seems setFont() change font only for popup not for line edit,
   // so we need to set font for it separately
   mScale->setMinimumWidth( 10 );
+  mScale->setMaximumWidth( 135 );
   mScale->setContentsMargins( 0, 0, 0, 0 );
   mScale->setToolTip( tr( "Current map scale" ) );
 
   // layout
   mLayout = new QHBoxLayout( this );
+  mLayout->addWidget( scaleIcon );
   mLayout->addWidget( mLabel );
   mLayout->addWidget( mScale );
   mLayout->setContentsMargins( 0, 0, 0, 0 );
   mLayout->setAlignment( Qt::AlignRight );
-  mLayout->setSpacing( 0 );
+  mLayout->setSpacing( 2 );
 
   setLayout( mLayout );
 
@@ -112,4 +120,11 @@ void QgsStatusBarScaleWidget::updateScales()
 void QgsStatusBarScaleWidget::userScale() const
 {
   mMapCanvas->zoomScale( mScale->scale() );
+}
+
+void QgsStatusBarScaleWidget::refreshIcons()
+{
+  QLabel *iconLabel = findChild<QLabel *>( u"mScaleIconLabel"_s );
+  if ( iconLabel )
+    iconLabel->setPixmap( QgsHakeIcons::icon( u"map/hake-map-decoration-scale-bar.svg"_s ).pixmap( 16, 16 ) );
 }

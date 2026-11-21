@@ -65,12 +65,7 @@ QgsColorButton::QgsColorButton( QWidget *parent, const QString &cdt, QgsColorSch
   setMenu( mMenu );
   setPopupMode( QToolButton::MenuButtonPopup );
 
-#ifdef Q_OS_WIN
-  mMinimumSize = QSize( 120, 22 );
-#else
-  mMinimumSize = QSize( 120, 28 );
-#endif
-
+  mMinimumSize = QSize( 120, 26 );
   mMinimumSize.setHeight( std::max( static_cast<int>( Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.1 ), mMinimumSize.height() ) );
 
   // If project colors change, we need to redraw the button, as it may be set to follow a project color
@@ -675,23 +670,15 @@ void QgsColorButton::setButtonBackground( const QColor &color )
       QStyleOptionToolButton opt;
       initStyleOption( &opt );
       const QRect buttonSize = QApplication::style()->subControlRect( QStyle::CC_ToolButton, &opt, QStyle::SC_ToolButton, this );
-      //make sure height of icon looks good under different platforms
-#ifdef Q_OS_WIN
-      mIconSize = QSize( buttonSize.width() - 10, height() - 6 );
-#else
-      mIconSize = QSize( buttonSize.width() - 10, height() - 12 );
-#endif
+      // consistent icon padding across all platforms
+      mIconSize = QSize( buttonSize.width() - 10, height() - 8 );
     }
     currentIconSize = mIconSize;
   }
   else
   {
     //no menu
-#ifdef Q_OS_WIN
-    currentIconSize = QSize( width() - 10, height() - 6 );
-#else
-    currentIconSize = QSize( width() - 10, height() - 12 );
-#endif
+    currentIconSize = QSize( width() - 10, height() - 8 );
   }
 
   if ( !currentIconSize.isValid() || currentIconSize.width() <= 0 || currentIconSize.height() <= 0 )

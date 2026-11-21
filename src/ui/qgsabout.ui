@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>903</width>
-    <height>444</height>
+    <width>920</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>700</width>
-    <height>0</height>
+    <width>800</width>
+    <height>520</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -161,19 +161,22 @@
            </property>
            <item>
             <layout class="QHBoxLayout">
-             <item>
+             <item alignment="Qt::AlignHCenter">
               <widget class="QLabel" name="qgisIcon">
-               <property name="maximumSize">
+               <property name="minimumSize">
                 <size>
-                 <width>200</width>
-                 <height>60</height>
+                 <width>0</width>
+                 <height>0</height>
                 </size>
                </property>
-               <property name="pixmap">
-                <pixmap>:/images/icons/hake-gis-full.png</pixmap>
+               <property name="maximumSize">
+                <size>
+                 <width>190</width>
+                 <height>62</height>
+                </size>
                </property>
-               <property name="scaledContents">
-                <bool>true</bool>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
                </property>
               </widget>
              </item>

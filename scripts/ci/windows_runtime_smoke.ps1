@@ -19,12 +19,13 @@ param(
     [string]$ReportDir = "",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("All", "AssertZip", "Install", "Smoke", "Process", "Runtime")]
+    [ValidateSet("All", "AssertZip", "Install", "Smoke", "Process", "Portable", "Runtime")]
     [string]$Mode = "All"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+$global:LASTEXITCODE = 0
 
 if (-not $ReportDir) {
     $ReportDir = Join-Path $BuildDir "runtime-smoke"
@@ -64,11 +65,42 @@ function Assert-ZipContents {
         $process = @($names | Where-Object { $_ -match '(^|/)bin/hake-geodesk-process\.exe$' })
         $allProjDb = @($names | Where-Object { $_ -match '(^|/)proj\.db$' })
         $projDlls = @($names | Where-Object { $_ -match '(^|/)bin/proj[^/]*\.dll$' })
+        $qtPlatform = @($names | Where-Object { $_ -match '(^|/)bin/Qt6/plugins/platforms/qwindows\.dll$' })
+        $qtCoreDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Core\.dll$' })
+        $qtGuiDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Gui\.dll$' })
+        $qtWidgetsDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Widgets\.dll$' })
+        $qtNetworkDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Network\.dll$' })
+        $qtMultimediaDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Multimedia\.dll$' })
+        $qtPositioningDll = @($names | Where-Object { $_ -match '(^|/)bin/Qt6Positioning\.dll$' })
+        $qgisCoreDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_core\.dll$' })
+        $qgisGuiDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_gui\.dll$' })
+        $qgisAppDll = @($names | Where-Object { $_ -match '(^|/)bin/(qgis|hakegis)_app\.dll$' })
+        $appExe = @($names | Where-Object { $_ -match '(^|/)bin/hake-geodesk\.exe$' })
+        $pyqtCore = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtCore[^/]*\.pyd$' })
+        $pyqtGui = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtGui[^/]*\.pyd$' })
+        $pyqtWidgets = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtWidgets[^/]*\.pyd$' })
+        $pyqtMultimedia = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtMultimedia[^/]*\.pyd$' })
+        $pyqtPositioning = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/QtPositioning[^/]*\.pyd$' })
+        $pyqtSip = @($names | Where-Object { $_ -match '(^|/)bin/Lib/site-packages/PyQt6/sip[^/]*\.pyd$' })
+        $qgisCore = @($names | Where-Object { $_ -match '(^|/)python/qgis/core/__init__\.py$' })
+        $qgisGui = @($names | Where-Object { $_ -match '(^|/)python/qgis/gui/__init__\.py$' })
+        $qgisCorePyd = @($names | Where-Object { $_ -match '(^|/)python/qgis/_core[^/]*\.pyd$' })
+        $qgisGuiPyd = @($names | Where-Object { $_ -match '(^|/)python/qgis/_gui[^/]*\.pyd$' })
 
         Write-Host "proj.db entries:"
         $allProjDb | ForEach-Object { Write-Host "  $_" }
         Write-Host "proj*.dll entries:"
         $projDlls | ForEach-Object { Write-Host "  $_" }
+        Write-Host "Qt6 platform plugin entries:"
+        $qtPlatform | ForEach-Object { Write-Host "  $_" }
+        Write-Host "Qt6 core/gui/widgets DLL entries:"
+        Write-Host "  Qt6Core: $($qtCoreDll.Count), Qt6Gui: $($qtGuiDll.Count), Qt6Widgets: $($qtWidgetsDll.Count)"
+        Write-Host "Core/Gui/App DLL entries:"
+        Write-Host "  Core: $($qgisCoreDll.Count), Gui: $($qgisGuiDll.Count), App: $($qgisAppDll.Count)"
+        Write-Host "PyQt6 multimedia entries:"
+        $pyqtMultimedia | ForEach-Object { Write-Host "  $_" }
+        Write-Host "PyQt6 positioning entries:"
+        $pyqtPositioning | ForEach-Object { Write-Host "  $_" }
 
         $missing = @()
         if (-not $projDb) { $missing += "share/proj/proj.db" }
@@ -79,6 +111,25 @@ function Assert-ZipContents {
         if (-not $osgeo) { $missing += "bin/Lib/site-packages/osgeo/" }
         if (-not $envFile) { $missing += "bin/hake-geodesk.env" }
         if (-not $process) { $missing += "bin/hake-geodesk-process.exe" }
+        if (-not $appExe) { $missing += "bin/hake-geodesk.exe" }
+        if (-not $qtCoreDll) { $missing += "bin/Qt6Core.dll" }
+        if (-not $qtGuiDll) { $missing += "bin/Qt6Gui.dll" }
+        if (-not $qtWidgetsDll) { $missing += "bin/Qt6Widgets.dll" }
+        if (-not $qtMultimediaDll) { $missing += "bin/Qt6Multimedia.dll" }
+        if (-not $qtPositioningDll) { $missing += "bin/Qt6Positioning.dll" }
+        if (-not $qgisCoreDll) { $missing += "bin/(qgis|hakegis)_core.dll" }
+        if (-not $qgisGuiDll) { $missing += "bin/(qgis|hakegis)_gui.dll" }
+        if (-not $qgisAppDll) { $missing += "bin/(qgis|hakegis)_app.dll" }
+        if (-not $qtPlatform) { $missing += "bin/Qt6/plugins/platforms/qwindows.dll" }
+        if (-not $pyqtCore) { $missing += "bin/Lib/site-packages/PyQt6/QtCore*.pyd" }
+        if (-not $pyqtGui) { $missing += "bin/Lib/site-packages/PyQt6/QtGui*.pyd" }
+        if (-not $pyqtWidgets) { $missing += "bin/Lib/site-packages/PyQt6/QtWidgets*.pyd" }
+        # Note: PyQt6.QtMultimedia is an optional module in vcpkg py-pyqt6; do not fail if omitted
+        if (-not $pyqtPositioning) { $missing += "bin/Lib/site-packages/PyQt6/QtPositioning*.pyd" }
+        if (-not $qgisCore) { $missing += "python/qgis/core/__init__.py" }
+        if (-not $qgisGui) { $missing += "python/qgis/gui/__init__.py" }
+        if (-not $qgisCorePyd) { $missing += "python/qgis/_core*.pyd" }
+        if (-not $qgisGuiPyd) { $missing += "python/qgis/_gui*.pyd" }
 
         if ($missing.Count -gt 0) {
             throw "ZIP missing required packaged paths: $($missing -join ', ')"
@@ -283,11 +334,56 @@ function Write-EnvDiagnostics([string]$Label) {
     }
 }
 
+function Invoke-AppExeVersion([string]$InstallRoot, [string]$Label) {
+    Write-Section "Executable version invocation ($Label)"
+    $appExe = Join-Path $InstallRoot "bin\hake-geodesk.exe"
+    $processExe = Join-Path $InstallRoot "bin\hake-geodesk-process.exe"
+
+    if (-not (Test-Path -LiteralPath $appExe)) {
+        throw "Missing $appExe"
+    }
+    if (-not (Test-Path -LiteralPath $processExe)) {
+        throw "Missing $processExe"
+    }
+
+    $launcher = Get-LauncherEnvironment $InstallRoot
+    Apply-EnvMap $launcher.Env
+    $env:QT_QPA_PLATFORM = "offscreen"
+
+    Write-Host "Running $appExe --version ..."
+    $logApp = Join-Path $ReportDir "app_version_$Label.log"
+    $logAppErr = Join-Path $ReportDir "app_version_err_$Label.log"
+    $procApp = Start-Process -FilePath $appExe -ArgumentList "--version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $logApp -RedirectStandardError $logAppErr
+    $codeApp = if ($null -ne $procApp.ExitCode) { $procApp.ExitCode } else { 1 }
+    Get-Content -LiteralPath $logApp -ErrorAction SilentlyContinue | Write-Host
+    Get-Content -LiteralPath $logAppErr -ErrorAction SilentlyContinue | Write-Host
+    if ($codeApp -ne 0) {
+        throw "$appExe --version exited with code $codeApp (see $logApp)"
+    }
+    Write-Host "App launcher executable ($appExe --version) PASSED ($Label)"
+
+    Write-Host "Running $processExe --version ..."
+    $logProc = Join-Path $ReportDir "process_version_$Label.log"
+    $logProcErr = Join-Path $ReportDir "process_version_err_$Label.log"
+    $procProc = Start-Process -FilePath $processExe -ArgumentList "--version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $logProc -RedirectStandardError $logProcErr
+    $codeProc = if ($null -ne $procProc.ExitCode) { $procProc.ExitCode } else { 1 }
+    Get-Content -LiteralPath $logProc -ErrorAction SilentlyContinue | Write-Host
+    Get-Content -LiteralPath $logProcErr -ErrorAction SilentlyContinue | Write-Host
+    if ($codeProc -ne 0) {
+        throw "$processExe --version exited with code $codeProc (see $logProc)"
+    }
+    Write-Host "Process CLI executable ($processExe --version) PASSED ($Label)"
+}
+
 function Invoke-Smoke([string]$InstallRoot, [string]$Label, [switch]$Isolated) {
     Write-Section "Runtime smoke ($Label)"
     $python = Join-Path $InstallRoot "bin\python.exe"
     if (-not (Test-Path -LiteralPath $python)) {
         throw "Bundled python.exe missing: $python"
+    }
+
+    if (-not $Isolated) {
+        Invoke-AppExeVersion -InstallRoot $InstallRoot -Label $Label
     }
 
     Clear-ProjEnvVars
@@ -331,6 +427,7 @@ function Invoke-Smoke([string]$InstallRoot, [string]$Label, [switch]$Isolated) {
     $localScript = Join-Path $ReportDir "windows_runtime_smoke.py"
     Copy-Item -LiteralPath $script -Destination $localScript -Force
 
+    $global:LASTEXITCODE = 0
     & $python -u $localScript `
         --install-root $InstallRoot `
         --report-dir $ReportDir `
@@ -377,6 +474,7 @@ print('wrote', r'$($tif.Replace('\','\\'))')
 "@
     $mkPath = Join-Path $work "mk_raster.py"
     Set-Content -LiteralPath $mkPath -Value $mk -Encoding UTF8
+    $global:LASTEXITCODE = 0
     & $python -u $mkPath
     if ($LASTEXITCODE -ne 0) { throw "Failed to create process test raster" }
 
@@ -395,6 +493,7 @@ print('wrote', r'$($tif.Replace('\','\\'))')
     )
     Write-Host "Running: $processExe $($args -join ' ')"
     $log = Join-Path $ReportDir "process_polygonize.log"
+    $global:LASTEXITCODE = 0
     & $processExe @args *> $log
     $code = $LASTEXITCODE
     Get-Content -LiteralPath $log -ErrorAction SilentlyContinue | Write-Host
@@ -418,9 +517,40 @@ assert count >= 2, count
 "@
     $valPath = Join-Path $work "validate_out.py"
     Set-Content -LiteralPath $valPath -Value $validate -Encoding UTF8
+    $global:LASTEXITCODE = 0
     & $python -u $valPath
     if ($LASTEXITCODE -ne 0) { throw "process output GeoPackage validation failed" }
     Write-Host "hake-geodesk-process polygonize PASSED"
+}
+
+function Test-PortableZip {
+    Write-Section "Portable ZIP extract and runtime smoke"
+    $zip = Get-CPackZip
+    $tempBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
+    $portableTarget = Join-Path $tempBase "HakeGeoDeskPortable"
+    if (Test-Path -LiteralPath $portableTarget) {
+        Remove-Item -Recurse -Force -LiteralPath $portableTarget
+    }
+    New-Item -ItemType Directory -Force -Path $portableTarget | Out-Null
+    Write-Host "Extracting $($zip.FullName) to $portableTarget ..."
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip.FullName, $portableTarget)
+
+    $portableRoot = $portableTarget
+    if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "bin\hake-geodesk.exe"))) {
+        $sub = Get-ChildItem -LiteralPath $portableTarget -Directory | Select-Object -First 1
+        if ($sub -and (Test-Path -LiteralPath (Join-Path $sub.FullName "bin\hake-geodesk.exe"))) {
+            $portableRoot = $sub.FullName
+        }
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "bin\hake-geodesk.exe"))) {
+        throw "Portable package extraction did not yield bin\hake-geodesk.exe"
+    }
+
+    Write-Host "Portable package root verified at $portableRoot"
+    Invoke-AppExeVersion -InstallRoot $portableRoot -Label "portable"
+    Invoke-Smoke -InstallRoot $portableRoot -Label "portable-smoke"
+    Write-Host "Portable package smoke PASSED"
 }
 
 # ---- main ----
@@ -461,6 +591,10 @@ if ($Mode -in @("All", "Smoke", "Runtime")) {
 
 if ($Mode -in @("All", "Process", "Runtime")) {
     Invoke-ProcessPolygonize -InstallRoot $installRoot
+}
+
+if ($Mode -in @("All", "Portable", "Runtime")) {
+    Test-PortableZip
 }
 
 Write-Section "All requested modes completed successfully"

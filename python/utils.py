@@ -105,6 +105,11 @@ def showException(
         blockingdialog = QApplication.activeModalWidget()
         window = QApplication.activeWindow()
 
+    # During application startup before the main window is active, do not block launch with modal popups
+    # when a messagebar notification was requested. The error is already recorded in QgsMessageLog.
+    if messagebar and (not window or not iface):
+        return
+
     # Still show the normal blocking dialog in this case for now.
     if blockingdialog or not window or not messagebar or not iface:
         open_stack_dialog(type, value, tb, msg)

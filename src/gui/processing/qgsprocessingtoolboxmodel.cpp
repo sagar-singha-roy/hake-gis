@@ -527,9 +527,34 @@ QVariant QgsProcessingToolboxModel::data( const QModelIndex &index, int role ) c
             return QgsApplication::getThemeIcon( u"/mIconFavorites.svg"_s );
           else if ( isParameterGroupNode )
             return QgsApplication::getThemeIcon( u"/mIconModelInput.svg"_s );
+          else if ( groupNode )
+          {
+            const QString id = groupNode->id().toLower();
+            const QString name = groupNode->name().toLower();
+            if ( id.contains( u"vector"_s ) || name.contains( u"vector"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconVector.svg"_s );
+            if ( id.contains( u"raster"_s ) || name.contains( u"raster"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconRaster.svg"_s );
+            if ( id.contains( u"mesh"_s ) || name.contains( u"mesh"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconMeshLayer.svg"_s );
+            if ( id.contains( u"pointcloud"_s ) || id.contains( u"point cloud"_s ) || name.contains( u"point cloud"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconPointCloudLayer.svg"_s );
+            if ( id.contains( u"database"_s ) || name.contains( u"database"_s ) || id.contains( u"table"_s ) || name.contains( u"table"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconTableLayer.svg"_s );
+            if ( id.contains( u"model"_s ) || name.contains( u"model"_s ) )
+              return QgsApplication::getThemeIcon( u"/processingModel.svg"_s );
+            if ( id.contains( u"gps"_s ) || name.contains( u"gps"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconGps.svg"_s );
+            if ( id.contains( u"3d"_s ) || name.contains( u"3d"_s ) )
+              return QgsApplication::getThemeIcon( u"/3d.svg"_s );
+            if ( id.contains( u"plot"_s ) || name.contains( u"plot"_s ) )
+              return QgsApplication::getThemeIcon( u"/histogram.svg"_s );
+            if ( id.contains( u"layer"_s ) || name.contains( u"layer"_s ) )
+              return QgsApplication::getThemeIcon( u"/mIconFolderProject.svg"_s );
+            return QgsApplication::getThemeIcon( u"/mIconFolder.svg"_s );
+          }
           else if ( !index.parent().isValid() )
-            // top level groups get the Hake Geospatial icon
-            return QgsApplication::getThemeIcon( u"/providerHakeGis.svg"_s );
+            return QgsApplication::getThemeIcon( u"/mIconFolder.svg"_s );
           else
             return QVariant();
         }

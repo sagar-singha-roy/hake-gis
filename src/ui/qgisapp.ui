@@ -280,7 +280,7 @@
    </widget>
    <widget class="QMenu" name="mPluginMenu">
     <property name="title">
-     <string>&amp;Plugins</string>
+     <string>&amp;Extensions</string>
     </property>
     <addaction name="mActionManagePlugins"/>
     <addaction name="separator"/>
@@ -476,7 +476,7 @@
     <string>Manage Layers Toolbar</string>
    </property>
    <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
+    <enum>LeftToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
     <bool>false</bool>
@@ -549,6 +549,9 @@
    <addaction name="mActionMergeFeatureAttributes"/>
   </widget>
   <widget class="QToolBar" name="mMapNavToolBar">
+   <property name="visible">
+    <bool>false</bool>
+   </property>
    <property name="windowTitle">
     <string>Map Navigation Toolbar</string>
    </property>
@@ -612,6 +615,9 @@
    <addaction name="mActionShowPythonDialog"/>
   </widget>
   <widget class="QToolBar" name="mHelpToolBar">
+   <property name="visible">
+    <bool>false</bool>
+   </property>
    <property name="windowTitle">
     <string>Help Toolbar</string>
    </property>
@@ -1861,7 +1867,7 @@ Shift+O to turn segments into straight or curve lines.</string>
      <normaloff>:/images/themes/default/mActionShowPluginManager.svg</normaloff>:/images/themes/default/mActionShowPluginManager.svg</iconset>
    </property>
    <property name="text">
-    <string>Manage and Install Plugins…</string>
+    <string>Manage and Install Extensions…</string>
    </property>
   </action>
   <action name="mActionToggleFullScreen">

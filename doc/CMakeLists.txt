@@ -18,6 +18,13 @@ set(QGIS_DOC_FILES
 install(FILES ${QGIS_DOC_FILES} DESTINATION ${QGIS_DATA_DIR}/doc)
 install(FILES ../images/icons/hake-gis-icon-60x60.png DESTINATION ${QGIS_DATA_DIR}/doc/images)
 
+# Ensure doc files are available directly in build output directory
+foreach(DOC_FILE ${QGIS_DOC_FILES} AUTHORS CONTRIBUTORS DONORS SPONSORS TRANSLATORS)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${DOC_FILE})
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${DOC_FILE} ${QGIS_OUTPUT_DIRECTORY}/data/doc/${DOC_FILE} COPYONLY)
+  endif()
+endforeach()
+
 if(WITH_APIDOC)
   find_package(Doxygen 1.8.2 REQUIRED)
   if(DOXYGEN_FOUND)

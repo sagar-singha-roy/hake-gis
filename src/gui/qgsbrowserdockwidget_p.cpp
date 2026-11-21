@@ -52,6 +52,7 @@
 #include <QPlainTextDocumentLayout>
 #include <QSortFilterProxyModel>
 #include <QString>
+#include <QTextDocument>
 #include <QToolButton>
 #include <QTreeView>
 
@@ -154,11 +155,47 @@ QgsBrowserLayerProperties::QgsBrowserLayerProperties( QWidget *parent )
   mMapCanvas->setMapTool( new QgsMapToolPan( mMapCanvas ) );
   mMapCanvas->freeze( true );
 
+  const bool isDark = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                      QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+  mMapCanvas->setCanvasColor( isDark ? QColor( QStringLiteral( "#0E2433" ) ) : Qt::white );
+  if ( isDark )
+  {
+    mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #121A24; color: #D7E1EC; }" ) );
+  }
+  else
+  {
+    mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #FFFFFF; color: #1E293B; }" ) );
+  }
+
+  if ( QgsApplication::instance() )
+  {
+    connect( QgsApplication::instance(), &QgsApplication::themeChanged, this, [this] {
+      const bool isDarkNow = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                             QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+      mMapCanvas->setCanvasColor( isDarkNow ? QColor( QStringLiteral( "#0E2433" ) ) : Qt::white );
+      if ( isDarkNow )
+      {
+        mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #121A24; color: #D7E1EC; }" ) );
+      }
+      else
+      {
+        mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #FFFFFF; color: #1E293B; }" ) );
+      }
+      mMetadataTextBrowser->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
+    } );
+  }
+
   connect( mTabWidget, &QTabWidget::currentChanged, this, [this] {
-    if ( mTabWidget->currentWidget() == mPreviewTab && mMapCanvas->isFrozen() )
+    if ( mTabWidget->currentWidget() == mPreviewTab )
     {
-      mMapCanvas->freeze( false );
-      mMapCanvas->refresh();
+      const bool isDarkTab = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                             QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+      mMapCanvas->setCanvasColor( isDarkTab ? QColor( QStringLiteral( "#0E2433" ) ) : Qt::white );
+      if ( mMapCanvas->isFrozen() )
+      {
+        mMapCanvas->freeze( false );
+        mMapCanvas->refresh();
+      }
     }
     else if ( mTabWidget->currentWidget() == mAttributesTab )
     {
@@ -262,6 +299,9 @@ void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
     mLayer->loadDefaultMetadata( ok );
     layerMetadata = mLayer->htmlMetadata();
 
+    const bool isDarkLayer = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                             QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+    mMapCanvas->setCanvasColor( isDarkLayer ? QColor( QStringLiteral( "#0E2433" ) ) : Qt::white );
     mMapCanvas->setDestinationCrs( mLayer->crs() );
     mMapCanvas->setLayers( QList<QgsMapLayer *>() << mLayer.get() );
     mMapCanvas->zoomToFullExtent();
@@ -281,6 +321,17 @@ void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
         mPreviewTab = nullptr;
       }
     }
+  }
+
+  const bool isDarkMeta = QgsApplication::themeName().contains( u"Night"_s, Qt::CaseInsensitive ) ||
+                          QgsApplication::themeName().contains( u"Dark"_s, Qt::CaseInsensitive );
+  if ( isDarkMeta )
+  {
+    mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #121A24; color: #D7E1EC; }" ) );
+  }
+  else
+  {
+    mMetadataTextBrowser->setStyleSheet( QStringLiteral( "QTextBrowser { background-color: #FFFFFF; color: #1E293B; }" ) );
   }
 
   const QString myStyle = QgsApplication::reportStyleSheet();
@@ -328,11 +379,7 @@ void QgsBrowserLayerProperties::loadAttributeTable()
   tableModel->loadLayer();
   QFont font = mAttributeTable->font();
   int fontSize = font.pointSize();
-#ifdef Q_OS_WIN
-  fontSize = std::max( fontSize - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
-#else
-  fontSize = std::max( fontSize - 2, 6 );
-#endif
+  fontSize = std::max( fontSize - 1, 8 );
   font.setPointSize( fontSize );
   mAttributeTable->setFont( font );
 

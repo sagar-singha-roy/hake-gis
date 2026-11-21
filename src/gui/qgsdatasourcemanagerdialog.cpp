@@ -59,8 +59,8 @@ QgsDataSourceManagerDialog::QgsDataSourceManagerDialog( QgsBrowserGuiModel *brow
   // Bind list index to the stacked dialogs
   connect( ui->mOptionsListWidget, &QListWidget::currentRowChanged, this, &QgsDataSourceManagerDialog::setCurrentPage );
 
-  // BROWSER Add the browser widget to the first stacked widget page
-  mBrowserWidget = new QgsBrowserDockWidget( u"Browser"_s, mBrowserModel, this );
+  // GEO EXPLORER Add the Geo Explorer widget to the first stacked widget page
+  mBrowserWidget = new QgsBrowserDockWidget( u"Geo Explorer"_s, mBrowserModel, this );
   mBrowserWidget->setFeatures( QDockWidget::NoDockWidgetFeatures );
   mBrowserWidget->setTitleBarWidget( new QWidget( mBrowserWidget ) );
   mBrowserWidget->setMessageBar( mMessageBar );
@@ -144,7 +144,8 @@ void QgsDataSourceManagerDialog::setCurrentPage( int index )
 {
   mPreviousRow = ui->mOptionsStackedWidget->currentIndex();
   ui->mOptionsStackedWidget->setCurrentIndex( index );
-  setWindowTitle( tr( "Data Source Manager | %1" ).arg( ui->mOptionsListWidget->currentItem()->text() ) );
+  if ( ui->mOptionsListWidget->currentItem() )
+    setWindowTitle( tr( "Data Source Manager — %1" ).arg( ui->mOptionsListWidget->currentItem()->text() ) );
   resizeAlltabs( index );
 }
 

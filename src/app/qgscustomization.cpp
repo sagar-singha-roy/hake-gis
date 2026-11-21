@@ -24,6 +24,7 @@
 #include "qgsbrowserdockwidget.h"
 #include "qgsdataitemprovider.h"
 #include "qgsdataitemproviderregistry.h"
+#include "qgslocatorwidget.h"
 #include "qgslogger.h"
 #include "qgsprocessingalgorithm.h"
 #include "qgsprocessingprovider.h"
@@ -48,6 +49,19 @@
 #include <QWidgetAction>
 
 using namespace Qt::StringLiterals;
+
+namespace
+{
+  /**
+   * Returns the locator when its entry point lives outside the status bar (the Ribbon search).
+   * It keeps its "StatusBarWidgets/LocatorWidget" customization entry so saved preferences still apply.
+   */
+  QgsLocatorWidget *relocatedLocator( QgisApp *app )
+  {
+    QgsLocatorWidget *locator = app ? app->locatorWidget() : nullptr;
+    return locator && locator->parentWidget() != app->statusBarIface() ? locator : nullptr;
+  }
+} // namespace
 
 #define CUSTOMIZATION_CURRENT_VERSION "1"
 #define USER_MENU_PROPERTY "__usermenu__"
@@ -1374,6 +1388,17 @@ void QgsCustomization::loadApplicationStatusBarWidgets()
       mStatusBarWidgets->addChild( std::move( statusBarWidgetItem ) );
     }
   }
+
+  if ( QgsLocatorWidget *locator = relocatedLocator( mQgisApp ) )
+  {
+    const QString name = locator->objectName();
+    if ( !mStatusBarWidgets->getChild<QgsStatusBarWidgetItem>( name ) )
+    {
+      auto locatorItem = std::make_unique<QgsStatusBarWidgetItem>( name, mStatusBarWidgets.get() );
+      locatorItem->setVisible( mQgisApp->isLocatorEntryVisible() );
+      mStatusBarWidgets->addChild( std::move( locatorItem ) );
+    }
+  }
 }
 
 void QgsCustomization::apply() const
@@ -1501,6 +1526,12 @@ QWidget *QgsCustomization::findQWidget( const QString &path )
   const QHash<QString, QWidget *> rootWidgets = { { "Menus", app->menuBar() }, { "ToolBars", app }, { "Docks", app }, { "StatusBarWidgets", app->statusBarIface() } };
 
   const QString rootElem = pathElems.takeFirst();
+  if ( rootElem == "StatusBarWidgets"_L1 && pathElems.size() == 1 )
+  {
+    if ( QgsLocatorWidget *locator = relocatedLocator( app ); locator && pathElems.constFirst() == locator->objectName() )
+      return app->locatorEntryWidget();
+  }
+
   QWidget *currentWidget = rootWidgets.value( rootElem );
   if ( !currentWidget )
     return nullptr;
@@ -1674,6 +1705,12 @@ void QgsCustomization::applyToStatusBarWidgets() const
     {
       statusBarWidget->setVisible( s->isVisible() );
     }
+  }
+
+  if ( QgsLocatorWidget *locator = relocatedLocator( mQgisApp ) )
+  {
+    if ( QgsStatusBarWidgetItem *s = mStatusBarWidgets->getChild<QgsStatusBarWidgetItem>( locator->objectName() ) )
+      mQgisApp->setLocatorEntryVisible( s->isVisible() );
   }
 }
 

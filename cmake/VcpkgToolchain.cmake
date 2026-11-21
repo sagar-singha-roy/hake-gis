@@ -1,7 +1,7 @@
-set(NUGET_SOURCE "https://nuget.pkg.github.com/qgis/index.json" CACHE STRING "Nuget push source for vcpkg binary cache")
-set(NUGET_USERNAME "qgis" CACHE STRING "Nuget user for push source")
-set(NUGET_READ_SOURCE "https://nuget.pkg.github.com/qgis/index.json" CACHE STRING "Read-only Nuget source for vcpkg binary cache (upstream QGIS packages)")
-set(NUGET_READ_USERNAME "qgis" CACHE STRING "Nuget user for read-only source")
+set(NUGET_SOURCE "https://nuget.pkg.github.com/Subhankar-hub/index.json" CACHE STRING "Nuget push source for vcpkg binary cache")
+set(NUGET_USERNAME "Subhankar-hub" CACHE STRING "Nuget user for push source")
+set(NUGET_READ_SOURCE "https://nuget.pkg.github.com/Subhankar-hub/index.json" CACHE STRING "Read-only Nuget source for vcpkg binary cache (upstream QGIS packages)")
+set(NUGET_READ_USERNAME "Subhankar-hub" CACHE STRING "Nuget user for read-only source")
 
 # Setup features (dependencies) based on cmake configuration
 if(WITH_3D)

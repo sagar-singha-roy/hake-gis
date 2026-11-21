@@ -112,11 +112,8 @@ void QgsRatioLockButton::drawButton()
 {
   QSize currentIconSize;
 
-#ifdef Q_OS_WIN
-  currentIconSize = QSize( width() - 10, height() - 6 );
-#else
-  currentIconSize = QSize( width() - 10, height() - 12 );
-#endif
+  // consistent icon padding across all platforms
+  currentIconSize = QSize( width() - 10, height() - 8 );
 
   if ( !currentIconSize.isValid() || currentIconSize.width() <= 0 || currentIconSize.height() <= 0 )
   {

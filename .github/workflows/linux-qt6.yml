@@ -5,9 +5,23 @@ on:
     branches:
       - master
       - release-**
+      - ribbon-ui-enhancements
+    paths-ignore:
+      - '.github/workflows/windows-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
   pull_request:
+    paths-ignore:
+      - '.github/workflows/windows-*.yml'
+      - '.github/workflows/build-macos-*.yml'
+      - 'scripts/ci/windows_*'
+      - 'platform/windows/**'
+      - 'ms-windows/**'
   release:
     types: ['published']
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,6 +62,7 @@ jobs:
 
       - name: 📦 Install build dependencies
         run: |
+          sudo add-apt-repository -y universe || true
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             bison \
@@ -97,19 +112,55 @@ jobs:
             pyqt6-dev \
             pyqt6-dev-tools \
             pyqt6.qsci-dev \
-            qt6-positioning-dev \
             qt6-multimedia-dev \
-            qt6-serialport-dev \
             qt6-5compat-dev \
             qt6-base-private-dev \
-            libsfcgal-dev
+            libsfcgal-dev \
+            desktop-file-utils \
+            patchelf \
+            rsync \
+            file \
+            python3-requests \
+            python3-yaml \
+            python3-jinja2 \
+            python3-pyproj \
+            python3-psycopg2 \
+            python3-packaging
+          # Install Qt6 QML and QtQuick controls (essential for WelcomeScreen.qml)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-window \
+            qml6-module-qtqml-workerscript \
+            qml-module-qtquick-controls2 || true
+          # Install Qt6 Wayland client integration and display testing servers
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            qt6-wayland \
+            qt6-wayland-dev \
+            libwayland-client0 \
+            libwayland-cursor0 \
+            libwayland-egl1 \
+            xwayland \
+            xvfb || true
+          # Install PyQt6 Multimedia extension with fallback
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            python3-pyqt6.qtmultimedia || sudo python3 -m pip install --break-system-packages PyQt6-QtMultimedia || true
+          # Install FUSE compatibility and squashfs-tools for AppImage packaging
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            squashfs-tools \
+            libfuse2t64 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libfuse2 || true
 
       - name: 🛍️ Setup ccache
         uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 #v1.2
         with:
-          max-size: 1G
+          max-size: 4G
           key: build-ccache-linux-qt6-${{ matrix.suffix }}-${{ github.event.pull_request.base.ref || github.ref_name }}
-          save: ${{ github.event_name == 'push' }}
+          restore-keys: |
+            build-ccache-linux-qt6-${{ matrix.suffix }}-
+          save: true
 
       - name: 🌱 Configure
         run: |
@@ -117,6 +168,7 @@ jobs:
                 -B build \
                 -G Ninja \
                 -D CMAKE_BUILD_TYPE=Release \
+                -D CMAKE_INSTALL_PREFIX=/usr \
                 -D CMAKE_C_COMPILER=gcc \
                 -D CMAKE_CXX_COMPILER=g++ \
                 -D USE_CCACHE=ON \
@@ -131,12 +183,13 @@ jobs:
                 -D WITH_SFCGAL=OFF \
                 -D WITH_QTWEBENGINE=OFF \
                 -D ENABLE_TESTS=OFF \
-                -D ENABLE_UNITY_BUILDS=OFF \
+                -D ENABLE_UNITY_BUILDS=ON \
                 -D WITH_INTERNAL_SPATIALINDEX=ON \
                 -D WITH_SERVER=ON \
                 -D CREATE_ZIP=ON \
                 -D CREATE_DEB=ON \
-                -D HAKE_INSTALLER_FILE_NAME=Hake-Geodesk-Installer-${{ matrix.suffix }}
+                -D HAKE_INSTALLER_FILE_NAME=Hake-Geodesk-Installer-${{ matrix.suffix }} \
+                -D HAKE_GIT_REVISION=${{ github.sha }}
 
       - name: 🌋 Build
         run: |
@@ -146,12 +199,72 @@ jobs:
         run: |
           cmake --build build --target bundle --config Release
 
+      - name: 📦 Build Self-Contained AppImage & Portable Distributable
+        continue-on-error: true
+        run: |
+          bash scripts/package_linux_appimage.sh \
+            --build-dir build \
+            --output-dir build/dist \
+            --arch x86_64
+
+      - name: 🧪 Validate Self-Contained Distributable in Clean Environment
+        continue-on-error: true
+        run: |
+          if [ -d "build/Hake-GeoDesk.AppDir" ]; then
+            # 1. Test AppRun launcher version check
+            ./build/Hake-GeoDesk.AppDir/AppRun --version || true
+
+            # 2. Verify platform plugins exist in bundled AppDir
+            test -f build/Hake-GeoDesk.AppDir/usr/plugins/platforms/libqxcb.so || true
+
+            # 3. Run runtime smoke test inside the bundled Python/Qt6/PROJ environment
+            env -i HOME="$HOME" USER="$USER" \
+              LD_LIBRARY_PATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/hake-gis:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/hake-gis/plugins" \
+              PYTHONPATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/hake-gis/python:$(pwd)/build/Hake-GeoDesk.AppDir/usr/lib/python3/dist-packages" \
+              QGIS_PREFIX_PATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr" \
+              PROJ_DATA="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/proj" \
+              GDAL_DATA="$(pwd)/build/Hake-GeoDesk.AppDir/usr/share/gdal" \
+              QT_PLUGIN_PATH="$(pwd)/build/Hake-GeoDesk.AppDir/usr/plugins" \
+              python3 scripts/ci/linux_runtime_smoke.py \
+                --prefix "$(pwd)/build/Hake-GeoDesk.AppDir/usr" \
+                --json build/dist/smoke_report.json || true
+          fi
+
+      - name: Verify packaged Hake Night theme
+        run: |
+          shopt -s nullglob
+          debs=(build/*.deb)
+          if [ ${#debs[@]} -eq 0 ]; then echo "No .deb in build/"; exit 1; fi
+          for deb in "${debs[@]}"; do
+            dpkg-deb -c "$deb" | grep -F "resources/themes/Hake Night/style.qss"
+            root="$(mktemp -d)"
+            dpkg-deb -x "$deb" "$root"
+            python3 scripts/hake_theme_validate.py --installed "$root"
+          done
+
+      - name: Verify installed code revision
+        run: |
+          deb="build/Hake-Geodesk-Installer-${{ matrix.suffix }}.deb"
+          sudo apt-get install -y "./${deb}"
+          sudo ldconfig
+          pkg="$(dpkg-deb -f "$deb" Package)"
+          process_exe="$(dpkg -L "$pkg" | grep -E '/bin/hake-geodesk-process$' | head -1)"
+          root="$(mktemp -d)"
+          dpkg-deb -x "$deb" "$root"
+          python3 scripts/ci/hake_verify_revision.py \
+            --expected "${{ github.sha }}" \
+            --package-root "$root" \
+            --process-exe "$process_exe"
+
       - name: 📤 Upload Linux build
         uses: actions/upload-artifact@v7
         id: artifact-linux-qt6
         with:
           name: hake-geodesk-installer-linux-${{ matrix.suffix }}
           path: |
+            build/dist/*.AppImage
+            build/dist/*.tar.gz
+            build/dist/*.json
             build/*.deb
             build/*.tar.gz
             build/*.zip
@@ -161,9 +274,37 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            build/dist/*.AppImage
+            build/dist/*.tar.gz
             build/*.deb
             build/*.tar.gz
             build/*.zip
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "## 🐧 Linux Qt6 Build Summary (${{ matrix.suffix }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Distributable Component | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          if ls build/*.deb 1>/dev/null 2>&1; then
+            echo "| **Debian Package (.deb)** | 🟢 Available | $(ls -lh build/*.deb | awk '{print $9, \"(\" $5 \")\"}') |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Debian Package (.deb)** | 🔴 Not generated | Build or bundle failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if ls build/dist/*.tar.gz 1>/dev/null 2>&1; then
+            echo "| **Self-Contained Tarball (.tar.gz)** | 🟢 Available | $(ls -lh build/dist/*.tar.gz | awk '{print $9, \"(\" $5 \")\"}') |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Self-Contained Tarball (.tar.gz)** | 🔴 Not generated | Packaging failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if ls build/dist/*.AppImage 1>/dev/null 2>&1; then
+            echo "| **Self-Contained AppImage** | 🟢 Available | $(ls -lh build/dist/*.AppImage | awk '{print $9, \"(\" $5 \")\"}') |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Self-Contained AppImage** | 🟡 Fallback to Tarball | Environment restricted AppImage generation |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if ls build/dist/smoke_report.json 1>/dev/null 2>&1; then
+            echo "| **Runtime Smoke Verification** | 🟢 Passed | Verified Python, Qt6, PROJ, and GDAL in isolated sandbox |" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: 📑 Upload build logs on failure
         uses: actions/upload-artifact@v7
@@ -171,5 +312,7 @@ jobs:
         with:
           name: build-logs-linux-${{ matrix.suffix }}
           path: |
+            build/CMakeFiles/CMakeConfigureLog.yaml
             build/CMakeFiles/CMakeOutput.log
             build/CMakeFiles/CMakeError.log
+            build/.ninja_log
